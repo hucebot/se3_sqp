@@ -1,0 +1,31 @@
+# Build directories
+build/
+code/build/
+
+# IDE
+.vscode/
+*.code-workspace
+.idea/
+
+# Compiled files
+*.o
+*.a
+*.so
+*.dylib
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+Makefile
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local notes
+*.local.md
