@@ -41,7 +41,7 @@ void test_hpipm_direct() {
     std::vector<double> q = {0.0, 0.0};
     std::vector<double> r = {0.0};
 
-    // Set problem data for all stages
+    // Set problem data for all nodes
     for (int k = 0; k < N; k++) {
         qp_solver.set_A(k, A.data());
         qp_solver.set_B(k, B.data());
@@ -66,7 +66,7 @@ void test_hpipm_direct() {
     std::cout << "\nSolution:" << std::endl;
     for (int k = 0; k <= N; k++) {
         qp_solver.get_x(k, x_sol.data());
-        std::cout << "  Stage " << k << ": x = [" << x_sol[0] << ", " << x_sol[1] << "]";
+        std::cout << "  Node " << k << ": x = [" << x_sol[0] << ", " << x_sol[1] << "]";
 
         if (k < N) {
             qp_solver.get_u(k, u_sol.data());
