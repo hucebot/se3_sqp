@@ -1,11 +1,12 @@
 #include <qp_solver/hpipm_solver.h>
+
 #include <cstdlib>
 
 extern "C" {
-#include <hpipm_d_ocp_qp_dim.h>
 #include <hpipm_d_ocp_qp.h>
-#include <hpipm_d_ocp_qp_sol.h>
+#include <hpipm_d_ocp_qp_dim.h>
 #include <hpipm_d_ocp_qp_ipm.h>
+#include <hpipm_d_ocp_qp_sol.h>
 }
 
 /**
@@ -17,9 +18,16 @@ extern "C" {
  */
 
 HPIPMSolver::HPIPMSolver()
-    : _N(0), _nx(0), _nu(0), _ng(0), _initialized(false),
-      _dim_mem(nullptr), _qp_mem(nullptr), _sol_mem(nullptr),
-      _arg_mem(nullptr), _ws_mem(nullptr) {}
+    : _N(0),
+      _nx(0),
+      _nu(0),
+      _ng(0),
+      _initialized(false),
+      _dim_mem(nullptr),
+      _qp_mem(nullptr),
+      _sol_mem(nullptr),
+      _arg_mem(nullptr),
+      _ws_mem(nullptr) {}
 
 void HPIPMSolver::initialize(int N, int nx, int nu, int ng) {
     _N = N;

@@ -3,8 +3,8 @@
 extern "C" {
 #include <hpipm_d_ocp_qp.h>
 #include <hpipm_d_ocp_qp_dim.h>
-#include <hpipm_d_ocp_qp_sol.h>
 #include <hpipm_d_ocp_qp_ipm.h>
+#include <hpipm_d_ocp_qp_sol.h>
 }
 
 /**
@@ -14,7 +14,7 @@ extern "C" {
  * Compiler can inline across translation units with LTO enabled.
  */
 class HPIPMSolver {
-private:
+   private:
     int _N, _nx, _nu, _ng;
     bool _initialized;
 
@@ -32,7 +32,7 @@ private:
     void* _arg_mem;
     void* _ws_mem;
 
-public:
+   public:
     HPIPMSolver();
     ~HPIPMSolver();
 
@@ -44,47 +44,30 @@ public:
     void initialize(int N, int nx, int nu, int ng = 0);
 
     // === Problem Specification (ALL INLINE for zero overhead) ===
-    // Note: HPIPM doesn't use const (poor API design), so we can't either
 
     /** Set dynamics matrix A_k (nx x nx) for stage k */
-    inline void set_A(int stage, double* A) {
-        d_ocp_qp_set_A(stage, A, &_qp);
-    }
+    inline void set_A(int stage, double* A) { d_ocp_qp_set_A(stage, A, &_qp); }
 
     /** Set dynamics matrix B_k (nx x nu) for stage k */
-    inline void set_B(int stage, double* B) {
-        d_ocp_qp_set_B(stage, B, &_qp);
-    }
+    inline void set_B(int stage, double* B) { d_ocp_qp_set_B(stage, B, &_qp); }
 
     /** Set dynamics affine term b_k (nx x 1) for stage k */
-    inline void set_b(int stage, double* b) {
-        d_ocp_qp_set_b(stage, b, &_qp);
-    }
+    inline void set_b(int stage, double* b) { d_ocp_qp_set_b(stage, b, &_qp); }
 
     /** Set state cost matrix Q_k (nx x nx) for stage k */
-    inline void set_Q(int stage, double* Q) {
-        d_ocp_qp_set_Q(stage, Q, &_qp);
-    }
+    inline void set_Q(int stage, double* Q) { d_ocp_qp_set_Q(stage, Q, &_qp); }
 
     /** Set control cost matrix R_k (nu x nu) for stage k */
-    inline void set_R(int stage, double* R) {
-        d_ocp_qp_set_R(stage, R, &_qp);
-    }
+    inline void set_R(int stage, double* R) { d_ocp_qp_set_R(stage, R, &_qp); }
 
     /** Set cross term S_k (nu x nx) for stage k */
-    inline void set_S(int stage, double* S) {
-        d_ocp_qp_set_S(stage, S, &_qp);
-    }
+    inline void set_S(int stage, double* S) { d_ocp_qp_set_S(stage, S, &_qp); }
 
     /** Set linear state cost q_k (nx x 1) for stage k */
-    inline void set_q(int stage, double* q) {
-        d_ocp_qp_set_q(stage, q, &_qp);
-    }
+    inline void set_q(int stage, double* q) { d_ocp_qp_set_q(stage, q, &_qp); }
 
     /** Set linear control cost r_k (nu x 1) for stage k */
-    inline void set_r(int stage, double* r) {
-        d_ocp_qp_set_r(stage, r, &_qp);
-    }
+    inline void set_r(int stage, double* r) { d_ocp_qp_set_r(stage, r, &_qp); }
 
     // === Solve (INLINE - Direct HPIPM call) ===
 
@@ -123,7 +106,8 @@ public:
     }
 
     /** Set convergence tolerances */
-    inline void set_tol(double tol_stat, double tol_eq, double tol_ineq, double tol_comp) {
+    inline void set_tol(double tol_stat, double tol_eq, double tol_ineq,
+                        double tol_comp) {
         d_ocp_qp_ipm_arg_set_tol_stat(&tol_stat, &_qp_arg);
         d_ocp_qp_ipm_arg_set_tol_eq(&tol_eq, &_qp_arg);
         d_ocp_qp_ipm_arg_set_tol_ineq(&tol_ineq, &_qp_arg);
