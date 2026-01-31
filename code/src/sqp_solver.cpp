@@ -1,1 +1,0 @@
-// SQP Solver library placeholder

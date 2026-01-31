@@ -18,7 +18,7 @@ else
     echo "Creating new container '${CONTAINER_NAME}'..."
     docker run -it \
         --name "${CONTAINER_NAME}" \
-        -v "${WORKSPACE_DIR}/code:/workspace/code" \
+        -v "${WORKSPACE_DIR}:/workspace" \
         -w /workspace \
         "${IMAGE_NAME}" \
         /bin/bash

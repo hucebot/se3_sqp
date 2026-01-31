@@ -12,8 +12,9 @@ find_package(hpipm REQUIRED)
 find_package(pinocchio REQUIRED)
 
 # sqp_solver library
-file(GLOB_RECURSE LIB_SOURCES "src/*.cpp")
+file(GLOB_RECURSE LIB_SOURCES "src/**.cpp")
 add_library(${PROJECT_NAME} ${LIB_SOURCES})
+
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
