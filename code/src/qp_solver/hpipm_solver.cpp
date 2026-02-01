@@ -73,7 +73,10 @@ void HPIPMSolver::initialize(int N, int nx, int nu, int ng, int nbx, int nbu) {
     _arg_mem = malloc(arg_size);
     d_ocp_qp_ipm_arg_create(&_qp_dim, &_qp_arg, _arg_mem);
 
-    // Allocate workspace
+    // Set default IPM mode (SPEED, BALANCE, or ROBUST)
+    d_ocp_qp_ipm_arg_set_default(BALANCE, &_qp_arg);
+
+    // Allocate workspace (size depends on arg settings)
     int ws_size = d_ocp_qp_ipm_ws_memsize(&_qp_dim, &_qp_arg);
     _ws_mem = malloc(ws_size);
     d_ocp_qp_ipm_ws_create(&_qp_dim, &_qp_arg, &_qp_ws, _ws_mem);

@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 /**
  * Double Integrator Example
@@ -56,16 +57,79 @@ void run_double_integrator_example() {
     std::cout << "\nInitial state: [" << x_init.transpose() << "]" << std::endl;
     std::cout << "Target state:  [" << x_target.transpose() << "]" << std::endl;
 
+    // Box constraint limits
+    const double v_max = 5.0;   // Max velocity [m/s]
+    const double a_max = 10.0;  // Max acceleration [m/s^2]
+    const int nbx =
+        nx;  // State box constraints (initial state + velocity limits)
+    const int nbu = nu;  // Control box constraints (acceleration limits)
+
     // Initialize QP solver
     // Parameters: N (horizon), nx (state dim), nu (control dim), ng (general
-    // constraints)
+    // constraints), nbx (state box constraints), nbu (control box constraints)
     HPIPMSolver qp_solver;
-    qp_solver.initialize(N, nx, nu, 0, nx, nu);  // No box constraints for now
+    qp_solver.initialize(N, nx, nu, 0, nbx, nbu);
 
     // Solver options
     qp_solver.set_iter_max(100);
     qp_solver.set_tol(1e-8, 1e-8, 1e-8, 1e-8);
     qp_solver.set_warm_start(true);
+
+    // Box constraint indices (which variables are constrained)
+    // State: [position, velocity] - constrain both at stage 0, velocity only
+    // elsewhere
+    std::vector<int> idxbx(nbx);
+    for (int i = 0; i < nbx; i++) {
+        idxbx[i] = i;  // Constrain indices 0, 1, ..., nbx-1
+    }
+
+    // Control: [acceleration] - constrain all controls
+    std::vector<int> idxbu(nbu);
+    for (int i = 0; i < nbu; i++) {
+        idxbu[i] = i;
+    }
+
+    // State bounds
+    const double inf = 1e20;            // Large number for "unbounded"
+    Eigen::Vector2d lbx_init = x_init;  // Initial state (hard constraint)
+    Eigen::Vector2d ubx_init = x_init;
+    Eigen::Vector2d lbx_stage(-inf, -v_max);  // Position free, velocity bounded
+    Eigen::Vector2d ubx_stage(inf, v_max);
+
+    // Control bounds
+    Eigen::Matrix<double, 1, 1> lbu, ubu;
+    lbu << -a_max;
+    ubu << a_max;
+
+    // Set box constraints for all stages
+    for (int k = 0; k <= N; k++) {
+        // State box constraint indices
+        qp_solver.set_idxbx(k, idxbx.data());
+
+        if (k == 0) {
+            // Initial state: hard constraint x(0) = x_init
+            qp_solver.set_lbx(k, lbx_init.data());
+            qp_solver.set_ubx(k, ubx_init.data());
+        } else {
+            // Other stages: velocity limits only
+            qp_solver.set_lbx(k, lbx_stage.data());
+            qp_solver.set_ubx(k, ubx_stage.data());
+        }
+
+        // Control bounds (stages 0 to N-1)
+        if (k < N) {
+            qp_solver.set_idxbu(k, idxbu.data());
+            qp_solver.set_lbu(k, lbu.data());
+            qp_solver.set_ubu(k, ubu.data());
+        }
+    }
+
+    std::cout << "\nBox constraints:" << std::endl;
+    std::cout << "  Initial state: x(0) = [" << x_init.transpose()
+              << "] (hard constraint)" << std::endl;
+    std::cout << "  Velocity limit: |v| <= " << v_max << " m/s" << std::endl;
+    std::cout << "  Acceleration limit: |a| <= " << a_max << " m/s^2"
+              << std::endl;
 
     // Discretized dynamics matrices (Euler integration)
     // x_{k+1} = x_k + dt * v_k
@@ -101,8 +165,8 @@ void run_double_integrator_example() {
     r << 0.0;  // No linear control cost
 
     // Terminal cost: reach target state
-    double Q_pos_terminal = 100.0;
-    double Q_vel_terminal = 100.0;
+    double Q_pos_terminal = 1e6;
+    double Q_vel_terminal = 1e3;
 
     Eigen::Matrix2d Q_N;
     Q_N << Q_pos_terminal, 0.0, 0.0, Q_vel_terminal;
@@ -115,10 +179,6 @@ void run_double_integrator_example() {
     std::cout << "  Terminal cost: reach target [" << x_target.transpose()
               << "] (Q=" << Q_pos_terminal << ")" << std::endl;
 
-    std::cout << "\nConstraints:" << std::endl;
-    std::cout << "  Initial state: x(0) = [" << x_init.transpose()
-              << "] (soft constraint, high weight)" << std::endl;
-
     // Set problem data for all stages
     for (int k = 0; k < N; k++) {
         // Dynamics
@@ -126,23 +186,12 @@ void run_double_integrator_example() {
         qp_solver.set_B(k, B.data());
         qp_solver.set_b(k, b.data());
 
-        if (k == 0) {
-            // Initial condition: use high weight to strongly enforce x(0) =
-            // x_init
-            double Q_init_weight = 10000.0;
-            Eigen::Matrix2d Q_0;
-            Q_0 << Q_init_weight, 0.0, 0.0, Q_init_weight;
-            Eigen::Vector2d q_0;
-            q_0 << -Q_init_weight * x_init(0), -Q_init_weight * x_init(1);
-            qp_solver.set_Q(k, Q_0.data());
-            qp_solver.set_q(k, q_0.data());
-        } else {
-            // Stage cost for other nodes
-            qp_solver.set_Q(k, Q.data());
-            qp_solver.set_q(k, q.data());
-        }
+        // Stage cost (same for all stages - initial state enforced via box
+        // constraint)
+        qp_solver.set_Q(k, Q.data());
+        qp_solver.set_q(k, q.data());
 
-        // Control cost (same for all stages)
+        // Control cost
         qp_solver.set_R(k, R.data());
         qp_solver.set_r(k, r.data());
     }
