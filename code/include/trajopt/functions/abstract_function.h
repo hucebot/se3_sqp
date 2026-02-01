@@ -1,20 +1,18 @@
 #pragma once
 
+#include <common/types.h>
+
 #include <Eigen/Dense>
 #include <string>
 
-// Forward declarations
+// Forward declaration (don't include node.h - circular dependency)
 class Node;
-
-// Type aliases for Eigen types used in function interfaces
-// Column-major is critical: HPIPM expects column-major layout
-using ColMajorMatrix =
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
-
 /**
- * AbstractFunction is the base class for all functions in trajectory optimization.
+ * AbstractFunction is the base class for all functions in trajectory
+ * optimization.
  *
- * This includes costs, constraints, and dynamics. All derived classes must implement:
+ * This includes costs, constraints, and dynamics. All derived classes must
+ * implement:
  * - allocate_slices(): Register variable/data slices in the node
  * - evaluate(): Compute the function value
  * - jacobian(): Compute first derivatives
@@ -26,22 +24,27 @@ using ColMajorMatrix =
  */
 class AbstractFunction {
    protected:
-    int input_dim;   // Dimension of input variables (set by derived class)
-    int output_dim;  // Dimension of output/residual (set by derived class)
-    std::string name;
+    std::string _name;
+
+    Node* _node = nullptr;  // Owning node (set by Node::add_cost/add_constraint)
 
    public:
-    AbstractFunction() : input_dim(0), output_dim(0), name("") {}
-    virtual ~AbstractFunction() {}
+    AbstractFunction() : _name("") {}
+    virtual ~AbstractFunction() = default;
+
+    /**
+     * Set the owning node. Called by Node::add_cost/add_constraint.
+     * Must be called before allocate_slices().
+     */
+    void set_node(Node* node) { _node = node; }
+    Node* get_node() const { return _node; }
 
     /**
      * Allocate function-specific slices in the node's registry.
      * This is called during problem setup to register the function's
      * variable and data requirements.
-     *
-     * @param node Reference to the node where slices will be allocated
      */
-    virtual void allocate_slices(Node& node) = 0;
+    virtual void allocate_slices() = 0;
 
     /**
      * Evaluate the function value.
@@ -49,17 +52,14 @@ class AbstractFunction {
      * @param x Input variables (decision variables)
      * @param output Output buffer (residual/value), size = output_dim
      */
-    virtual void evaluate(Eigen::Ref<const Eigen::VectorXd> x,
-                          Eigen::Ref<Eigen::VectorXd> output) = 0;
+    virtual void evaluate(VectorXdConstRef x, VectorXdConstRef u,
+                          VectorXdRef output) = 0;
 
     /**
      * Compute the Jacobian (first derivatives).
-     *
-     * @param x Input variables
-     * @param jac Jacobian matrix (output_dim x input_dim, column-major)
      */
-    virtual void jacobian(Eigen::Ref<const Eigen::VectorXd> x,
-                          Eigen::Ref<ColMajorMatrix> jac) = 0;
+    virtual void jacobian(VectorXdConstRef x, VectorXdConstRef u,
+                          MatrixXdRef jac_x, MatrixXdRef jac_u) = 0;
 
     /**
      * Compute the Hessian (second derivatives) - optional, mainly for costs.
@@ -68,14 +68,12 @@ class AbstractFunction {
      * @param x Input variables
      * @param hess Hessian matrix (input_dim x input_dim, column-major)
      */
-    virtual void hessian(Eigen::Ref<const Eigen::VectorXd> x,
-                         Eigen::Ref<ColMajorMatrix> hess) {
+    virtual void hessian(VectorXdConstRef x, VectorXdConstRef u,
+                         MatrixXdConstRef hes_xx, MatrixXdConstRef hes_uu) {
         // Default: no second-order information (Gauss-Newton approximation)
         // Can be overridden by derived classes for exact Hessian
     }
 
     // Getters (dimensions determined by derived class implementation)
-    virtual int get_input_dim() const { return input_dim; }
-    virtual int get_output_dim() const { return output_dim; }
-    virtual std::string get_name() const { return name; }
+    virtual std::string get_name() const { return _name; }
 };
