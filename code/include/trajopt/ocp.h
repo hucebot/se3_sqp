@@ -5,42 +5,30 @@
 #include <Eigen/Dense>
 #include <vector>
 
+class Node;
+
 class OCP {
    private:
     // Horizon as a list of nodes
-    std::vector<Node> horizon;
+    std::vector<Node> _horizon;
 
     // Problem dimensions
-    int num_nodes;
+    int _num_nodes;
 
-    std::vector<Eigen::VectorXd> x_trajectory;
-    std::vector<Eigen::VectorXd> u_trajectory;
+    std::vector<VectorXd> _x_traj;
+    std::vector<VectorXd> _u_traj;
 
    public:
     OCP();
     ~OCP();
 
     // Methods to build the horizon
-    void add_node(const Node& node);
-    void set_horizon(const std::vector<Node>& nodes);
+    void addNode(const Node& node);
+    void setHorizon(const std::vector<Node>& nodes);
 
     // Getters
-    int get_num_nodes() const { return num_nodes; }
-    const std::vector<Node>& get_horizon() const { return horizon; }
-    Node& get_node(int index) { return horizon[index]; }
-    const Node& get_node(int index) const { return horizon[index]; }
+    int getNumNodes() const { return _num_nodes; }
+    const std::vector<Node>& getHorizon() const { return _horizon; }
+    Node& getNode(int index) { return _horizon[index]; }
+    const Node& getNode(int index) const { return _horizon[index]; }
 };
-
-OCP::OCP() : num_nodes(0) {}
-
-OCP::~OCP() {}
-
-void OCP::add_node(const Node& node) {
-    horizon.push_back(node);
-    num_nodes = horizon.size();
-}
-
-void OCP::set_horizon(const std::vector<Node>& nodes) {
-    horizon = nodes;
-    num_nodes = horizon.size();
-}

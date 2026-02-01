@@ -20,8 +20,8 @@
  */
 class AbstractConstraint : public AbstractFunction {
    protected:
-    Eigen::VectorXd lower_bound;  // Lower bounds on constraint
-    Eigen::VectorXd upper_bound;  // Upper bounds on constraint
+    VectorXd _lower_bound;  // Lower bounds on constraint
+    VectorXd _upper_bound;  // Upper bounds on constraint
 
    public:
     AbstractConstraint() : AbstractFunction() {}
@@ -33,43 +33,33 @@ class AbstractConstraint : public AbstractFunction {
      * @param lower Lower bounds (size must match output_dim)
      * @param upper Upper bounds (size must match output_dim)
      */
-    void set_bounds(const Eigen::VectorXd& lower,
-                    const Eigen::VectorXd& upper) {
-        lower_bound = lower;
-        upper_bound = upper;
+    void set_bounds(VectorXdConstRef lower, VectorXdConstRef upper) {
+        _lower_bound = lower;
+        _upper_bound = upper;
     }
 
     /**
      * Set as equality constraint: g(x) = value
      */
-    void set_equality(const Eigen::VectorXd& value) {
-        lower_bound = value;
-        upper_bound = value;
+    void set_equality(VectorXdConstRef value) {
+        _lower_bound = value;
+        _upper_bound = value;
     }
 
     /**
      * Set as equality constraint to zero: g(x) = 0
      */
     void set_equality_to_zero() {
-        lower_bound = Eigen::VectorXd::Zero(output_dim);
-        upper_bound = Eigen::VectorXd::Zero(output_dim);
+        _lower_bound = VectorXd::Zero(_output_dim);
+        _upper_bound = VectorXd::Zero(_output_dim);
     }
 
-    /**
-     * Get the lower bounds
-     */
-    const Eigen::VectorXd& get_lower_bound() const { return lower_bound; }
+    const VectorXd& get_lower_bound() const { return _lower_bound; }
 
-    /**
-     * Get the upper bounds
-     */
-    const Eigen::VectorXd& get_upper_bound() const { return upper_bound; }
+    const VectorXd& get_upper_bound() const { return _upper_bound; }
 
-    /**
-     * Check if this is an equality constraint
-     */
     bool is_equality() const {
-        if (lower_bound.size() != upper_bound.size()) return false;
-        return lower_bound.isApprox(upper_bound);
+        if (_lower_bound.size() != _upper_bound.size()) return false;
+        return _lower_bound.isApprox(_upper_bound);
     }
 };
