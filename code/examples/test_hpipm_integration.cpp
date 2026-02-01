@@ -1,7 +1,8 @@
-#include <sqp_solver/sqp_solver.h>
 #include <qp_solver/hpipm_solver.h>
+#include <sqp_solver/sqp_solver.h>
+
+#include <Eigen/Dense>
 #include <iostream>
-#include <vector>
 
 /**
  * Simple example showcasing the HPIPM integration with SQP solver
@@ -16,9 +17,9 @@ void test_hpipm_direct() {
     std::cout << "\n=== Testing Direct HPIPM Wrapper ===" << std::endl;
 
     // Simple QP problem: minimize 0.5*x'*Q*x + q'*x subject to dynamics
-    int N = 5;   // Horizon
-    int nx = 2;  // State dimension
-    int nu = 1;  // Control dimension
+    int N = 100;  // Horizon
+    int nx = 2;   // State dimension
+    int nu = 1;   // Control dimension
 
     HPIPMSolver qp_solver;
     qp_solver.initialize(N, nx, nu, 0);
@@ -29,17 +30,20 @@ void test_hpipm_direct() {
     qp_solver.set_warm_start(true);  // CRITICAL for performance
 
     // Simple dynamics: x_{k+1} = A*x_k + B*u_k
-    std::vector<double> A = {1.0, 0.1,  // A = [1.0  0.1]
-                             0.0, 1.0};  //     [0.0  1.0]
-    std::vector<double> B = {0.0, 0.1};  // B = [0.0; 0.1]
-    std::vector<double> b = {0.0, 0.0};  // b = [0; 0]
+    // Using column-major Eigen matrices (HPIPM expects column-major)
+    Eigen::Matrix2d A;
+    A << 1.0, 0.1,   // A = [1.0  0.1]
+         0.0, 1.0;   //     [0.0  1.0]
+    Eigen::Vector2d B(0.0, 0.1);  // B = [0.0; 0.1]
+    Eigen::Vector2d b = Eigen::Vector2d::Zero();
 
     // Simple cost: Q = I, R = I
-    std::vector<double> Q = {1.0, 0.0,
-                             0.0, 1.0};
-    std::vector<double> R = {1.0};
-    std::vector<double> q = {0.0, 0.0};
-    std::vector<double> r = {0.0};
+    Eigen::Matrix2d Q = Eigen::Matrix2d::Identity();
+    Eigen::Matrix<double, 1, 1> R;
+    R << 1.0;
+    Eigen::Vector2d q = Eigen::Vector2d::Zero();
+    Eigen::Matrix<double, 1, 1> r;
+    r << 0.0;
 
     // Set problem data for all nodes
     for (int k = 0; k < N; k++) {
@@ -59,25 +63,27 @@ void test_hpipm_direct() {
     std::cout << "Solving QP..." << std::endl;
     qp_solver.solve();
 
-    // Extract solution
-    std::vector<double> x_sol(nx);
-    std::vector<double> u_sol(nu);
+    // Extract solution using Eigen vectors
+    Eigen::Vector2d x_sol;
+    Eigen::Matrix<double, 1, 1> u_sol;
 
     std::cout << "\nSolution:" << std::endl;
     for (int k = 0; k <= N; k++) {
         qp_solver.get_x(k, x_sol.data());
-        std::cout << "  Node " << k << ": x = [" << x_sol[0] << ", " << x_sol[1] << "]";
+        std::cout << "  Node " << k << ": x = [" << x_sol(0) << ", " << x_sol(1)
+                  << "]";
 
         if (k < N) {
             qp_solver.get_u(k, u_sol.data());
-            std::cout << ", u = [" << u_sol[0] << "]";
+            std::cout << ", u = [" << u_sol(0) << "]";
         }
         std::cout << std::endl;
     }
 
     std::cout << "\n✓ Direct HPIPM wrapper works!" << std::endl;
     std::cout << "  - All methods inline for zero overhead" << std::endl;
-    std::cout << "  - Warm-starting enabled for maximum performance" << std::endl;
+    std::cout << "  - Warm-starting enabled for maximum performance"
+              << std::endl;
     std::cout << "  - Clean code separation maintained" << std::endl;
 }
 
@@ -89,7 +95,8 @@ int main() {
 
     test_hpipm_direct();
 
-    std::cout << "\n==============================================" << std::endl;
+    std::cout << "\n=============================================="
+              << std::endl;
     std::cout << "  All tests passed! ✓" << std::endl;
     std::cout << "==============================================" << std::endl;
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Eigen/Dense>
+
 extern "C" {
 #include <hpipm_d_ocp_qp.h>
 #include <hpipm_d_ocp_qp_dim.h>
@@ -41,7 +43,7 @@ class HPIPMSolver {
     HPIPMSolver& operator=(const HPIPMSolver&) = delete;
 
     // Initialization (only non-inline method besides destructor)
-    void initialize(int N, int nx, int nu, int ng = 0);
+    void initialize(int N, int nx, int nu, int ng = 0, int nbx = 0, int nbu = 0);
 
     // === Problem Specification (ALL INLINE for zero overhead) ===
 
@@ -68,6 +70,38 @@ class HPIPMSolver {
 
     /** Set linear control cost r_k (nu x 1) for stage k */
     inline void set_r(int stage, double* r) { d_ocp_qp_set_r(stage, r, &_qp); }
+
+    // === State and Control Bounds ===
+
+    /** Set lower bounds on state x_k for stage k */
+    inline void set_lbx(int stage, double* lbx) {
+        d_ocp_qp_set_lbx(stage, lbx, &_qp);
+    }
+
+    /** Set upper bounds on state x_k for stage k */
+    inline void set_ubx(int stage, double* ubx) {
+        d_ocp_qp_set_ubx(stage, ubx, &_qp);
+    }
+
+    /** Set lower bounds on control u_k for stage k */
+    inline void set_lbu(int stage, double* lbu) {
+        d_ocp_qp_set_lbu(stage, lbu, &_qp);
+    }
+
+    /** Set upper bounds on control u_k for stage k */
+    inline void set_ubu(int stage, double* ubu) {
+        d_ocp_qp_set_ubu(stage, ubu, &_qp);
+    }
+
+    /** Set state indices for box constraints at stage k */
+    inline void set_idxbx(int stage, int* idxbx) {
+        d_ocp_qp_set_idxbx(stage, idxbx, &_qp);
+    }
+
+    /** Set control indices for box constraints at stage k */
+    inline void set_idxbu(int stage, int* idxbu) {
+        d_ocp_qp_set_idxbu(stage, idxbu, &_qp);
+    }
 
     // === Solve (INLINE - Direct HPIPM call) ===
 

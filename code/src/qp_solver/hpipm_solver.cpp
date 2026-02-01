@@ -29,7 +29,7 @@ HPIPMSolver::HPIPMSolver()
       _arg_mem(nullptr),
       _ws_mem(nullptr) {}
 
-void HPIPMSolver::initialize(int N, int nx, int nu, int ng) {
+void HPIPMSolver::initialize(int N, int nx, int nu, int ng, int nbx, int nbu) {
     _N = N;
     _nx = nx;
     _nu = nu;
@@ -49,6 +49,12 @@ void HPIPMSolver::initialize(int N, int nx, int nu, int ng) {
         }
         if (ng > 0) {
             d_ocp_qp_dim_set_ng(k, ng, &_qp_dim);
+        }
+        if (nbx > 0) {
+            d_ocp_qp_dim_set_nbx(k, nbx, &_qp_dim);
+        }
+        if (nbu > 0 && k < N) {
+            d_ocp_qp_dim_set_nbu(k, nbu, &_qp_dim);
         }
     }
 

@@ -56,3 +56,6 @@ target_link_libraries(verify_imports ${PROJECT_NAME})
 
 add_executable(test_hpipm_integration examples/test_hpipm_integration.cpp)
 target_link_libraries(test_hpipm_integration ${PROJECT_NAME})
+
+add_executable(double_integrator_example examples/double_integrator_example.cpp)
+target_link_libraries(double_integrator_example ${PROJECT_NAME})

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <functions/abstract_function.h>
+#include <trajopt/functions/abstract_function.h>
 
 /**
  * AbstractCost extends AbstractFunction with cost-specific semantics.

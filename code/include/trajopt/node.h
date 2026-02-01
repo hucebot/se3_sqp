@@ -1,9 +1,11 @@
 #pragma once
 
-#include <constraints/abstract_constraint.h>
-#include <costs/abstract_cost.h>
+#include <trajopt/constraints/abstract_constraint.h>
+#include <trajopt/costs/abstract_cost.h>
 
 #include <memory>
+#include <pinocchio/multibody/data.hpp>
+#include <pinocchio/multibody/model.hpp>
 #include <string>
 #include <vector>
 
@@ -16,9 +18,9 @@
  */
 class NodeSliceRegistry {
    private:
-    int nv;           // Number of variables
-    int var_offset;   // Current variable offset
-    int con_offset;   // Current constraint offset
+    int nv;          // Number of variables
+    int var_offset;  // Current variable offset
+    int con_offset;  // Current constraint offset
 
    public:
     NodeSliceRegistry(int num_vars)
@@ -67,10 +69,12 @@ class NodeSliceRegistry {
 class Node {
    private:
     // Placeholder for Pinocchio model
-    void* model;  // Will be replaced with Pinocchio model type
+    pinocchio::Model model;  // Will be replaced with Pinocchio model type
+    pinocchio::Data data;
 
     // Placeholder for dynamics
-    std::shared_ptr<AbstractConstraint> dynamics;  // Will be replaced with dynamics type
+    std::shared_ptr<AbstractConstraint>
+        dynamics;  // Will be replaced with dynamics type
 
     // Optimization variables dimensions
     int state_dim;
@@ -122,33 +126,8 @@ class Node {
     const std::vector<std::shared_ptr<AbstractCost>>& get_costs() const {
         return cost_list;
     }
-    const std::vector<std::shared_ptr<AbstractConstraint>>& get_constraints() const {
+    const std::vector<std::shared_ptr<AbstractConstraint>>& get_constraints()
+        const {
         return constraint_list;
     }
 };
-
-Node::Node(int num_vars)
-    : state_dim(0),
-      control_dim(0),
-      parameter_dim(0),
-      registry(num_vars) {}
-
-Node::~Node() {}
-
-void Node::set_dimensions(int nx, int nu, int np) {
-    state_dim = nx;
-    control_dim = nu;
-    parameter_dim = np;
-}
-
-void Node::add_cost(std::shared_ptr<AbstractCost> cost) {
-    cost_list.push_back(cost);
-    // Allocate slices immediately when adding the cost
-    cost->allocate_slices(*this);
-}
-
-void Node::add_constraint(std::shared_ptr<AbstractConstraint> constraint) {
-    constraint_list.push_back(constraint);
-    // Allocate slices immediately when adding the constraint
-    constraint->allocate_slices(*this);
-}

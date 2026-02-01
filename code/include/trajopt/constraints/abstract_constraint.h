@@ -1,10 +1,12 @@
 #pragma once
 
-#include <functions/abstract_function.h>
+#include <trajopt/functions/abstract_function.h>
+
 #include <Eigen/Dense>
 
 /**
- * AbstractConstraint extends AbstractFunction with constraint-specific semantics.
+ * AbstractConstraint extends AbstractFunction with constraint-specific
+ * semantics.
  *
  * Constraints represent hard bounds that must be satisfied.
  * They can be equality constraints (lower == upper) or inequality constraints.
@@ -31,7 +33,8 @@ class AbstractConstraint : public AbstractFunction {
      * @param lower Lower bounds (size must match output_dim)
      * @param upper Upper bounds (size must match output_dim)
      */
-    void set_bounds(const Eigen::VectorXd& lower, const Eigen::VectorXd& upper) {
+    void set_bounds(const Eigen::VectorXd& lower,
+                    const Eigen::VectorXd& upper) {
         lower_bound = lower;
         upper_bound = upper;
     }

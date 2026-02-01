@@ -1,9 +1,15 @@
 #pragma once
 
+#include <Eigen/Dense>
 #include <string>
 
 // Forward declarations
 class Node;
+
+// Type aliases for Eigen types used in function interfaces
+// Column-major is critical: HPIPM expects column-major layout
+using ColMajorMatrix =
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
 
 /**
  * AbstractFunction is the base class for all functions in trajectory optimization.
@@ -40,27 +46,30 @@ class AbstractFunction {
     /**
      * Evaluate the function value.
      *
-     * @param x Pointer to input variables (decision variables)
-     * @param output Pointer to output buffer (residual/value)
+     * @param x Input variables (decision variables)
+     * @param output Output buffer (residual/value), size = output_dim
      */
-    virtual void evaluate(const double* x, double* output) = 0;
+    virtual void evaluate(Eigen::Ref<const Eigen::VectorXd> x,
+                          Eigen::Ref<Eigen::VectorXd> output) = 0;
 
     /**
      * Compute the Jacobian (first derivatives).
      *
-     * @param x Pointer to input variables
-     * @param jac Pointer to Jacobian matrix (output_dim x input_dim, row-major)
+     * @param x Input variables
+     * @param jac Jacobian matrix (output_dim x input_dim, column-major)
      */
-    virtual void jacobian(const double* x, double* jac) = 0;
+    virtual void jacobian(Eigen::Ref<const Eigen::VectorXd> x,
+                          Eigen::Ref<ColMajorMatrix> jac) = 0;
 
     /**
      * Compute the Hessian (second derivatives) - optional, mainly for costs.
      * Default implementation does nothing (use Gauss-Newton approximation).
      *
-     * @param x Pointer to input variables
-     * @param hess Pointer to Hessian matrix (input_dim x input_dim, row-major)
+     * @param x Input variables
+     * @param hess Hessian matrix (input_dim x input_dim, column-major)
      */
-    virtual void hessian(const double* x, double* hess) {
+    virtual void hessian(Eigen::Ref<const Eigen::VectorXd> x,
+                         Eigen::Ref<ColMajorMatrix> hess) {
         // Default: no second-order information (Gauss-Newton approximation)
         // Can be overridden by derived classes for exact Hessian
     }
