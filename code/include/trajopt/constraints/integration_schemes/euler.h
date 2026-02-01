@@ -1,0 +1,47 @@
+#pragma once
+
+#include <common/var_slice.h>
+#include <trajopt/constraints/abstract_constraint.h>
+
+#include <pinocchio/algorithm/joint-configuration.hpp>
+#include <pinocchio/multibody/model.hpp>
+
+/**
+ * EulerIntegration implements explicit Euler as an equality constraint.
+ *
+ * For state x = [q; v] and control u = a (acceleration):
+ *   q_{k+1} = q_k ⊕ (dt * v_k)   (Pinocchio integrate for Lie groups)
+ *   v_{k+1} = v_k + dt * a_k
+ *
+ * Constraint residual (equality to zero):
+ *   g = [ q_{k+1} ⊖ integrate(q_k, dt * v_k) ]
+ *       [ v_{k+1} - v_k - dt * a_k           ]
+ */
+class EulerIntegration : public AbstractConstraint {
+   private:
+    double _dt;
+
+    // Cached slice pointers for fast runtime access
+    const VarSlice* _conf_slice = nullptr;
+    const VarSlice* _vel_slice = nullptr;
+    const VarSlice* _acc_slice = nullptr;
+
+    // Pre-allocated temporaries
+    mutable VectorXd _q_integrated;
+    mutable VectorXd _v_dt;
+    mutable MatrixXd _J_q;
+    mutable MatrixXd _J_v;
+
+   public:
+    explicit EulerIntegration(double dt);
+
+    ~EulerIntegration() = default;
+
+    void allocate_slices() override;
+
+    void evaluate(VectorXdConstRef x, VectorXdConstRef u,
+                  VectorXdRef residual) override;
+
+    void jacobian(VectorXdConstRef x, VectorXdConstRef u, MatrixXdRef jac_x,
+                  MatrixXdRef jac_u) override;
+};
