@@ -157,19 +157,7 @@ class NodeSliceRegistry {
         }
         return it->second;
     }
-
-    /**
-     * Get slice for a custom variable.
-     * @throws std::runtime_error if not found
-     */
-    const VarSlice& get_custom_var(const std::string& name) const {
-        auto it = _custom_vars.find(name);
-        if (it == _custom_vars.end()) {
-            throw std::runtime_error("Custom var '" + name + "' not allocated");
-        }
-        return it->second;
-    }
-
+    
     /**
      * Get slice for a constraint.
      * @throws std::runtime_error if not found
@@ -195,10 +183,6 @@ class NodeSliceRegistry {
 
     bool has_force(const std::string& name) const {
         return _forces.find(name) != _forces.end();
-    }
-
-    bool has_custom_var(const std::string& name) const {
-        return _custom_vars.find(name) != _custom_vars.end();
     }
 
     bool has_constraint(const std::string& name) const {

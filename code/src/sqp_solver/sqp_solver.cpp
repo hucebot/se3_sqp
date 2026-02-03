@@ -108,31 +108,20 @@ void SQPSolver::populate_qp() {
 
 void SQPSolver::step() {
     // Extract QP solution and update trajectory
-    // Eigen provides automatic SIMD vectorization (SSE/AVX)
 
     double alpha = _ls_alpha;  // Line search step size
     _step_norm = 0.0;          // Reset step norm for convergence check
 
     // Process all stages with zero-copy Eigen operations
     for (int k = 0; k <= _N; ++k) {
-        // Extract state step from QP solution (zero-copy via Eigen::Map)
         _qp_solver.get_x(k, _dx[k].data());
-
-        // Update state with vectorized operation (SIMD-optimized by Eigen)
-        // Equivalent to: x_k += alpha * dx_k
         _x[k] += alpha * _dx[k];
-
-        // Accumulate squared norm (Eigen optimizes this)
         _step_norm += (alpha * _dx[k]).squaredNorm();
 
         // Extract and update control (if not terminal stage)
         if (k < _N) {
             _qp_solver.get_u(k, _du[k].data());
-
-            // Vectorized control update
             _u[k] += alpha * _du[k];
-
-            // Accumulate squared norm
             _step_norm += (alpha * _du[k]).squaredNorm();
         }
     }

@@ -59,3 +59,7 @@ target_link_libraries(test_hpipm_integration ${PROJECT_NAME})
 
 add_executable(double_integrator_example examples/double_integrator_example.cpp)
 target_link_libraries(double_integrator_example ${PROJECT_NAME})
+
+
+add_executable(example_trajopt examples/example_trajopt.cpp)
+target_link_libraries(example_trajopt ${PROJECT_NAME})

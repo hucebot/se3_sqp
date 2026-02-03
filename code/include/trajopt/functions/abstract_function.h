@@ -24,6 +24,8 @@ class Node;
  */
 class AbstractFunction {
    protected:
+    int _input_dim;
+    int _output_dim;
     std::string _name;
 
     Node* _node = nullptr;  // Owning node (set by Node::add_cost/add_constraint)
