@@ -63,3 +63,24 @@ target_link_libraries(double_integrator_example ${PROJECT_NAME})
 
 add_executable(example_trajopt examples/example_trajopt.cpp)
 target_link_libraries(example_trajopt ${PROJECT_NAME})
+
+# ========================================
+# TESTING CONFIGURATION
+# ========================================
+option(BUILD_TESTING "Build unit tests" ON)
+
+if(BUILD_TESTING)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG v1.14.0
+    )
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+
+    enable_testing()
+    include(GoogleTest)
+    add_subdirectory(tests)
+endif()
