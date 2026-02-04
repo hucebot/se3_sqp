@@ -51,30 +51,28 @@ class AbstractFunction {
     /**
      * Evaluate the function value.
      *
-     * @param x Input variables (decision variables)
+     * @param var Input variables (decision variables)
      * @param output Output buffer (residual/value), size = output_dim
      */
-    virtual void evaluate(VectorXdConstRef x, VectorXdConstRef u,
-                          VectorXdRef output) = 0;
+    virtual void evaluate(VectorXdRef output) = 0;
 
     /**
      * Compute the Jacobian (first derivatives).
      */
-    virtual void jacobian(VectorXdConstRef x, VectorXdConstRef u,
-                          MatrixXdRef jac_x, MatrixXdRef jac_u) = 0;
+    virtual void jacobian(MatrixXdRef jac) = 0;
 
-    /**
-     * Compute the Hessian (second derivatives) - optional, mainly for costs.
-     * Default implementation does nothing (use Gauss-Newton approximation).
-     *
-     * @param x Input variables
-     * @param hess Hessian matrix (input_dim x input_dim, column-major)
-     */
-    virtual void hessian(VectorXdConstRef x, VectorXdConstRef u,
-                         MatrixXdConstRef hes_xx, MatrixXdConstRef hes_uu) {
-        // Default: no second-order information (Gauss-Newton approximation)
-        // Can be overridden by derived classes for exact Hessian
-    }
+    // /**
+    //  * Compute the Hessian (second derivatives) - optional, mainly for costs.
+    //  * Default implementation does nothing (use Gauss-Newton approximation).
+    //  *
+    //  * @param x Input variables
+    //  * @param hess Hessian matrix (input_dim x input_dim, column-major)
+    //  */
+    // virtual void hessian(VectorXdConstRef x, VectorXdConstRef u,
+    //                      MatrixXdConstRef hes_xx, MatrixXdConstRef hes_uu) {
+    //     // Default: no second-order information (Gauss-Newton approximation)
+    //     // Can be overridden by derived classes for exact Hessian
+    // }
 
     // Getters (dimensions determined by derived class implementation)
     virtual std::string get_name() const { return _name; }

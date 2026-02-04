@@ -9,14 +9,11 @@ class Node;
 
 class OCP {
    private:
-    // Horizon as a list of nodes
+    // Horizon as a list of nodes (nodes own their state/control data)
     std::vector<Node> _horizon;
 
     // Problem dimensions
     int _num_nodes;
-
-    std::vector<VectorXd> _x_traj;
-    std::vector<VectorXd> _u_traj;
 
    public:
     OCP();
@@ -24,11 +21,15 @@ class OCP {
 
     // Methods to build the horizon
     void addNode(const Node& node);
+    void addNode(Node&& node);  // Move version
     void setHorizon(const std::vector<Node>& nodes);
 
-    // Getters
-    int getNumNodes() const { return _num_nodes; }
-    const std::vector<Node>& getHorizon() const { return _horizon; }
-    Node& getNode(int index) { return _horizon[index]; }
-    const Node& getNode(int index) const { return _horizon[index]; }
+    // Node accessors
+    int num_nodes() const { return _num_nodes; }
+    Node& get_node(int k) { return _horizon[k]; }
+    const Node& get_node(int k) const { return _horizon[k]; }
+
+    // Pointer accessors for HPIPM (zero-copy)
+    double* x_ptr(int k) { return _horizon[k].x().data(); }
+    double* u_ptr(int k) { return _horizon[k].u().data(); }
 };

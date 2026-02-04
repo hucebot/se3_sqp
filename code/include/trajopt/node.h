@@ -23,81 +23,55 @@
  * the Node needing to know constraint-specific details.
  */
 class Node {
-   protected:
-    pinocchio::Data _data;
-
    private:
     // Placeholder for dynamics constraint
     std::shared_ptr<AbstractConstraint> _dynamics;
 
-    // Configuration and velocity dimensions (from Pinocchio model)
-    int _nq = 0;  // Configuration dimension
-    int _nv = 0;  // Velocity/tangent dimension
-
-    // Which variable type is used as control input
-    VarType _control_type = VarType::ACC;  // Default: acceleration control
-
-    // Slice registry for variable and constraint allocation
-    NodeSliceRegistry _registry;
-
-    // Constraints and costs (stored as shared pointers)
+    // Constraints and costs
     std::vector<std::shared_ptr<AbstractCost>> _cost_list;
     std::vector<std::shared_ptr<AbstractConstraint>> _constraint_list;
 
+    // State and control vectors
+    VectorXd _x;   // State: [q, v] contiguous
+    VectorXd _u;   // Control input
+
    public:
-    Node() = default;
+    Node(pinocchio::Model mdl);
     ~Node() = default;
 
-    // Robot model (shared across nodes)
+    std::shared_ptr<Node> next_node;
+
     std::shared_ptr<pinocchio::Model> _model_ptr;
+    pinocchio::Data _data;
 
-    // =========================================================================
-    // Dimension setup
-    // =========================================================================
+    int _nq;
+    int _nv;
 
-    /**
-     * Set configuration and velocity dimensions.
-     * This pre-allocates CONF and VEL slices in the registry.
-     *
-     * @param nq Configuration dimension (e.g., joint positions)
-     * @param nv Velocity dimension (e.g., joint velocities)
-     */
-    void set_dimensions(int nq, int nv);
+    // Zero-copy segment accessors for state components
+    auto q() { return _x.head(_nq); }
+    auto v() { return _x.tail(_nv); }
+    auto q() const { return _x.head(_nq); }
+    auto v() const { return _x.tail(_nv); }
 
-    /**
-     * Set the control variable type and allocate its slice.
-     *
-     * @param type VarType::ACC (acceleration) or VarType::TORQ
-     * @param size Control dimension (typically nv)
-     */
-    void set_control_type(VarType type, int size);
+    // Full state/control accessors
+    VectorXdRef x() { return _x; }
+    VectorXdRef u() { return _u; }
+    VectorXdConstRef x() const { return _x; }
+    VectorXdConstRef u() const { return _u; }
 
-    int get_nq() const { return _nq; }
-    int get_nv() const { return _nv; }
-    VarType get_control_type() const { return _control_type; }
+    // Dimensions
+    int nq() const { return _nq; }
+    int nv() const { return _nv; }
+    int nx() const { return _nq + _nv; }
+    int nu() const { return _u.size(); }
 
+    // Model access
+    pinocchio::Model& model() { return *_model_ptr; }
+    const pinocchio::Model& model() const { return *_model_ptr; }
 
-    NodeSliceRegistry& get_registry() { return _registry; }
-    const NodeSliceRegistry& get_registry() const { return _registry; }
+    void cached_update();
 
-    // =========================================================================
-    // Cost and constraint management
-    // =========================================================================
-
-    /**
-     * Add a cost to the node and allocate its slices immediately.
-     * The cost's allocate_slices() method is called automatically.
-     *
-     * @param cost Shared pointer to the cost to add
-     */
     void add_cost(std::shared_ptr<AbstractCost> cost);
-
-    /**
-     * Add a constraint to the node and allocate its slices immediately.
-     * The constraint's allocate_slices() method is called automatically.
-     *
-     * @param constraint Shared pointer to the constraint to add
-     */
     void add_constraint(std::shared_ptr<AbstractConstraint> constraint);
 
     // Access to constraint and cost lists

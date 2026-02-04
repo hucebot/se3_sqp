@@ -21,27 +21,24 @@ class EulerIntegration : public AbstractConstraint {
    private:
     double _dt;
 
-    // Cached slice pointers for fast runtime access
-    const VarSlice* _conf_slice = nullptr;
-    const VarSlice* _vel_slice = nullptr;
-    const VarSlice* _acc_slice = nullptr;
-
     // Pre-allocated temporaries
-    mutable VectorXd _q_integrated;
-    mutable VectorXd _v_dt;
-    mutable MatrixXd _J_q;
-    mutable MatrixXd _J_v;
+    VectorXd _q;
+    VectorXd _q_next;
+    VectorXd _vq;
+    VectorXd _vq_next;
+    VectorXd _aq;
+    VectorXd _q_integrated;
+    MatrixXd _J_q;
+    MatrixXd _J_v;
 
    public:
     explicit EulerIntegration(double dt);
 
     ~EulerIntegration() = default;
 
-    void allocate_slices() override;
+    void allocate_slices() override {}
 
-    void evaluate(VectorXdConstRef x, VectorXdConstRef u,
-                  VectorXdRef residual) override;
+    void evaluate(VectorXdRef output) override;
 
-    void jacobian(VectorXdConstRef x, VectorXdConstRef u, MatrixXdRef jac_x,
-                  MatrixXdRef jac_u) override;
+    void jacobian(MatrixXdRef jac) override;
 };

@@ -33,10 +33,9 @@ TEST_F(EulerEvaluateTest, ZeroVelocityZeroAcceleration) {
     auto euler = std::make_shared<EulerIntegration>(dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     VectorXd output(2 * model.nv);
 
-    euler->evaluate(var, output);
+    euler->evaluate(output);
 
     // With zero velocity and acceleration:
     // - Position integrated = q + dt*0 = 0
@@ -54,10 +53,9 @@ TEST_F(EulerEvaluateTest, ConstantVelocityZeroAcceleration) {
     auto euler = std::make_shared<EulerIntegration>(dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     VectorXd output(2 * model.nv);
 
-    euler->evaluate(var, output);
+    euler->evaluate(output);
 
     // Position: q_integrated = q + dt*v = 1 + 0.1*1 = 1.1
     // Velocity: v_integrated = v + dt*a = 1 + 0 = 1
@@ -73,10 +71,9 @@ TEST_F(EulerEvaluateTest, AccelerationOnly) {
     auto euler = std::make_shared<EulerIntegration>(dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     VectorXd output(2 * model.nv);
 
-    euler->evaluate(var, output);
+    euler->evaluate(output);
 
     // Position: q_integrated = q + dt*v = 0 + 0.1*0 = 0
     // Velocity: v_integrated = v + dt*a = 0 + 0.1*2 = 0.2
@@ -93,10 +90,9 @@ TEST_F(EulerEvaluateTest, CombinedMotion) {
     auto euler = std::make_shared<EulerIntegration>(dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     VectorXd output(2 * model.nv);
 
-    euler->evaluate(var, output);
+    euler->evaluate(output);
 
     // Position: 2.0 + 0.1 * 3.0 = 2.3
     // Velocity: 3.0 + 0.1 * (-1.0) = 2.9
@@ -118,9 +114,8 @@ TEST_F(EulerJacobianTest, JacobianDimensions) {
     auto euler = std::make_shared<EulerIntegration>(dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     MatrixXd jac(2 * model.nv, 3 * model.nv);
-    euler->jacobian(var, jac);
+    euler->jacobian(jac);
 
     // Jacobian should be 2*nv x 3*nv
     EXPECT_EQ(jac.rows(), 2 * model.nv);
@@ -135,9 +130,8 @@ TEST_F(EulerJacobianTest, JacobianMatchesNumerical_AtOrigin) {
     auto euler = std::make_shared<EulerIntegration>(dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     MatrixXd analytical_jac(2 * model.nv, 3 * model.nv);
-    euler->jacobian(var, analytical_jac);
+    euler->jacobian(analytical_jac);
 
     // Numerical Jacobian via finite differences
     auto eval_func = [&](const VectorXd& state) -> VectorXd {
@@ -146,7 +140,7 @@ TEST_F(EulerJacobianTest, JacobianMatchesNumerical_AtOrigin) {
         node->u() = state.tail(model.nv);
 
         VectorXd output(2 * model.nv);
-        euler->evaluate(var, output);
+        euler->evaluate(output);
         return output;
     };
 
@@ -167,9 +161,8 @@ TEST_F(EulerJacobianTest, JacobianMatchesNumerical_NonzeroState) {
     auto euler = std::make_shared<EulerIntegration>(dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     MatrixXd analytical_jac(2 * model.nv, 3 * model.nv);
-    euler->jacobian(var, analytical_jac);
+    euler->jacobian(analytical_jac);
 
     auto eval_func = [&](const VectorXd& state) -> VectorXd {
         node->q() = state.head(model.nq);
@@ -177,7 +170,7 @@ TEST_F(EulerJacobianTest, JacobianMatchesNumerical_NonzeroState) {
         node->u() = state.tail(model.nv);
 
         VectorXd output(2 * model.nv);
-        euler->evaluate(var, output);
+        euler->evaluate(output);
         return output;
     };
 
@@ -197,9 +190,8 @@ TEST_F(EulerJacobianTest, JacobianStructure_VelocityAccelerationBlock) {
     auto euler = std::make_shared<EulerIntegration>(dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     MatrixXd jac(2 * model.nv, 3 * model.nv);
-    euler->jacobian(var, jac);
+    euler->jacobian(jac);
 
     // Check velocity-acceleration block is dt*I
     // jac(nv:2*nv, 2*nv:3*nv) = dt * I
@@ -226,10 +218,9 @@ TEST_F(EulerEdgeCaseTest, LargeTimestep) {
     auto euler = std::make_shared<EulerIntegration>(large_dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     VectorXd output(2 * model.nv);
 
-    euler->evaluate(var, output);
+    euler->evaluate(output);
 
     EXPECT_NEAR(output(0), 1.0, 1e-10);  // 0 + 1*1
     EXPECT_NEAR(output(1), 2.0, 1e-10);  // 1 + 1*1
@@ -245,10 +236,9 @@ TEST_F(EulerEdgeCaseTest, VerySmallTimestep) {
     auto euler = std::make_shared<EulerIntegration>(small_dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     VectorXd output(2 * model.nv);
 
-    euler->evaluate(var, output);
+    euler->evaluate(output);
 
     // With tiny dt, output should be approximately [q, v]
     EXPECT_NEAR(output(0), 1.0, 1e-8);
@@ -263,10 +253,9 @@ TEST_F(EulerEdgeCaseTest, LargeValues) {
     auto euler = std::make_shared<EulerIntegration>(dt);
     euler->set_node(node.get());
 
-    VectorXd var;
     VectorXd output(2 * model.nv);
 
-    euler->evaluate(var, output);
+    euler->evaluate(output);
 
     EXPECT_FALSE(std::isnan(output(0)));
     EXPECT_FALSE(std::isnan(output(1)));
