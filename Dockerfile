@@ -78,6 +78,11 @@ ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 # Update shared library cache
 RUN ldconfig
 
+# Additional development tools
+RUN apt-get update && apt-get install -y \
+    cmake-curses-gui \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create workspace
 WORKDIR /workspace
 

@@ -50,24 +50,24 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     pinocchio::pinocchio
 )
 
-# Examples
-add_executable(verify_imports examples/verify_imports.cpp)
-target_link_libraries(verify_imports ${PROJECT_NAME})
+# ========================================
+# EXAMPLES CONFIGURATION
+# ========================================
+option(BUILD_EXAMPLES "Build example executables" OFF)
 
-add_executable(test_hpipm_integration examples/test_hpipm_integration.cpp)
-target_link_libraries(test_hpipm_integration ${PROJECT_NAME})
-
-add_executable(double_integrator_example examples/double_integrator_example.cpp)
-target_link_libraries(double_integrator_example ${PROJECT_NAME})
-
-
-add_executable(example_trajopt examples/example_trajopt.cpp)
-target_link_libraries(example_trajopt ${PROJECT_NAME})
+if(BUILD_EXAMPLES)
+    file(GLOB EXAMPLE_SOURCES "examples/*.cpp")
+    foreach(EXAMPLE_SOURCE ${EXAMPLE_SOURCES})
+        get_filename_component(EXAMPLE_NAME ${EXAMPLE_SOURCE} NAME_WE)
+        add_executable(${EXAMPLE_NAME} ${EXAMPLE_SOURCE})
+        target_link_libraries(${EXAMPLE_NAME} ${PROJECT_NAME})
+    endforeach()
+endif()
 
 # ========================================
 # TESTING CONFIGURATION
 # ========================================
-option(BUILD_TESTING "Build unit tests" ON)
+option(BUILD_TESTING "Build unit tests" OFF)
 
 if(BUILD_TESTING)
     include(FetchContent)
