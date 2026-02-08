@@ -30,6 +30,9 @@ class AbstractFunction {
 
     Node* _node = nullptr;  // Owning node (set by Node::add_cost/add_constraint)
 
+    // Internal Jacobian storage (pre-allocated, size: _output_dim × _input_dim)
+    MatrixXd _jacobian;
+
    public:
     AbstractFunction() : _name("") {}
     virtual ~AbstractFunction() = default;
@@ -57,9 +60,36 @@ class AbstractFunction {
     virtual void evaluate(VectorXdRef output) = 0;
 
     /**
-     * Compute the Jacobian (first derivatives).
+     * Compute the Jacobian (first derivatives) - legacy interface.
+     * @param jac Output Jacobian matrix
      */
     virtual void jacobian(MatrixXdRef jac) = 0;
+
+    /**
+     * Compute the Jacobian (first derivatives) - new interface.
+     * Stores result in internal _jacobian matrix.
+     * Override this in derived classes for SQP solver compatibility.
+     */
+    virtual void jacobian() {
+        // Default: call legacy interface with internal storage
+        jacobian(_jacobian);
+    }
+
+    /**
+     * Get Jacobian block w.r.t. state x (∂f/∂x).
+     * Override in derived classes for specific block extraction.
+     */
+    virtual MatrixXdConstRef get_jac_x() const {
+        return _jacobian;  // Default: return full Jacobian
+    }
+
+    /**
+     * Get Jacobian block w.r.t. control u (∂f/∂u).
+     * Override in derived classes that depend on control.
+     */
+    virtual MatrixXd get_jac_u() const {
+        return MatrixXd::Zero(_output_dim, 0);  // Default: no control dependency
+    }
 
     // /**
     //  * Compute the Hessian (second derivatives) - optional, mainly for costs.

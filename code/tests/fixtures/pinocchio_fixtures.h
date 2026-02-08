@@ -13,6 +13,7 @@ class DoubleIntegratorFixture : public ::testing::Test {
    protected:
     pinocchio::Model model;
     std::shared_ptr<Node> node;
+    std::shared_ptr<Node> next_node;
     double dt = 0.1;
 
     void SetUp() override {
@@ -30,9 +31,12 @@ class DoubleIntegratorFixture : public ::testing::Test {
         model.upperPositionLimit << 10.0;
 
         node = std::make_shared<Node>(model);
+        next_node = std::make_shared<Node>(model);
+        node->next_node = next_node;
     }
 
     void TearDown() override {
         node.reset();
+        next_node.reset();
     }
 };

@@ -28,17 +28,24 @@ class EulerIntegration : public AbstractConstraint {
     VectorXd _vq_next;
     VectorXd _aq;
     VectorXd _q_integrated;
+    VectorXd _res;
     MatrixXd _J_q;
     MatrixXd _J_v;
+
 
    public:
     explicit EulerIntegration(double dt);
 
     ~EulerIntegration() = default;
 
-    void allocate_slices() override {}
+    void allocate_slices() override;
 
     void evaluate(VectorXdRef output) override;
 
     void jacobian(MatrixXdRef jac) override;
+    void jacobian() override;
+
+    // Accessors for SQP solver
+    MatrixXdConstRef get_jac_x() const override;
+    MatrixXd get_jac_u() const override;
 };

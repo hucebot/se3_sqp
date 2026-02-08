@@ -27,7 +27,7 @@ int main() {
     std::cout << "OK - Matrix-vector product: [" << result.transpose() << "]"
               << std::endl;
 
-    SQPSolver mpla;
+    // SQPSolver mpla;
 
     // Test Pinocchio
     std::cout << "\n[Pinocchio] ";
