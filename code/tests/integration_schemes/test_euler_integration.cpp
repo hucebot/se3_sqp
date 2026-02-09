@@ -317,7 +317,7 @@ protected:
         // Create two nodes (current and next)
         node_k = std::make_shared<Node>(model);
         node_k_next = std::make_shared<Node>(model);
-        node_k->next_node = node_k_next;
+        node_k->next_node = node_k_next.get();
     }
 
     void TearDown() override {

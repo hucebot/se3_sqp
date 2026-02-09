@@ -32,7 +32,7 @@ class DoubleIntegratorFixture : public ::testing::Test {
 
         node = std::make_shared<Node>(model);
         next_node = std::make_shared<Node>(model);
-        node->next_node = next_node;
+        node->next_node = next_node.get();
     }
 
     void TearDown() override {

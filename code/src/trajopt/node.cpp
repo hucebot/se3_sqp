@@ -26,3 +26,22 @@ void Node::add_constraint(std::shared_ptr<AbstractConstraint> constraint) {
     constraint->set_node(this);
     constraint->allocate_slices();
 }
+
+void Node::add_dynamics(std::shared_ptr<AbstractConstraint> constraint) {
+    _dynamics = constraint;
+    constraint->set_node(this);
+    constraint->allocate_slices();
+}
+
+void Node::rebind_constraints() {
+    // Update all constraints' node pointers to this node
+    if (_dynamics) {
+        _dynamics->set_node(this);
+    }
+    for (auto& constraint : _constraint_list) {
+        constraint->set_node(this);
+    }
+    for (auto& cost : _cost_list) {
+        cost->set_node(this);
+    }
+}

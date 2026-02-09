@@ -4,6 +4,7 @@
 #include <qp_solver/hpipm_solver.h>
 #include <sqp_solver/sqp_options.h>
 #include <sqp_solver/sqp_statistics.h>
+#include <trajopt/ocp.h>
 
 #include <Eigen/Dense>
 #include <vector>
@@ -13,13 +14,16 @@ class SQPSolver {
     int _N, _nx, _ndx, _nu,
         _ndu;  // number of nodes, state, deltastate, control, deltacontrol
 
+    OCP& _ocproblem;
+
+
     // High-performance QP solver (direct member for zero indirection)
     HPIPMSolver _qp_solver;
 
-    // Current trajectory (Eigen for SIMD-vectorized operations)
-    std::vector<VectorXd> _x;  // States: _x[k] is VectorXd of size _nx
-    std::vector<VectorXd> _u;  // Controls: _u[k] is VectorXd of size _nu
-
+    // // Current trajectory (Eigen for SIMD-vectorized operations)
+    std::vector<VectorXd> _x_candidate;  // States: _x[k] is VectorXd of size _nx
+    std::vector<VectorXd> _u_candidate;  // Controls: _u[k] is VectorXd of size _nu
+    
     // Linearization storage per stage (Eigen matrices for optimized operations)
     std::vector<MatrixXd> _A;  // Dynamics Jacobian A_k (nx x nx)
     std::vector<MatrixXd> _B;  // Dynamics Jacobian B_k (nx x nu)
@@ -51,7 +55,7 @@ class SQPSolver {
     bool break_criteria();
 
    public:
-    SQPSolver();
+    SQPSolver(OCP& ocp);
     ~SQPSolver();
 
     /// @brief solve the defined problem

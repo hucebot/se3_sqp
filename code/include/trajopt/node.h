@@ -39,7 +39,7 @@ class Node {
     Node(pinocchio::Model mdl);
     ~Node() = default;
 
-    std::shared_ptr<Node> next_node;
+    Node* next_node = nullptr;
 
     std::shared_ptr<pinocchio::Model> _model_ptr;
     pinocchio::Data _data;
@@ -72,6 +72,8 @@ class Node {
     void cached_update();
 
     void add_cost(std::shared_ptr<AbstractCost> cost);
+
+    void add_dynamics(std::shared_ptr<AbstractConstraint> dynamics);
     void add_constraint(std::shared_ptr<AbstractConstraint> constraint);
 
     // Access to constraint and cost lists
@@ -81,4 +83,11 @@ class Node {
     const std::vector<std::shared_ptr<AbstractConstraint>>& get_constraints() const {
         return _constraint_list;
     }
+    const std::shared_ptr<AbstractConstraint>& get_dynamics() const {
+        return _dynamics;
+    }
+
+    // Update all constraints' node pointers to point to this node
+    // (needed after node is copied into a container)
+    void rebind_constraints();
 };
