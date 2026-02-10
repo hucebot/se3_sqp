@@ -13,7 +13,9 @@ void SQPstatistics::reset()
     total_cost = 0.0;
     total_constraint_violation = 0.0;
     step_norm = 0.0;
-    linesearch_iterations = 0.0;
+    linesearch_iterations = 0;
+    total_time_ms = 0.0;
+    last_iteration_time_ms = 0.0;
 }
 
 void SQPstatistics::print(int verbosity) const
@@ -41,10 +43,24 @@ void SQPstatistics::print_internal(std::ostream& os, int verbosity) const
 
     if (verbosity == 0)
     {
-        // Minimal output - single line
-        os << "Iter: " << number_of_iterations
-           << " | Cost: " << total_cost
-           << " | Viol: " << total_constraint_violation << std::endl;
+        // Normal output - header at beginning and every 10 iterations
+        if (number_of_iterations == 1 || number_of_iterations % 10 == 0)
+        {
+            os << std::setw(6) << "Iter"
+               << std::setw(14) << "Cost"
+               << std::setw(14) << "Violation"
+               << std::setw(14) << "StepNorm"
+               << std::setw(10) << "LSiters"
+               << std::setw(12) << "Time(ms)"
+               << std::setw(12) << "TotTime(ms)" << std::endl;
+        }
+        os << std::setw(6) << number_of_iterations
+           << std::setw(14) << total_cost
+           << std::setw(14) << total_constraint_violation
+           << std::setw(14) << step_norm
+           << std::setw(10) << linesearch_iterations
+           << std::setw(12) << std::setprecision(3) << last_iteration_time_ms
+           << std::setw(12) << std::setprecision(1) << total_time_ms << std::endl;
     }
     else if (verbosity == 1)
     {
@@ -55,20 +71,25 @@ void SQPstatistics::print_internal(std::ostream& os, int verbosity) const
         os << "  Constraint Violation:   " << total_constraint_violation << std::endl;
         os << "  Step Norm:              " << step_norm << std::endl;
         os << "  Linesearch Iterations:  " << linesearch_iterations << std::endl;
+        os << "  Last Iteration Time:    " << std::setprecision(3) << last_iteration_time_ms << " ms" << std::endl;
+        os << "  Total Time:             " << std::setprecision(3) << total_time_ms / 1000.0 << " s" << std::endl;
     }
-    else
-    {
-        // Detailed output
-        os << "=====================================" << std::endl;
-        os << "  SQP SOLVER STATISTICS (DETAILED)   " << std::endl;
-        os << "=====================================" << std::endl;
-        os << "  Number of Iterations:        " << number_of_iterations << std::endl;
-        os << "  Total Cost:                  " << total_cost << std::endl;
-        os << "  Total Constraint Violation:  " << total_constraint_violation << std::endl;
-        os << "  Final Step Norm:             " << step_norm << std::endl;
-        os << "  Linesearch Iterations:       " << linesearch_iterations << std::endl;
-        os << "=====================================" << std::endl;
-    }
+}
+
+void SQPstatistics::update()
+{
+    auto now = std::chrono::high_resolution_clock::now();
+    last_iteration_time_ms = std::chrono::duration<double, std::milli>(now - _iteration_start_time).count();
+    total_time_ms = std::chrono::duration<double, std::milli>(now - _solve_start_time).count();
+    _iteration_start_time = now;
+    number_of_iterations++;
+}
+
+void SQPstatistics::start_timer()
+{
+    auto now = std::chrono::high_resolution_clock::now();
+    _solve_start_time = now;
+    _iteration_start_time = now;
 }
 
 void SQPstatistics::update_iterations(int iter)
@@ -91,7 +112,7 @@ void SQPstatistics::update_step_norm(double norm)
     step_norm = norm;
 }
 
-void SQPstatistics::update_linesearch_iterations(double ls_iter)
+void SQPstatistics::update_linesearch_iterations(int ls_iter)
 {
     linesearch_iterations = ls_iter;
 }

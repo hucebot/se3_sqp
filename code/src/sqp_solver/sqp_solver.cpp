@@ -9,14 +9,19 @@ SQPSolver::~SQPSolver() {
 }
 
 void SQPSolver::solve() {
+    _stats.start_timer();
     for (int i = 0; i < _opts.max_sqp_iters; i++) {
+        _ls_alpha = 1.;
         linearize();
         populate_qp();
         _qp_solver.solve();
         step();
+        _stats.update();
 
         if (break_criteria()) break;
+        _stats.print();
     }
+    _stats.print(1);
 }
 
 void SQPSolver::init() {
@@ -77,7 +82,7 @@ void SQPSolver::init() {
 
     // Set solver options for maximum performance
     _qp_solver.set_iter_max(50);                 // Reasonable default
-    _qp_solver.set_tol(1e-8, 1e-8, 1e-8, 1e-8);  // Tolerances
+    _qp_solver.set_tol(1e-3, 1e-3, 1e-3, 1e-3);  // Tolerances
     _qp_solver.set_warm_start(
         true);  // CRITICAL: Enable warm-starting (huge speedup)
 }
@@ -109,27 +114,27 @@ void SQPSolver::populate_qp() {
 void SQPSolver::step() {
     // Extract QP solution and update trajectory
 
-    double alpha = _ls_alpha;  // Line search step size
     _step_norm = 0.0;          // Reset step norm for convergence check
 
     // Process all N stages (HPIPM stages 0 to N-1)
     for (int k = 0; k < _N; ++k) {
         _qp_solver.get_x(k, _dx[k].data());
-        _step_norm += (alpha * _dx[k]).squaredNorm();
+        _step_norm += (_ls_alpha * _dx[k]).squaredNorm();
 
-        _x_candidate[k] += alpha * _dx[k]; //TODO - This needs the \oplus
+        _x_candidate[k] += _ls_alpha * _dx[k]; //TODO - This needs the \oplus
 
         // Terminal stage (k = N-1) has no control
         if (k < _N - 1) {
             _qp_solver.get_u(k, _du[k].data());
-            _step_norm += (alpha * _du[k]).squaredNorm();
+            _step_norm += (_ls_alpha * _du[k]).squaredNorm();
 
-            _u_candidate[k] += alpha * _du[k];
+            _u_candidate[k] += _ls_alpha * _du[k];
         }
     }
 
     // Take square root to get actual norm
     _step_norm = std::sqrt(_step_norm);
+    _stats.update_step_norm(_step_norm);
 }
 
 void SQPSolver::linearize() {
