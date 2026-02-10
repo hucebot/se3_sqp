@@ -31,6 +31,7 @@ class EulerIntegration : public AbstractConstraint {
     VectorXd _res;
     MatrixXd _J_q;
     MatrixXd _J_v;
+    MatrixXd _J_diff_qnext;
 
 
    public:

@@ -15,6 +15,7 @@ void EulerIntegration::allocate_slices() {
     _res.resize(2*nv);
     _J_q.resize(nv, nv);
     _J_v.resize(nv, nv);
+    _J_diff_qnext.resize(nv, nv);
 
     // Pre-allocate Jacobian: (2*nv × 5*nv)
     // Columns: [q_k(nv), v_k(nv), u_k(nv), q_{k+1}(nv), v_{k+1}(nv)]
@@ -69,15 +70,14 @@ void EulerIntegration::jacobian(MatrixXdRef jac) {
                           pinocchio::ArgumentPosition::ARG1);
 
     // Jacobian of difference w.r.t. q_next (first argument)
-    MatrixXd J_diff_qnext(nv, nv); // #TODO - Optimize
-    pinocchio::dDifference(_node->model(), _q_integrated, _q_next, J_diff_qnext,
+    pinocchio::dDifference(_node->model(), _q_integrated, _q_next, _J_diff_qnext,
                            pinocchio::ArgumentPosition::ARG0);
 
     // Position constraint Jacobian: ∂(q_next ⊖ q_integrated)/∂[q_k, v_k, u_k, q_{k+1}, v_{k+1}]
     // ∂/∂q_k = -dDiff/dq_int * dInt/dq
-    jac.block(0, 0, nv, nv) = -J_diff_qnext * _J_q;
+    jac.block(0, 0, nv, nv) = -_J_diff_qnext * _J_q;
     // ∂/∂v_k = -dDiff/dq_int * dInt/d(dt*v) * dt
-    jac.block(0, nv, nv, nv) = -J_diff_qnext * _J_v * _dt;
+    jac.block(0, nv, nv, nv) = -_J_diff_qnext * _J_v * _dt;
     // ∂/∂u_k = 0 (position doesn't depend on control)
     jac.block(0, 2*nv, nv, nv).setZero();
 
