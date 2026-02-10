@@ -112,23 +112,35 @@ void SQPSolver::populate_qp() {
 }
 
 void SQPSolver::step() {
-    // Extract QP solution and update trajectory
+    // Extract QP solution and compute candidate trajectory
 
     _step_norm = 0.0;          // Reset step norm for convergence check
+
+    auto& x_nom = _ocproblem.x_traj();
+    auto& u_nom = _ocproblem.u_traj();
 
     // Process all N stages (HPIPM stages 0 to N-1)
     for (int k = 0; k < _N; ++k) {
         _qp_solver.get_x(k, _dx[k].data());
         _step_norm += (_ls_alpha * _dx[k]).squaredNorm();
 
-        _x_candidate[k] += _ls_alpha * _dx[k]; //TODO - This needs the \oplus
+        _x_candidate[k] = x_nom[k] + _ls_alpha * _dx[k]; //TODO - This needs the \oplus
 
         // Terminal stage (k = N-1) has no control
         if (k < _N - 1) {
             _qp_solver.get_u(k, _du[k].data());
             _step_norm += (_ls_alpha * _du[k]).squaredNorm();
 
-            _u_candidate[k] += _ls_alpha * _du[k];
+            _u_candidate[k] = u_nom[k] + _ls_alpha * _du[k];
+        }
+    }
+
+    // Accept step: copy candidate to nominal
+    // TODO: This will be moved to line search logic
+    for (int k = 0; k < _N; ++k) {
+        x_nom[k] = _x_candidate[k];
+        if (k < _N - 1) {
+            u_nom[k] = _u_candidate[k];
         }
     }
 

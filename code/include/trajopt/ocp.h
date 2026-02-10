@@ -9,14 +9,18 @@ class Node;
 
 class OCP {
    private:
-    // Horizon as a list of nodes (nodes own their state/control data)
+    // Horizon as a list of nodes
     std::vector<Node> _horizon;
+
+    // Trajectory storage (owned by OCP)
+    std::vector<VectorXd> _x_traj;
+    std::vector<VectorXd> _u_traj;
 
     // Problem dimensions
     int _num_nodes;
 
    public:
-    OCP();
+    OCP(int num_nodes);
     ~OCP();
 
     // Methods to build the horizon
@@ -32,4 +36,16 @@ class OCP {
     // Pointer accessors for HPIPM (zero-copy)
     double* x_ptr(int k) { return _horizon[k].x().data(); }
     double* u_ptr(int k) { return _horizon[k].u().data(); }
+
+    // Allocate trajectories and bind nodes (call after adding all nodes)
+    void finalize();
+
+    // Bind nodes to external trajectory (for SQP line search)
+    void bind_trajectory(std::vector<VectorXd>& x, std::vector<VectorXd>& u);
+
+    // Access to OCP-owned trajectory
+    std::vector<VectorXd>& x_traj() { return _x_traj; }
+    std::vector<VectorXd>& u_traj() { return _u_traj; }
+    const std::vector<VectorXd>& x_traj() const { return _x_traj; }
+    const std::vector<VectorXd>& u_traj() const { return _u_traj; }
 };

@@ -31,9 +31,9 @@ class Node {
     std::vector<std::shared_ptr<AbstractCost>> _cost_list;
     std::vector<std::shared_ptr<AbstractConstraint>> _constraint_list;
 
-    // State and control vectors
-    VectorXd _x;   // State: [q, v] contiguous
-    VectorXd _u;   // Control input
+    // Pointers to trajectory data (owned by OCP)
+    VectorXd* _x_ptr = nullptr;
+    VectorXd* _u_ptr = nullptr;
 
    public:
     Node(pinocchio::Model mdl);
@@ -47,23 +47,26 @@ class Node {
     int _nq;
     int _nv;
 
+    // Bind node to trajectory data
+    void bind_trajectory(VectorXd* x, VectorXd* u);
+
     // Zero-copy segment accessors for state components
-    auto q() { return _x.head(_nq); }
-    auto v() { return _x.tail(_nv); }
-    auto q() const { return _x.head(_nq); }
-    auto v() const { return _x.tail(_nv); }
+    auto q() { return _x_ptr->head(_nq); }
+    auto v() { return _x_ptr->tail(_nv); }
+    auto q() const { return _x_ptr->head(_nq); }
+    auto v() const { return _x_ptr->tail(_nv); }
 
     // Full state/control accessors
-    VectorXdRef x() { return _x; }
-    VectorXdRef u() { return _u; }
-    VectorXdConstRef x() const { return _x; }
-    VectorXdConstRef u() const { return _u; }
+    VectorXdRef x() { return *_x_ptr; }
+    VectorXdRef u() { return *_u_ptr; }
+    VectorXdConstRef x() const { return *_x_ptr; }
+    VectorXdConstRef u() const { return *_u_ptr; }
 
     // Dimensions
     int nq() const { return _nq; }
     int nv() const { return _nv; }
     int nx() const { return _nq + _nv; }
-    int nu() const { return _u.size(); }
+    int nu() const { return _nv; }
 
     // Model access
     pinocchio::Model& model() { return *_model_ptr; }

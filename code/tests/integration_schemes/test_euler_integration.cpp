@@ -299,6 +299,10 @@ protected:
     std::shared_ptr<Node> node_k_next;
     double dt = 0.1;
 
+    // Trajectory storage for nodes
+    VectorXd x_k_storage, u_k_storage;
+    VectorXd x_k_next_storage, u_k_next_storage;
+
     void SetUp() override {
         // Create simple 1-DOF model
         model.name = "double_integrator";
@@ -318,6 +322,16 @@ protected:
         node_k = std::make_shared<Node>(model);
         node_k_next = std::make_shared<Node>(model);
         node_k->next_node = node_k_next.get();
+
+        // Allocate trajectory storage
+        x_k_storage.setZero(node_k->nx());
+        u_k_storage.setZero(node_k->nu());
+        x_k_next_storage.setZero(node_k_next->nx());
+        u_k_next_storage.setZero(node_k_next->nu());
+
+        // Bind nodes to storage
+        node_k->bind_trajectory(&x_k_storage, &u_k_storage);
+        node_k_next->bind_trajectory(&x_k_next_storage, &u_k_next_storage);
     }
 
     void TearDown() override {

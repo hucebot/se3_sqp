@@ -3,12 +3,17 @@
 
 Node::Node(pinocchio::Model mdl)
     : _model_ptr(std::make_shared<pinocchio::Model>(std::move(mdl))),
-      _data(*_model_ptr) {
+      _data(*_model_ptr),
+      _x_ptr(nullptr),
+      _u_ptr(nullptr) {
     _nq = _model_ptr->nq;
     _nv = _model_ptr->nv;
+    // _x and _u are bound later via bind_trajectory()
+}
 
-    _x.resize(_nq + _nv);  // State: [q, v]
-    _u.resize(_nv);        // Control: acceleration by default
+void Node::bind_trajectory(VectorXd* x, VectorXd* u) {
+    _x_ptr = x;
+    _u_ptr = u;
 }
 
 void Node::cached_update(){

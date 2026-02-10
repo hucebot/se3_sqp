@@ -12,7 +12,7 @@ int main() {
     int N = 20;
     double dt = 0.01;
 
-    OCP ocp;
+    OCP ocp(N);
 
     // Create a simple 1-DOF model (double integrator)
     pinocchio::Model robot_mdl;
@@ -33,12 +33,15 @@ int main() {
     {
         Node node(robot_mdl);
         node.add_dynamics(std::make_shared<EulerIntegration>(dt));
-        ocp.addNode(node);
+        ocp.addNode(std::move(node));
     }
+
+    // Finalize: allocate trajectories and bind nodes
+    ocp.finalize();
 
     // Set initial guess
     for (int k = 0; k < N; k++) {
-        ocp.get_node(k).x().setZero();  // [q, v] = 0
+        ocp.get_node(k).x().setOnes();  // [q, v] = 0
         ocp.get_node(k).u().setZero();  // control = 0
     }
 
