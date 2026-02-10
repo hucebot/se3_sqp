@@ -6,37 +6,29 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ========================================
-# MAXIMUM PERFORMANCE OPTIMIZATION FLAGS
+# RELEASE BUILD OPTIMIZATIONS
 # ========================================
-
-# Aggressive optimization for Release builds
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
-
-# Link-Time Optimization (LTO) - CRITICAL for header-only performance
-# Allows compiler to inline across translation units
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 
-# Additional performance flags
 add_compile_options(
-    $<$<CONFIG:Release>:-ffast-math>         # Aggressive floating-point optimizations
-    $<$<CONFIG:Release>:-funroll-loops>      # Unroll loops for speed
-    $<$<CONFIG:Release>:-finline-functions>  # Inline aggressively
+    $<$<CONFIG:Release>:-ffast-math>
+    $<$<CONFIG:Release>:-funroll-loops>
+    $<$<CONFIG:Release>:-finline-functions>
 )
 
-message(STATUS "Performance optimizations enabled for Release builds:")
-message(STATUS "  - O3 optimization level")
-message(STATUS "  - march=native (CPU-specific vectorization)")
-message(STATUS "  - Link-Time Optimization (LTO)")
-message(STATUS "  - Fast-math, loop unrolling, aggressive inlining")
-
-# Find dependencies
+# ========================================
+# DEPENDENCIES
+# ========================================
 find_package(Eigen3 REQUIRED)
 find_package(blasfeo REQUIRED)
 find_package(hpipm REQUIRED)
 find_package(pinocchio REQUIRED)
 
-# sqp_solver library
+# ========================================
+# LIBRARY
+# ========================================
 file(GLOB_RECURSE LIB_SOURCES "src/**.cpp")
 add_library(${PROJECT_NAME} ${LIB_SOURCES})
 
@@ -53,7 +45,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 # ========================================
 # EXAMPLES CONFIGURATION
 # ========================================
-option(BUILD_EXAMPLES "Build example executables" OFF)
+option(BUILD_EXAMPLES "Build example executables" ON)
 
 if(BUILD_EXAMPLES)
     file(GLOB EXAMPLE_SOURCES "examples/*.cpp")
