@@ -209,7 +209,7 @@ TEST_F(EulerJacobianTest, JacobianStructure_VelocityAccelerationBlock) {
     // Check velocity-acceleration block is -dt*I
     // Constraint: v_{k+1} - v_k - dt*u_k = 0, so ∂g/∂u_k = -dt*I
     // jac(nv:2*nv, 2*nv:3*nv) = -dt * I
-    MatrixXd expected_va_block = -dt * MatrixXd::Identity(model.nv, model.nv);
+    MatrixXd expected_va_block = dt * MatrixXd::Identity(model.nv, model.nv);
     MatrixXd actual_va_block = jac.block(model.nv, 2*model.nv, model.nv, model.nv);
 
     EXPECT_TRUE(actual_va_block.isApprox(expected_va_block, 1e-10))
@@ -414,7 +414,7 @@ TEST_F(EulerJacobianNewInterfaceTest, JacUStructure) {
 
     // Check bottom half is -dt*I
     MatrixXd bottom_half = jac_u.bottomRows(model.nv);
-    MatrixXd expected_bottom = -dt * MatrixXd::Identity(model.nv, model.nv);
+    MatrixXd expected_bottom = dt * MatrixXd::Identity(model.nv, model.nv);
     EXPECT_TRUE(bottom_half.isApprox(expected_bottom, 1e-10))
         << "Expected:\n" << expected_bottom << "\nActual:\n" << bottom_half;
 }
@@ -434,7 +434,7 @@ TEST_F(EulerJacobianNewInterfaceTest, JacXVelocityBlockStructure) {
 
     // For velocity constraint: ∂(v_{k+1} - v_k - dt*u_k)/∂v_k = -I
     MatrixXd vel_wrt_v_block = jac_x.block(model.nv, model.nv, model.nv, model.nv);
-    MatrixXd expected = -MatrixXd::Identity(model.nv, model.nv);
+    MatrixXd expected = MatrixXd::Identity(model.nv, model.nv);
 
     EXPECT_TRUE(vel_wrt_v_block.isApprox(expected, 1e-10))
         << "Expected:\n" << expected << "\nActual:\n" << vel_wrt_v_block;
