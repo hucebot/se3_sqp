@@ -16,10 +16,11 @@ void SQPSolver::solve() {
         populate_qp();
         _qp_solver.solve();
         step();
-        _stats.update();
 
-        if (break_criteria()) break;
+        _stats.update();
         _stats.print();
+        if (break_criteria()) break;
+
     }
     _stats.print(1);
 }

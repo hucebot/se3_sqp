@@ -72,10 +72,11 @@ class Node {
     pinocchio::Model& model() { return *_model_ptr; }
     const pinocchio::Model& model() const { return *_model_ptr; }
 
+    pinocchio::Data& data() {return _data;}
+
     void cached_update();
 
     void add_cost(std::shared_ptr<AbstractCost> cost);
-
     void add_dynamics(std::shared_ptr<AbstractConstraint> dynamics);
     void add_constraint(std::shared_ptr<AbstractConstraint> constraint);
 
