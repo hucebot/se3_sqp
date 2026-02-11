@@ -43,7 +43,7 @@ RUN git clone --depth 1 https://github.com/giaf/blasfeo.git /tmp/blasfeo && \
     cmake .. \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/opt/blasfeo \
-        -DTARGET=ARMV8A_APPLE_M1 \
+        -DTARGET=GENERIC \
         -DBUILD_SHARED_LIBS=ON \
         -DBLASFEO_EXAMPLES=OFF \
         -DBLAS_API=OFF && \

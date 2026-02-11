@@ -42,7 +42,7 @@ int main() {
     // Set initial guess
     for (int k = 0; k < N; k++) {
         ocp.get_node(k).x().setOnes();  // [q, v] = 0
-        ocp.get_node(k).u().setZero();  // control = 0
+        ocp.get_node(k).u().setOnes();  // control = 0
     }
 
     SQPSolver solver(ocp);

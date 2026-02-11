@@ -43,8 +43,8 @@ void EulerIntegration::evaluate(VectorXdRef output) {
     pinocchio::difference(_node->model(), _q_next, _q_integrated,
                           _res.head(_node->nv()));
 
-    // Velocity residual: v_next - v - dt * a
-    _res.tail(_node->nv()) = _vq_next - (_vq + _dt * _aq);
+    // Velocity defect: f_v(x_k, u_k) - v_{k+1} = (v + dt*a) - v_next
+    _res.tail(_node->nv()) = (_vq + _dt * _aq) - _vq_next;
 
     output = _res;
 
@@ -62,6 +62,7 @@ void EulerIntegration::jacobian(MatrixXdRef jac) {
     jac.setZero();
     _J_q.setZero();
     _J_v.setZero();
+    _J_diff_qnext.setZero();
 
     // Jacobians of integrate(q, dt*v) w.r.t. q and dt*v
     pinocchio::dIntegrate(_node->model(), _q, _vq * _dt, _J_q,
@@ -78,16 +79,12 @@ void EulerIntegration::jacobian(MatrixXdRef jac) {
     jac.block(0, 0, nv, nv) = _J_diff_qnext * _J_q;
     // ∂/∂v_k = -dDiff/dq_int * dInt/d(dt*v) * dt
     jac.block(0, nv, nv, nv) = _J_diff_qnext * _J_v * _dt;
-    // ∂/∂u_k = 0 (position doesn't depend on control)
-    jac.block(0, 2*nv, nv, nv).setZero();
 
-    // Velocity constraint Jacobian: ∂(v_{k+1} - v_k - dt*u_k)/∂[...]
-    // ∂/∂q_k = 0
-    jac.block(nv, 0, nv, nv).setZero();
-    // ∂/∂v_k = -I
-    jac.block(nv, nv, nv, nv) = -MatrixXd::Identity(nv, nv);
-    // ∂/∂u_k = -dt*I
-    jac.block(nv, 2*nv, nv, nv) = -_dt * MatrixXd::Identity(nv, nv);
+    // Velocity dynamics Jacobian: ∂f_v/∂[...] where f_v = v_k + dt*u_k
+    // ∂f_v/∂v_k = I
+    jac.block(nv, nv, nv, nv) = MatrixXd::Identity(nv, nv);
+    // ∂f_v/∂u_k = dt*I
+    jac.block(nv, 2*nv, nv, nv) = _dt * MatrixXd::Identity(nv, nv);
 }
 
 void EulerIntegration::jacobian() {
