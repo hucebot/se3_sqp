@@ -69,6 +69,20 @@ RUN git clone --depth 1 https://github.com/giaf/hpipm.git /tmp/hpipm && \
     rm -rf /tmp/hpipm
 
 # ============================================
+# Example Robot Data - Robot Models for Testing
+# ============================================
+RUN git clone --depth 1 --recursive https://github.com/Gepetto/example-robot-data.git /tmp/example-robot-data && \
+    cd /tmp/example-robot-data && \
+    mkdir build && cd build && \
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DBUILD_PYTHON_INTERFACE=OFF && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf /tmp/example-robot-data
+
+# ============================================
 # Environment Configuration
 # ============================================
 ENV LD_LIBRARY_PATH=/opt/blasfeo/lib:/opt/hpipm/lib:/usr/local/lib
