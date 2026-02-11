@@ -14,8 +14,9 @@ class InvDynamics : public AbstractConstraint {
     VectorXd _vq;
     VectorXd _aq;
     VectorXd _res;
-    MatrixXd _J_q;
-    MatrixXd _J_v;
+    MatrixXd _dtau_dq;
+    MatrixXd _dtau_dv;
+    MatrixXd _dtau_da;
 
    public:
     explicit InvDynamics();

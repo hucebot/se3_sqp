@@ -20,7 +20,7 @@ void EulerIntegration::allocate_slices() {
     // Pre-allocate Jacobian: (2*nv × 5*nv)
     // Columns: [q_k(nv), v_k(nv), u_k(nv), q_{k+1}(nv), v_{k+1}(nv)]
     _output_dim = 2 * nv;
-    _input_dim = 5 * nv;  // [x_k, u_k, x_{k+1}] = [2*nv, nv, 2*nv]
+    _input_dim = 3 * nv;  // [x_k, u_k, x_{k+1}] = [2*nv, nv, 2*nv]
     _jacobian.resize(_output_dim, _input_dim);
     _jacobian.setZero();
 
@@ -99,6 +99,5 @@ MatrixXdConstRef EulerIntegration::get_jac_x() const {
 
 MatrixXd EulerIntegration::get_jac_u() const {
     // Return ∂g/∂u_k (columns 2*nv to 3*nv-1)
-    auto nv = _node->nv();
-    return _jacobian.block(0, 2*nv, 2*nv, nv);
+    return _jacobian.rightCols(_node->nv(););
 }
