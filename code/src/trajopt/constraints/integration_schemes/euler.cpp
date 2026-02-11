@@ -70,14 +70,14 @@ void EulerIntegration::jacobian(MatrixXdRef jac) {
                           pinocchio::ArgumentPosition::ARG1);
 
     // Jacobian of difference w.r.t. q_next (first argument)
-    pinocchio::dDifference(_node->model(), _q_integrated, _q_next, _J_diff_qnext,
-                           pinocchio::ArgumentPosition::ARG0);
+    pinocchio::dDifference(_node->model(), _q_next, _q_integrated, _J_diff_qnext,
+                           pinocchio::ArgumentPosition::ARG1);
 
-    // Position constraint Jacobian: ∂(q_next ⊖ q_integrated)/∂[q_k, v_k, u_k, q_{k+1}, v_{k+1}]
+    // Position constraint Jacobian: ∂(q_next ⊖ q_integrated)/∂[q_k, v_k, u_k]
     // ∂/∂q_k = -dDiff/dq_int * dInt/dq
-    jac.block(0, 0, nv, nv) = -_J_diff_qnext * _J_q;
+    jac.block(0, 0, nv, nv) = _J_diff_qnext * _J_q;
     // ∂/∂v_k = -dDiff/dq_int * dInt/d(dt*v) * dt
-    jac.block(0, nv, nv, nv) = -_J_diff_qnext * _J_v * _dt;
+    jac.block(0, nv, nv, nv) = _J_diff_qnext * _J_v * _dt;
     // ∂/∂u_k = 0 (position doesn't depend on control)
     jac.block(0, 2*nv, nv, nv).setZero();
 
