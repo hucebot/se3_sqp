@@ -10,17 +10,19 @@ void InvDynamics::allocate_slices() {
     int nq = _node->nq();
     int nv = _node->nv();
 
-    _res.resize(2*nv);
+    _output_dim = nv;
+    _input_dim = 3 * nv;  // [x_k, u_k]
+
     _dtau_dq.resize(nv, nv);
     _dtau_dv.resize(nv, nv);
     _dtau_da.resize(nv, nv);
 
     // Columns: [q_k(nv), v_k(nv), u_k(nv)]
-    _output_dim = nv;
-    _input_dim = 3 * nv;  // [x_k, u_k]
+
     _jacobian.resize(_output_dim, _input_dim);
     _jacobian.setZero();
 
+    set_equality_to_zero();
     // TODO: Set bounds from effort limimits
 }
 
@@ -28,8 +30,7 @@ void InvDynamics::evaluate(VectorXdRef output) {
     _q       = _node->q();
     _vq      = _node->v();
     _aq      = _node->u();
-    output.resize(_node->nv());
-    
+
     pinocchio::rnea(_node->model(), _node->data(), _q, _vq, _aq);
 
     output = _node->data().tau;

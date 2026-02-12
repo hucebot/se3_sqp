@@ -17,7 +17,7 @@ extern "C" {
  */
 class HPIPMSolver {
    private:
-    int _N, _nx, _nu, _ng;
+    int _N;
     bool _initialized;
 
     // HPIPM structures
@@ -42,8 +42,14 @@ class HPIPMSolver {
     HPIPMSolver(const HPIPMSolver&) = delete;
     HPIPMSolver& operator=(const HPIPMSolver&) = delete;
 
-    // Initialization (only non-inline method besides destructor)
-    void initialize(int N, int nx, int nu, int ng = 0, int nbx = 0, int nbu = 0);
+    // Initialization, allocates dimension structure
+    void initialize(int N);
+
+    // Stage initialization, sets stage dimensions
+    void init_stage(int k, int nx, int nu, int ng = 0, int nbx = 0, int nbu = 0);
+
+    // Allocates memory 
+    void allocate();
 
     // === Problem Specification (ALL INLINE for zero overhead) ===
 

@@ -35,8 +35,6 @@ void EulerIntegration::evaluate(VectorXdRef output) {
     _vq_next = _node->next_node->v();
     _aq      = _node->u();
 
-    output.resize(2 * _node->nv());
-
     pinocchio::integrate(_node->model(), _q, _vq * _dt, _q_integrated);
 
     // Position residual: q_next ⊖ q_integrated

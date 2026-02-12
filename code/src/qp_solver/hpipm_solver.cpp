@@ -19,9 +19,6 @@ extern "C" {
 
 HPIPMSolver::HPIPMSolver()
     : _N(0),
-      _nx(0),
-      _nu(0),
-      _ng(0),
       _initialized(false),
       _dim_mem(nullptr),
       _qp_mem(nullptr),
@@ -29,34 +26,32 @@ HPIPMSolver::HPIPMSolver()
       _arg_mem(nullptr),
       _ws_mem(nullptr) {}
 
-void HPIPMSolver::initialize(int N, int nx, int nu, int ng, int nbx, int nbu) {
+void HPIPMSolver::initialize(int N) {
     _N = N;
-    _nx = nx;
-    _nu = nu;
-    _ng = ng;
 
-    // Allocate dimension structure
     int dim_size = d_ocp_qp_dim_memsize(N);
     _dim_mem = malloc(dim_size);
     d_ocp_qp_dim_create(N, &_qp_dim, _dim_mem);
 
-    // Set dimensions for all stages
-    // Note: HPIPM API is (stage, value, dim_struct)
-    for (int k = 0; k <= N; k++) {
-        d_ocp_qp_dim_set_nx(k, nx, &_qp_dim);
-        if (k < N) {
-            d_ocp_qp_dim_set_nu(k, nu, &_qp_dim);
-        }
-        if (ng > 0) {
-            d_ocp_qp_dim_set_ng(k, ng, &_qp_dim);
-        }
-        if (nbx > 0) {
-            d_ocp_qp_dim_set_nbx(k, nbx, &_qp_dim);
-        }
-        if (nbu > 0 && k < N) {
-            d_ocp_qp_dim_set_nbu(k, nbu, &_qp_dim);
-        }
-    }
+}
+
+
+void HPIPMSolver::init_stage(int k, int nx, int nu, int ng, int nbx, int nbu) {
+    
+    d_ocp_qp_dim_set_nx(k, nx, &_qp_dim);
+    if (nu>0)
+        d_ocp_qp_dim_set_nu(k, nu, &_qp_dim);
+    if (ng > 0) 
+        d_ocp_qp_dim_set_ng(k, ng, &_qp_dim);
+    if (nbx > 0)
+        d_ocp_qp_dim_set_nbx(k, nbx, &_qp_dim);
+    if (nbu > 0)
+        d_ocp_qp_dim_set_nbu(k, nbu, &_qp_dim);
+
+}
+
+
+void HPIPMSolver::allocate(){
 
     // Allocate QP problem structure
     int qp_size = d_ocp_qp_memsize(&_qp_dim);

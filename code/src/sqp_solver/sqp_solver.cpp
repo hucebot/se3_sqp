@@ -1,6 +1,7 @@
 #include <sqp_solver/sqp_solver.h>
 
 #include <cmath>
+#include <iostream>
 
 SQPSolver::SQPSolver(OCP& ocp): _ocproblem(ocp) { init(); }
 
@@ -27,121 +28,126 @@ void SQPSolver::solve() {
 
 void SQPSolver::init() {
     _N = _ocproblem.num_nodes();
-    _nx = _ocproblem.get_node(0).nx();
-    _nu = _ocproblem.get_node(0).nu();
-    _ndx = _nx;  // For now, assume delta-state = state dimension
-    _ndu = _nu;
     _ls_alpha = 1.0;  // Default step size
+    _Nx = _N;
+    _Nu = _N-1;
 
     // Linearization storage - resize vectors and pre-allocate Eigen matrices
     // Dynamics: N-1 transitions (stages 0 to N-2)
-    _A.resize(_N - 1);
-    _B.resize(_N - 1);
-    _b.resize(_N - 1);
-    // Costs: N stages (0 to N-1)
-    _Q.resize(_N);
-    _R.resize(_N);
-    _S.resize(_N);
-    _q.resize(_N);
-    _r.resize(_N);
-
-    // Pre-allocate and zero dynamics matrices (N-1 transitions)
-    for (int k = 0; k < _N - 1; ++k) {
-        _A[k].setZero(_ndx, _ndx);
-        _B[k].setZero(_ndx, _ndu);
-        _b[k].setZero(_ndx);
-    }
-    // Pre-allocate and zero cost matrices (N stages)
-    for (int k = 0; k < _N; ++k) {
-        _Q[k].setIdentity(_ndx, _ndx);  // Default: identity cost on state
-        _R[k].setIdentity(_ndu, _ndu);  // Default: identity cost on control
-        _S[k].setZero(_ndu, _ndx);
-        _q[k].setZero(_ndx);
-        _r[k].setZero(_ndu);
-    }
-
+    _A.resize(_Nu);
+    _B.resize(_Nu);
+    _b.resize(_Nu);
+    // Costs:
+    _Q.resize(_Nx);   //state
+    _q.resize(_Nx);
+    _R.resize(_Nu); //control
+    _r.resize(_Nu);
+    // Constraints: 
+    _C.resize(_Nx);   //state
+    _D.resize(_Nu); //control 
+    _lg.resize(_Nx); 
+    _ug.resize(_Nx);
     // Step storage (reused every iteration)
-    _dx.resize(_N);
-    _du.resize(_N);
-    for (int k = 0; k < _N; ++k) {
-        _dx[k].setZero(_ndx);
-        _du[k].setZero(_ndu);
-    }
-
+    _dx.resize(_Nx);
+    _du.resize(_Nu);
     // Trajectory storage
-    _x_candidate.resize(_N);
-    _u_candidate.resize(_N);
-    for (int k = 0; k < _N; ++k) {
-        _x_candidate[k].setZero(_ndx);
-        _u_candidate[k].setZero(_ndu);
-    }
+    _x_candidate.resize(_Nx);
+    _u_candidate.resize(_Nu);
 
-    // Compute ng: total constraint output rows at each node (uniform across nodes)
-    _ng = 0;
-    for (auto& con : _ocproblem.get_node(0).get_constraints())
-        _ng += con->get_lower_bound().size();
+    // std::cout<<"initing hpipm"<<std::endl;
+    _qp_solver.initialize(_N);    
+    // std::cout<<"inited hpipm"<<std::endl;
 
-    // Pre-allocate constraint matrices (ng x ndx/ndu) per stage
-    _C.resize(_N);
-    _D.resize(_N);
-    _lg.resize(_N);
-    _ug.resize(_N);
-    for (int k = 0; k < _N; ++k) {
+    // std::cout<<"initing hpipm stages"<<std::endl;
+    for (int k = 0; k<_N; ++k )
+    {
+        // std::cout<<"hpipm_stage:"<<k<<std::endl;
+        _nx = _ocproblem.get_node(k).nx();
+        _nu = _ocproblem.get_node(k).nu();
+        _ndx = _nx;  // TODO: For now, assume delta-state = state dimension
+        _ndu = _nu;
+
+        // Pre-allocate and zero dynamics matrices (N-1 transitions)
+        if (k<_Nu){
+            _A[k].setZero(_ndx, _ndx);
+            _B[k].setZero(_ndx, _ndu);
+            _b[k].setZero(_ndx);
+        }
+
+        // Pre-allocate and zero cost matrices (N stages)
+        _Q[k].setIdentity(_ndx, _ndx);  // Default: identity cost on state
+        _q[k].setZero(_ndx);
+        if (k<_Nu){
+            _R[k].setIdentity(_ndu, _ndu);  // Default: identity cost on control
+            _r[k].setZero(_ndu);
+        }
+
+        // Pre-allocate constraint matrices (ng x ndx/ndu) per stage
         _C[k].setZero(_ng, _ndx);
-        _D[k].setZero(_ng, _ndu);
+        if (k<_Nu) _D[k].setZero(_ng, _ndu);
         _lg[k].setZero(_ng);
         _ug[k].setZero(_ng);
-    }
 
-    // Initialize HPIPM solver
-    // HPIPM horizon = N-1 for N nodes (N-1 dynamics, terminal stage has no control)
-    _qp_solver.initialize(_N - 1, _ndx, _ndu, _ng);
+        _dx[k].setZero(_ndx);
+        if (k<_Nu) _du[k].setZero(_ndu);
+
+        _x_candidate[k].setZero(_ndx);
+        _u_candidate[k].setZero(_ndu);
+
+        _ng = 0;
+        for (auto& con : _ocproblem.get_node(0).get_constraints())
+            _ng += con->get_output_dim();
+        
+        if (k==0) // 
+            _qp_solver.init_stage(k, _ndx, _ndu, _ng); //TODO: fix state and control bounds
+        else if (k<_Nu)
+            _qp_solver.init_stage(k, _ndx, _ndu, _ng);
+        else
+            _qp_solver.init_stage(k, _ndx, 0, _ng);
+    } 
+
+
+    // std::cout<<"allocating hpipm"<<std::endl;
+    _qp_solver.allocate();
+    // std::cout<<"allocated hpipm"<<std::endl;
 
     // Set solver options for maximum performance
-    _qp_solver.set_iter_max(50);                 // Reasonable default
+    _qp_solver.set_iter_max(500);                 // Reasonable default
     _qp_solver.set_tol(1e-3, 1e-3, 1e-3, 1e-3);  // Tolerances
-    _qp_solver.set_warm_start(
-        true);  // CRITICAL: Enable warm-starting (huge speedup)
+    _qp_solver.set_warm_start(true);             // CRITICAL: Enable warm-starting (huge speedup)
+
+    // std::cout<<"inited_sqp"<<std::endl;
 }
 
 void SQPSolver::populate_qp() {
     // Transfer linearization data to HPIPM
-    // Zero-copy: pass Eigen data pointers directly (column-major format)
-    // HPIPM expects column-major (Fortran-style), which matches Eigen's default
 
-    // Dynamics for stages k=0..N-2
-    for (int k = 0; k < _N - 1; ++k) {
-        _qp_solver.set_A(k, _A[k].data());
-        _qp_solver.set_B(k, _B[k].data());
-        _qp_solver.set_b(k, _b[k].data());
-    }
-
-    // Cost for HPIPM stages 0..N-1 (N stages total with horizon N-1)
     for (int k = 0; k < _N; ++k) {
+        if (k<_Nu){
+            _qp_solver.set_A(k, _A[k].data());
+            _qp_solver.set_B(k, _B[k].data());
+            _qp_solver.set_b(k, _b[k].data());    
+        }
+
         _qp_solver.set_Q(k, _Q[k].data());
         _qp_solver.set_q(k, _q[k].data());
-        // Terminal stage (k = N-1) has no control
-        if (k < _N - 1) {
+        if (k<_Nu){
             _qp_solver.set_R(k, _R[k].data());
             _qp_solver.set_r(k, _r[k].data());
-            _qp_solver.set_S(k, _S[k].data());
         }
+
+        _qp_solver.set_C(k, _C[k].data());
+        if (k< _Nu) _qp_solver.set_D(k, _D[k].data());
+        _qp_solver.set_lg(k, _lg[k].data());
+        _qp_solver.set_ug(k, _ug[k].data());
+
     }
 
-    // General constraints for all stages
-    if (_ng > 0) {
-        for (int k = 0; k < _N; ++k) {
-            _qp_solver.set_C(k, _C[k].data());
-            _qp_solver.set_D(k, _D[k].data());
-            _qp_solver.set_lg(k, _lg[k].data());
-            _qp_solver.set_ug(k, _ug[k].data());
-        }
-    }
+    // std::cout<<"populated_qp"<<std::endl;
 }
 
 void SQPSolver::step() {
     // Extract QP solution and compute candidate trajectory
-
     _step_norm = 0.0;          // Reset step norm for convergence check
 
     auto& x_nom = _ocproblem.x_traj();
@@ -155,7 +161,7 @@ void SQPSolver::step() {
         _x_candidate[k] = x_nom[k] + _ls_alpha * _dx[k]; //TODO - This needs the \oplus
 
         // Terminal stage (k = N-1) has no control
-        if (k < _N - 1) {
+        if (k < _Nu) {
             _qp_solver.get_u(k, _du[k].data());
             _step_norm += (_ls_alpha * _du[k]).squaredNorm();
 
@@ -178,11 +184,14 @@ void SQPSolver::step() {
 }
 
 void SQPSolver::linearize() {
+
     for (int i = 0; i < _N; i++)
     {
+        // std::cout<<i<<std::endl;
         // Dynamics for N-1 transitions (nodes 0 to N-2)
-        if (i < _N - 1)
+        if (i < _Nu)
         {
+            // std::cout<<"Linearizing dynamics"<<std::endl;
             auto dyn = _ocproblem.get_node(i).get_dynamics();
             dyn->evaluate(_b[i]);
             dyn->jacobian();
@@ -197,12 +206,14 @@ void SQPSolver::linearize() {
         //   S += w * Ju' * Jx
         _Q[i].setZero();
         _q[i].setZero();
-        _R[i].setZero();
-        _r[i].setZero();
-        _S[i].setZero();
+        if (i<_Nu){
+            _R[i].setZero();
+            _r[i].setZero();
+        }
 
+        // std::cout<<"Linearizing costs"<<std::endl;
         for (auto& cost : _ocproblem.get_node(i).get_costs()) {
-            int out_dim = cost->_output_dim;
+            int out_dim = cost->get_output_dim();
             VectorXd residual(out_dim);
             cost->evaluate(residual);
             cost->jacobian();
@@ -214,37 +225,35 @@ void SQPSolver::linearize() {
             _Q[i].noalias() += w * Jx.transpose() * Jx;
             _q[i].noalias() += w * Jx.transpose() * residual;
 
-            if (Ju.cols() > 0 && i < _N - 1) {
+            if (Ju.cols() > 0 && i < _Nu) {
                 _R[i].noalias() += w * Ju.transpose() * Ju;
                 _r[i].noalias() += w * Ju.transpose() * residual;
-                _S[i].noalias() += w * Ju.transpose() * Jx;
             }
         }
 
         // Constraint linearization: lg <= C*dx + D*du <= ug
         // Linearized around current x: lg = lb - g(x),  ug = ub - g(x)
         // C = dg/dx,  D = dg/du
-        if (_ng > 0) {
-            int row = 0;
-            VectorXd residual;
-            for (auto& con : _ocproblem.get_node(i).get_constraints()) {
-                int nc = con->get_lower_bound().size();
-                residual.resize(nc);
-                con->evaluate(residual);
-                con->jacobian();
+        // std::cout<<"Linearizing constraints"<<std::endl;
+        int row = 0;
+        VectorXd residual;
+        for (auto& con : _ocproblem.get_node(i).get_constraints()) {
+            int nc = con->get_output_dim();
+            residual.resize(nc);
+            con->evaluate(residual);
+            con->jacobian();
 
-                _C[i].middleRows(row, nc) = con->get_jac_x();
-                _lg[i].segment(row, nc) = con->get_lower_bound() - residual;
-                _ug[i].segment(row, nc) = con->get_upper_bound() - residual;
+            _C[i].middleRows(row, nc) = con->get_jac_x();
+            _lg[i].segment(row, nc) = con->get_lower_bound() - residual;
+            _ug[i].segment(row, nc) = con->get_upper_bound() - residual;
 
-                MatrixXd Ju = con->get_jac_u();
-                if (Ju.cols() > 0 && i < _N - 1)
-                    _D[i].middleRows(row, nc) = Ju;
-                else
-                    _D[i].middleRows(row, nc).setZero();
+            MatrixXd Ju = con->get_jac_u();
+            if (Ju.cols() > 0 && i < _Nu)
+                _D[i].middleRows(row, nc) = Ju;
+            else
+                _D[i].middleRows(row, nc).setZero();
 
-                row += nc;
-            }
+            row += nc;
         }
 
     }

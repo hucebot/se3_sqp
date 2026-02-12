@@ -11,7 +11,7 @@
 
 class SQPSolver {
    private:
-    int _N, _nx, _ndx, _nu,
+    int _N, _Nx, _Nu, _nx, _ndx, _nu,
         _ndu;  // number of nodes, state, deltastate, control, deltacontrol
 
     OCP& _ocproblem;

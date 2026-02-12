@@ -105,5 +105,7 @@ class AbstractFunction {
     // }
 
     // Getters (dimensions determined by derived class implementation)
+    int get_input_dim() const { return _input_dim; }
+    int get_output_dim() const { return _output_dim; }
     virtual std::string get_name() const { return _name; }
 };
