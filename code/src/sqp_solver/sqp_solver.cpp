@@ -99,7 +99,14 @@ void SQPSolver::init() {
             _ng += con->get_output_dim();
         
         if (k==0) // 
-            _qp_solver.init_stage(k, _ndx, _ndu, _ng); //TODO: fix state and control bounds
+        {
+            _qp_solver.init_stage(k, _ndx, _ndu, _ng, _ndx);
+            // Initial state constraint: dx_0 = 0 (all state variables constrained)
+            _idxbx.resize(_ndx);
+            for (int i = 0; i < _ndx; ++i) _idxbx[i] = i;
+            _lbx.setZero(_ndx);
+            _ubx.setZero(_ndx);
+        }
         else if (k<_Nu)
             _qp_solver.init_stage(k, _ndx, _ndu, _ng);
         else
@@ -110,6 +117,13 @@ void SQPSolver::init() {
     // std::cout<<"allocating hpipm"<<std::endl;
     _qp_solver.allocate();
     // std::cout<<"allocated hpipm"<<std::endl;
+
+
+    // Initial state constraint: dx_0 = 0 (box constraint at stage 0)
+    _qp_solver.set_idxbx(0, _idxbx.data());
+    _qp_solver.set_lbx(0, _lbx.data());
+    _qp_solver.set_ubx(0, _ubx.data());
+
 
     // Set solver options for maximum performance
     _qp_solver.set_iter_max(500);                 // Reasonable default
