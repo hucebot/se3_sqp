@@ -190,7 +190,63 @@ void SQPSolver::linearize() {
             _B[i] = dyn->get_jac_u();
         }
 
-        // TODO: Cost linearization for all N nodes
+        // Cost linearization for all N nodes (Gauss-Newton Hessian approximation)
+        // For each cost f(x, u) with residual r = f(x, u):
+        //   Q += w * Jx' * Jx,  q += w * Jx' * r
+        //   R += w * Ju' * Ju,  r += w * Ju' * r
+        //   S += w * Ju' * Jx
+        _Q[i].setZero();
+        _q[i].setZero();
+        _R[i].setZero();
+        _r[i].setZero();
+        _S[i].setZero();
+
+        for (auto& cost : _ocproblem.get_node(i).get_costs()) {
+            int out_dim = cost->_output_dim;
+            VectorXd residual(out_dim);
+            cost->evaluate(residual);
+            cost->jacobian();
+
+            MatrixXdConstRef Jx = cost->get_jac_x();  // out_dim × ndx
+            MatrixXd Ju = cost->get_jac_u();           // out_dim × ndu
+            double w = cost->get_weight();
+
+            _Q[i].noalias() += w * Jx.transpose() * Jx;
+            _q[i].noalias() += w * Jx.transpose() * residual;
+
+            if (Ju.cols() > 0 && i < _N - 1) {
+                _R[i].noalias() += w * Ju.transpose() * Ju;
+                _r[i].noalias() += w * Ju.transpose() * residual;
+                _S[i].noalias() += w * Ju.transpose() * Jx;
+            }
+        }
+
+        // Constraint linearization: lg <= C*dx + D*du <= ug
+        // Linearized around current x: lg = lb - g(x),  ug = ub - g(x)
+        // C = dg/dx,  D = dg/du
+        if (_ng > 0) {
+            int row = 0;
+            VectorXd residual;
+            for (auto& con : _ocproblem.get_node(i).get_constraints()) {
+                int nc = con->get_lower_bound().size();
+                residual.resize(nc);
+                con->evaluate(residual);
+                con->jacobian();
+
+                _C[i].middleRows(row, nc) = con->get_jac_x();
+                _lg[i].segment(row, nc) = con->get_lower_bound() - residual;
+                _ug[i].segment(row, nc) = con->get_upper_bound() - residual;
+
+                MatrixXd Ju = con->get_jac_u();
+                if (Ju.cols() > 0 && i < _N - 1)
+                    _D[i].middleRows(row, nc) = Ju;
+                else
+                    _D[i].middleRows(row, nc).setZero();
+
+                row += nc;
+            }
+        }
+
     }
 }
 
