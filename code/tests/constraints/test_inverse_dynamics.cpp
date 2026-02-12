@@ -38,5 +38,8 @@ TEST_F(InvDynamicsJacobianTest, JacobianMatchesFiniteDifferences) {
 
     MatrixXd numerical_jac = numerical_jacobian(eval_func, x, nv);
 
+    std::cout<<"analytical"<<std::endl<<analytical_jac<<std::endl;
+    std::cout<<"numerical"<<std::endl<<numerical_jac<<std::endl;
+
     EXPECT_TRUE(jacobians_match(analytical_jac, numerical_jac, 1e-5, 1e-8));
 }

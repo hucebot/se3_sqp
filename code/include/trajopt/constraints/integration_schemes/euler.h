@@ -1,6 +1,5 @@
 #pragma once
 
-#include <common/var_slice.h>
 #include <trajopt/constraints/abstract_constraint.h>
 
 #include <pinocchio/algorithm/joint-configuration.hpp>

@@ -17,8 +17,8 @@
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    int N = 30;
-    double dt = 0.05;
+    int N = 50;
+    double dt = 0.01;
 
     OCP ocp(N);
 
@@ -33,7 +33,7 @@ int main() {
         if (i<N-1)
         {
             node.add_dynamics(std::make_shared<EulerIntegration>(dt));
-            // node.add_constraint(std::make_shared<InvDynamics>());
+            node.add_constraint(std::make_shared<InvDynamics>());
         }
             
         ocp.addNode(std::move(node));
@@ -43,24 +43,22 @@ int main() {
     ocp.finalize();
 
     // Set initial guess
-    int nq = robot_mdl.nq;  // configuration dimension
-    int nv = robot_mdl.nv;  // velocity dimension
     for (int k = 0; k < N; k++) {
-        ocp.get_node(k).x().head(nq).setOnes();  // q = random in [-pi, pi]
-        ocp.get_node(k).x().tail(nv).setZero();    // v = 0
-        ocp.get_node(k).u().setRandom();             // control = 0
+        ocp.get_node(k).q() << 0.1, 0.0;
+        ocp.get_node(k).v().setZero();
+        ocp.get_node(k).u().setZero();             // control = 0
     }
 
     SQPSolver solver(ocp);
     solver.solve();
 
-    std::cout<<"state_trajectory"<<std::endl;
-    for (int k = 0; k < N; k++) 
-        std::cout<<"x["<<k<<"]"<<ocp.get_node(k).x().transpose()<<std::endl;  
+    // std::cout<<"state_trajectory"<<std::endl;
+    // for (int k = 0; k < N; k++) 
+    //     std::cout<<"x["<<k<<"]"<<ocp.get_node(k).x().transpose()<<std::endl;  
     
-    std::cout<<"control_trajectory"<<std::endl;
-    for (int k = 0; k < N; k++) 
-        std::cout<<"u["<<k<<"]"<<ocp.get_node(k).u().transpose()<<std::endl;
+    // std::cout<<"control_trajectory"<<std::endl;
+    // for (int k = 0; k < N; k++) 
+    //     std::cout<<"u["<<k<<"]"<<ocp.get_node(k).u().transpose()<<std::endl;
 
     return 0;
 }

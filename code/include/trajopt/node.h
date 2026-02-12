@@ -1,7 +1,6 @@
 #pragma once
 
 #include <common/types.h>
-#include <common/var_slice.h>
 #include <trajopt/constraints/abstract_constraint.h>
 #include <trajopt/costs/abstract_cost.h>
 
@@ -37,12 +36,14 @@ class Node {
 
    public:
     Node(pinocchio::Model mdl);
+    Node(Node&&) = default;
+    Node& operator=(Node&&) = default;
     ~Node() = default;
 
     Node* next_node = nullptr;
 
     std::shared_ptr<pinocchio::Model> _model_ptr;
-    pinocchio::Data _data;
+    std::unique_ptr<pinocchio::Data> _data_ptr;
 
     int _nq;
     int _nv;
@@ -72,7 +73,7 @@ class Node {
     pinocchio::Model& model() { return *_model_ptr; }
     const pinocchio::Model& model() const { return *_model_ptr; }
 
-    pinocchio::Data& data() {return _data;}
+    pinocchio::Data& data() {return *_data_ptr;}
 
     void cached_update();
 

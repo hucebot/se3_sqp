@@ -3,7 +3,7 @@
 
 Node::Node(pinocchio::Model mdl)
     : _model_ptr(std::make_shared<pinocchio::Model>(std::move(mdl))),
-      _data(*_model_ptr),
+      _data_ptr(std::make_unique<pinocchio::Data>(*_model_ptr)),
       _x_ptr(nullptr),
       _u_ptr(nullptr) {
     _nq = _model_ptr->nq;

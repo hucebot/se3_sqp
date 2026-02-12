@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <pinocchio/multibody/model.hpp>
+#include <pinocchio/parsers/urdf.hpp>
 #include <trajopt/node.h>
 #include <memory>
 
@@ -21,18 +22,21 @@ class DoubleIntegratorFixture : public ::testing::Test {
     VectorXd x_next_storage, u_next_storage;
 
     void SetUp() override {
-        model.name = "double_integrator";
-        auto joint_id = model.addJoint(
-            0,
-            pinocchio::JointModelPX(),
-            pinocchio::SE3::Identity(),
-            "slider"
-        );
-        model.addJointFrame(joint_id);
-        model.lowerPositionLimit.resize(1);
-        model.upperPositionLimit.resize(1);
-        model.lowerPositionLimit << -10.0;
-        model.upperPositionLimit << 10.0;
+        // model.name = "double_integrator";
+        // auto joint_id = model.addJoint(
+        //     0,
+        //     pinocchio::JointModelPX(),
+        //     pinocchio::SE3::Identity(),
+        //     "slider"
+        // );
+        // model.addJointFrame(joint_id);
+        // model.lowerPositionLimit.resize(1);
+        // model.upperPositionLimit.resize(1);
+        // model.lowerPositionLimit << -10.0;
+        // model.upperPositionLimit << 10.0;
+
+        const std::string urdf_path = "/workspace/code/resources/pendubot.urdf";
+        pinocchio::urdf::buildModel(urdf_path, model);
 
         node = std::make_shared<Node>(model);
         next_node = std::make_shared<Node>(model);

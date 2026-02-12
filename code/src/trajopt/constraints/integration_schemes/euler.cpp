@@ -28,8 +28,6 @@ void EulerIntegration::allocate_slices() {
     set_equality_to_zero();
 }
 
-25 ruel victor ugo
-stash begonia
 
 void EulerIntegration::evaluate(VectorXdRef output) {
     _q       = _node->q();

@@ -67,6 +67,10 @@ void SQPSolver::init() {
         _ndx = _nx;  // TODO: For now, assume delta-state = state dimension
         _ndu = _nu;
 
+        _ng = 0;
+        for (auto& con : _ocproblem.get_node(k).get_constraints())
+            _ng += con->get_output_dim();
+
         // Pre-allocate and zero dynamics matrices (N-1 transitions)
         if (k<_Nu){
             _A[k].setZero(_ndx, _ndx);
@@ -92,13 +96,9 @@ void SQPSolver::init() {
         if (k<_Nu) _du[k].setZero(_ndu);
 
         _x_candidate[k].setZero(_ndx);
-        _u_candidate[k].setZero(_ndu);
+        if (k<_Nu) _u_candidate[k].setZero(_ndu);
 
-        _ng = 0;
-        for (auto& con : _ocproblem.get_node(0).get_constraints())
-            _ng += con->get_output_dim();
-        
-        if (k==0) // 
+        if (k==0) //
         {
             _qp_solver.init_stage(k, _ndx, _ndu, _ng, _ndx);
             // Initial state constraint: dx_0 = 0 (all state variables constrained)
@@ -126,9 +126,9 @@ void SQPSolver::init() {
 
 
     // Set solver options for maximum performance
-    _qp_solver.set_iter_max(500);                 // Reasonable default
+    _qp_solver.set_iter_max(200);                 // Reasonable default
     _qp_solver.set_tol(1e-3, 1e-3, 1e-3, 1e-3);  // Tolerances
-    _qp_solver.set_warm_start(true);             // CRITICAL: Enable warm-starting (huge speedup)
+    _qp_solver.set_warm_start(false);             // CRITICAL: Enable warm-starting (huge speedup)
 
     // std::cout<<"inited_sqp"<<std::endl;
 }
@@ -170,14 +170,14 @@ void SQPSolver::step() {
     // Process all N stages (HPIPM stages 0 to N-1)
     for (int k = 0; k < _N; ++k) {
         _qp_solver.get_x(k, _dx[k].data());
-        _step_norm += (_ls_alpha * _dx[k]).squaredNorm();
+        _step_norm = std::max(_step_norm, (_ls_alpha * _dx[k]).cwiseAbs().maxCoeff());
 
         _x_candidate[k] = x_nom[k] + _ls_alpha * _dx[k]; //TODO - This needs the \oplus
 
         // Terminal stage (k = N-1) has no control
         if (k < _Nu) {
             _qp_solver.get_u(k, _du[k].data());
-            _step_norm += (_ls_alpha * _du[k]).squaredNorm();
+            _step_norm = std::max(_step_norm, (_ls_alpha * _du[k]).cwiseAbs().maxCoeff());
 
             _u_candidate[k] = u_nom[k] + _ls_alpha * _du[k];
         }
@@ -192,8 +192,6 @@ void SQPSolver::step() {
         }
     }
 
-    // Take square root to get actual norm
-    _step_norm = std::sqrt(_step_norm);
     _stats.update_step_norm(_step_norm);
 }
 

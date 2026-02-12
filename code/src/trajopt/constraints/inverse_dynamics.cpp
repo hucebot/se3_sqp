@@ -1,4 +1,5 @@
 #include <trajopt/constraints/inverse_dynamics.h>
+#include <iostream>
 
 InvDynamics::InvDynamics() : AbstractConstraint() {
     _name = "inverse_dynamics";
@@ -22,8 +23,11 @@ void InvDynamics::allocate_slices() {
     _jacobian.resize(_output_dim, _input_dim);
     _jacobian.setZero();
 
-    set_equality_to_zero();
-    // TODO: Set bounds from effort limimits
+    // Set bounds from model effort limits
+    // effortLimit is nv-dimensional; joints with limit 0 are unactuated (tau = 0)
+    const VectorXd& effort = _node->model().effortLimit;
+    _lower_bound = -effort;
+    _upper_bound =  effort;
 }
 
 void InvDynamics::evaluate(VectorXdRef output) {
@@ -45,8 +49,9 @@ void InvDynamics::jacobian(MatrixXdRef jac) {
     _dtau_dq.setZero();
     _dtau_dv.setZero();
     _dtau_da.setZero();
-
+    
     pinocchio::computeRNEADerivatives(_node->model(), _node->data(), _q, _vq, _aq, _dtau_dq, _dtau_dv, _dtau_da);
+    _dtau_da.template triangularView<Eigen::StrictlyLower>() = _dtau_da.transpose().template triangularView<Eigen::StrictlyLower>();
 
     jac.block(0, 0, _node->nv(), _node->nv()) = _dtau_dq;
     jac.block(0, _node->nv(), _node->nv(), _node->nv()) = _dtau_dv;
