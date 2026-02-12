@@ -23,10 +23,8 @@ class OCP {
     OCP(int num_nodes);
     ~OCP();
 
-    // Methods to build the horizon
-    void addNode(const Node& node);
-    void addNode(Node&& node);  // Move version
-    void setHorizon(const std::vector<Node>& nodes);
+    // Methods to build the horizon (move-only, Node is not copyable)
+    void addNode(Node&& node);
 
     // Node accessors
     int num_nodes() const { return _num_nodes; }
