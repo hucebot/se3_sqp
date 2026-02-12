@@ -64,8 +64,8 @@ void SQPSolver::init() {
         // std::cout<<"hpipm_stage:"<<k<<std::endl;
         _nx = _ocproblem.get_node(k).nx();
         _nu = _ocproblem.get_node(k).nu();
-        _ndx = _nx;  // TODO: For now, assume delta-state = state dimension
-        _ndu = _nu;
+        _ndx = _ocproblem.get_node(k).ndx();
+        _ndu = _ocproblem.get_node(k).ndu();
 
         _ng = 0;
         for (auto& con : _ocproblem.get_node(k).get_constraints())
@@ -172,7 +172,8 @@ void SQPSolver::step() {
         _qp_solver.get_x(k, _dx[k].data());
         _step_norm = std::max(_step_norm, (_ls_alpha * _dx[k]).cwiseAbs().maxCoeff());
 
-        _x_candidate[k] = x_nom[k] + _ls_alpha * _dx[k]; //TODO - This needs the \oplus
+        VectorXd scaled_dx = _ls_alpha * _dx[k];
+        _ocproblem.get_node(k).x_oplus(x_nom[k], scaled_dx, _x_candidate[k]);
 
         // Terminal stage (k = N-1) has no control
         if (k < _Nu) {
@@ -277,6 +278,8 @@ bool SQPSolver::break_criteria() {
     if (_step_norm < _opts.tolerance) {
         return true;  // Converged
     }
+
+    //TODO copy converge criteria from opensot
 
     return false;  // Not converged yet
 }

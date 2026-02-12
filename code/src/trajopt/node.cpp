@@ -20,6 +20,17 @@ void Node::cached_update(){
     //TODO - update the pinocchio data and cache the computations
 }
 
+void Node::x_oplus(VectorXdRef x0, VectorXdRef dx, VectorXdRef x1){
+    // x = [q; v],  dx = [dq; dv]  (both tangent vectors have size nv)
+    auto q0 = x0.head(_nq);
+    auto v0 = x0.tail(_nv);
+    auto dq = dx.head(_nv);
+    auto dv = dx.tail(_nv);
+
+    pinocchio::integrate(*_model_ptr, q0, dq, x1.head(_nq));
+    x1.tail(_nv) = v0 + dv;
+}
+
 void Node::add_cost(std::shared_ptr<AbstractCost> cost) {
     _cost_list.push_back(cost);
     cost->set_node(this);

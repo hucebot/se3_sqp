@@ -6,6 +6,7 @@
 
 #include <array>
 #include <memory>
+#include <pinocchio/algorithm/joint-configuration.hpp>
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/multibody/model.hpp>
 #include <stdexcept>
@@ -67,13 +68,18 @@ class Node {
     int nq() const { return _nq; }
     int nv() const { return _nv; }
     int nx() const { return _nq + _nv; }
+    int ndx() const { return _nv + _nv; }
     int nu() const { return _nv; }
+    int ndu() const { return _nv; }
 
     // Model access
     pinocchio::Model& model() { return *_model_ptr; }
     const pinocchio::Model& model() const { return *_model_ptr; }
 
     pinocchio::Data& data() {return *_data_ptr;}
+
+    void x_oplus(VectorXdRef x0, VectorXdRef dx, VectorXdRef x1);
+    // void u_oplus(VectorXdRef x0, VectorXdRef dx, VectorXdRef x1);
 
     void cached_update();
 
