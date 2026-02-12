@@ -4,6 +4,7 @@
 
 #include "trajopt/constraints/integration_schemes/euler.h"
 #include "trajopt/constraints/inverse_dynamics.h"
+#include "trajopt/costs/configuration_cost.h"
 
 #include <pinocchio/parsers/urdf.hpp>
 #include <pinocchio/multibody/model.hpp>
@@ -17,7 +18,7 @@
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    int N = 50;
+    int N = 300;
     double dt = 0.01;
 
     OCP ocp(N);
@@ -26,6 +27,8 @@ int main() {
     const std::string urdf_path = "/workspace/code/resources/pendubot.urdf";
     pinocchio::urdf::buildModel(urdf_path, robot_mdl);
 
+    Vector2d q_ref;
+    q_ref << M_PI, 0.;
 
     for (int i = 0; i < N; i++)
     {
@@ -35,6 +38,8 @@ int main() {
             node.add_dynamics(std::make_shared<EulerIntegration>(dt));
             node.add_constraint(std::make_shared<InvDynamics>());
         }
+
+        if (i==N-1) node.add_cost(std::make_shared<ConfigurationCost>(q_ref));
             
         ocp.addNode(std::move(node));
     }
@@ -52,13 +57,13 @@ int main() {
     SQPSolver solver(ocp);
     solver.solve();
 
-    // std::cout<<"state_trajectory"<<std::endl;
-    // for (int k = 0; k < N; k++) 
-    //     std::cout<<"x["<<k<<"]"<<ocp.get_node(k).x().transpose()<<std::endl;  
+    std::cout<<"state_trajectory"<<std::endl;
+    for (int k = 0; k < N; k++) 
+        std::cout<<"x["<<k<<"]"<<ocp.get_node(k).x().transpose()<<std::endl;  
     
-    // std::cout<<"control_trajectory"<<std::endl;
-    // for (int k = 0; k < N; k++) 
-    //     std::cout<<"u["<<k<<"]"<<ocp.get_node(k).u().transpose()<<std::endl;
+    std::cout<<"control_trajectory"<<std::endl;
+    for (int k = 0; k < N; k++) 
+        std::cout<<"u["<<k<<"]"<<ocp.get_node(k).u().transpose()<<std::endl;
 
     return 0;
 }

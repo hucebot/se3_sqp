@@ -32,3 +32,6 @@ class AbstractCost : public AbstractFunction {
      */
     void set_weight(double w) { weight = w; }
 };
+
+
+//TODO: I can cache the evaluation of the functions with a simple flag if the nodes state and controls haven't changed

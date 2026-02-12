@@ -198,6 +198,7 @@ void SQPSolver::step() {
 
 void SQPSolver::linearize() {
 
+    double total_cost = 0.;
     for (int i = 0; i < _N; i++)
     {
         // std::cout<<i<<std::endl;
@@ -223,26 +224,33 @@ void SQPSolver::linearize() {
             _R[i].setZero();
             _r[i].setZero();
         }
+        
 
         // std::cout<<"Linearizing costs"<<std::endl;
         for (auto& cost : _ocproblem.get_node(i).get_costs()) {
+            std::cout<<"Linearizing :"<<cost->get_name()<< std::endl;
             int out_dim = cost->get_output_dim();
-            VectorXd residual(out_dim);
-            cost->evaluate(residual);
+            VectorXd cost_val(out_dim);
+            cost->evaluate(cost_val);
+            std::cout<<"val :"<<cost_val.transpose()<< std::endl;
+            total_cost += 0.5 * cost_val.transpose() * cost_val;
             cost->jacobian();
+            
 
             MatrixXdConstRef Jx = cost->get_jac_x();  // out_dim × ndx
+            std::cout<<"Jx :"<<std::endl<<Jx<< std::endl;
             MatrixXd Ju = cost->get_jac_u();           // out_dim × ndu
             double w = cost->get_weight();
 
             _Q[i].noalias() += w * Jx.transpose() * Jx;
-            _q[i].noalias() += w * Jx.transpose() * residual;
+            _q[i].noalias() += w * Jx.transpose() * cost_val;
 
             if (Ju.cols() > 0 && i < _Nu) {
                 _R[i].noalias() += w * Ju.transpose() * Ju;
-                _r[i].noalias() += w * Ju.transpose() * residual;
+                _r[i].noalias() += w * Ju.transpose() * cost_val;
             }
         }
+        _stats.update_cost(total_cost);
 
         // Constraint linearization: lg <= C*dx + D*du <= ug
         // Linearized around current x: lg = lb - g(x),  ug = ub - g(x)
