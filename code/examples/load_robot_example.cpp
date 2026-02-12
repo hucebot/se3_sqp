@@ -9,8 +9,7 @@
 
 int main() {
     // Load UR5 robot from example-robot-data
-    const std::string urdf_path =
-        EXAMPLE_ROBOT_DATA_MODEL_DIR "/ur_description/urdf/ur5_robot.urdf";
+    const std::string urdf_path = "/workspace/code/resources/pendubot.urdf";
         
 
     pinocchio::Model model;

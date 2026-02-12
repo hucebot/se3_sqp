@@ -7,10 +7,12 @@
 #include <pinocchio/multibody/joint/joint-generic.hpp>
 #include <memory>
 
+#include <iostream>
+
 int main() {
 
-    int N = 20;
-    double dt = 0.01;
+    int N = 10;
+    double dt = 0.05;
 
     OCP ocp(N);
 
@@ -41,12 +43,20 @@ int main() {
 
     // Set initial guess
     for (int k = 0; k < N; k++) {
-        ocp.get_node(k).x().setOnes();  // [q, v] = 0
+        ocp.get_node(k).x().setZero();  // [q, v] = 0
         ocp.get_node(k).u().setOnes();  // control = 0
     }
 
     SQPSolver solver(ocp);
     solver.solve();
+
+    std::cout<<"state_trajectory"<<std::endl;
+    for (int k = 0; k < N; k++) 
+        std::cout<<"x["<<k<<"]"<<ocp.get_node(k).x().transpose()<<std::endl;  
+    
+    std::cout<<"control_trajectory"<<std::endl;
+    for (int k = 0; k < N; k++) 
+        std::cout<<"u["<<k<<"]"<<ocp.get_node(k).u().transpose()<<std::endl;
 
     return 0;
 }

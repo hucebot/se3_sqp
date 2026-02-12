@@ -99,5 +99,5 @@ MatrixXdConstRef EulerIntegration::get_jac_x() const {
 
 MatrixXd EulerIntegration::get_jac_u() const {
     // Return ∂g/∂u_k (columns 2*nv to 3*nv-1)
-    return _jacobian.rightCols(_node->nv(););
+    return _jacobian.rightCols(_node->nv());
 }
