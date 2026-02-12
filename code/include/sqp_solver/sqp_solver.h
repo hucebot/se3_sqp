@@ -34,6 +34,13 @@ class SQPSolver {
     std::vector<VectorXd> _q;  // Linear state cost (nx)
     std::vector<VectorXd> _r;  // Linear control cost (nu)
 
+    // General constraints: lg_k <= C_k*dx + D_k*du <= ug_k
+    int _ng;                   // Number of general constraints per stage (uniform)
+    std::vector<MatrixXd> _C;  // Constraint Jacobian w.r.t. state (ng x nx)
+    std::vector<MatrixXd> _D;  // Constraint Jacobian w.r.t. control (ng x nu)
+    std::vector<VectorXd> _lg; // Lower bound: lb - g(x) (ng)
+    std::vector<VectorXd> _ug; // Upper bound: ub - g(x) (ng)
+
     // Step storage for full trajectory (pre-allocated for zero allocations)
     std::vector<VectorXd> _dx;  // State steps: _dx[k] is VectorXd of size _ndx
     std::vector<VectorXd>

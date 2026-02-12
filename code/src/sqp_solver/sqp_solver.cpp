@@ -76,10 +76,26 @@ void SQPSolver::init() {
         _u_candidate[k].setZero(_ndu);
     }
 
+    // Compute ng: total constraint output rows at each node (uniform across nodes)
+    _ng = 0;
+    for (auto& con : _ocproblem.get_node(0).get_constraints())
+        _ng += con->get_lower_bound().size();
+
+    // Pre-allocate constraint matrices (ng x ndx/ndu) per stage
+    _C.resize(_N);
+    _D.resize(_N);
+    _lg.resize(_N);
+    _ug.resize(_N);
+    for (int k = 0; k < _N; ++k) {
+        _C[k].setZero(_ng, _ndx);
+        _D[k].setZero(_ng, _ndu);
+        _lg[k].setZero(_ng);
+        _ug[k].setZero(_ng);
+    }
+
     // Initialize HPIPM solver
     // HPIPM horizon = N-1 for N nodes (N-1 dynamics, terminal stage has no control)
-    _qp_solver.initialize(_N - 1, _ndx, _ndu,
-                          0);  // ng=0 (no general constraints yet)
+    _qp_solver.initialize(_N - 1, _ndx, _ndu, _ng);
 
     // Set solver options for maximum performance
     _qp_solver.set_iter_max(50);                 // Reasonable default
@@ -108,6 +124,17 @@ void SQPSolver::populate_qp() {
         if (k < _N - 1) {
             _qp_solver.set_R(k, _R[k].data());
             _qp_solver.set_r(k, _r[k].data());
+            _qp_solver.set_S(k, _S[k].data());
+        }
+    }
+
+    // General constraints for all stages
+    if (_ng > 0) {
+        for (int k = 0; k < _N; ++k) {
+            _qp_solver.set_C(k, _C[k].data());
+            _qp_solver.set_D(k, _D[k].data());
+            _qp_solver.set_lg(k, _lg[k].data());
+            _qp_solver.set_ug(k, _ug[k].data());
         }
     }
 }

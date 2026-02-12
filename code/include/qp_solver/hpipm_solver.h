@@ -103,6 +103,20 @@ class HPIPMSolver {
         d_ocp_qp_set_idxbu(stage, idxbu, &_qp);
     }
 
+    // === General Constraints: lg_k <= C_k*dx + D_k*du <= ug_k ===
+
+    /** Set general constraint Jacobian w.r.t. state C_k (ng x nx) for stage k */
+    inline void set_C(int stage, double* C) { d_ocp_qp_set_C(stage, C, &_qp); }
+
+    /** Set general constraint Jacobian w.r.t. control D_k (ng x nu) for stage k */
+    inline void set_D(int stage, double* D) { d_ocp_qp_set_D(stage, D, &_qp); }
+
+    /** Set lower bound on general constraints lg_k (ng x 1) for stage k */
+    inline void set_lg(int stage, double* lg) { d_ocp_qp_set_lg(stage, lg, &_qp); }
+
+    /** Set upper bound on general constraints ug_k (ng x 1) for stage k */
+    inline void set_ug(int stage, double* ug) { d_ocp_qp_set_ug(stage, ug, &_qp); }
+
     // === Solve (INLINE - Direct HPIPM call) ===
 
     /**
