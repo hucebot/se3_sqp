@@ -22,11 +22,11 @@ void SQPSolver::solve() {
         // TODO write tests for the pipeline
         if (_ls_function) {
             DEBUG_PRINT("LS");
-            for (int ls_iter = 0; ls_iter < _opts.max_ls_iters; ++ls_iter) {
+            for (int ls_iter = 1; ls_iter < _opts.max_ls_iters; ++ls_iter) {
+                _stats.update_linesearch_iterations(ls_iter);
                 if ((this->*_ls_function)()) break;
                 _ls_alpha *= _opts.ls_scale_factor;
                 step();
-                _stats.update_linesearch_iterations(ls_iter);
             }
         }
         accept_step();
