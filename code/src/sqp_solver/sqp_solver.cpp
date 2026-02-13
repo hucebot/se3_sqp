@@ -16,19 +16,37 @@ void SQPSolver::solve() {
         linearize();
         populate_qp();
         _qp_solver.solve();
+
+        // Backtracking line search
         step();
+        // TODO write tests for the pipeline
+        if (_ls_function) {
+            for (int ls_iter = 0; ls_iter < _opts.max_ls_iters; ++ls_iter) {
+                if ((this->*_ls_function)()) break;
+                _ls_alpha *= _opts.ls_scale_factor;
+                step();
+                _stats.update_linesearch_iterations(ls_iter);
+            }
+        }
+        accept_step();
 
         _stats.update();
         _stats.print();
         if (break_criteria()) break;
-
     }
     _stats.print(1);
 }
 
 void SQPSolver::init() {
     _N = _ocproblem.num_nodes();
-    _ls_alpha = 1.0;  // Default step size
+    _ls_alpha = 1.0;
+
+    // Set line search function pointer based on options
+    switch (_opts.ls_type) {
+        case LSType::MERIT:  _ls_function = &SQPSolver::ls_merit;  break;
+        case LSType::FILTER: _ls_function = &SQPSolver::ls_filter; break;
+        case LSType::NONE:   _ls_function = nullptr;               break;
+    }
     _Nx = _N;
     _Nu = _N-1;
 
@@ -161,13 +179,13 @@ void SQPSolver::populate_qp() {
 }
 
 void SQPSolver::step() {
-    // Extract QP solution and compute candidate trajectory
-    _step_norm = 0.0;          // Reset step norm for convergence check
+    // Compute candidate trajectory from QP solution at current _ls_alpha.
+    // After this call, nodes are bound to _x_candidate/_u_candidate.
+    _step_norm = 0.0;
 
     auto& x_nom = _ocproblem.x_traj();
     auto& u_nom = _ocproblem.u_traj();
 
-    // Process all N stages (HPIPM stages 0 to N-1)
     for (int k = 0; k < _N; ++k) {
         _qp_solver.get_x(k, _dx[k].data());
         _step_norm = std::max(_step_norm, (_ls_alpha * _dx[k]).cwiseAbs().maxCoeff());
@@ -175,7 +193,6 @@ void SQPSolver::step() {
         VectorXd scaled_dx = _ls_alpha * _dx[k];
         _ocproblem.get_node(k).x_oplus(x_nom[k], scaled_dx, _x_candidate[k]);
 
-        // Terminal stage (k = N-1) has no control
         if (k < _Nu) {
             _qp_solver.get_u(k, _du[k].data());
             _step_norm = std::max(_step_norm, (_ls_alpha * _du[k]).cwiseAbs().maxCoeff());
@@ -185,19 +202,26 @@ void SQPSolver::step() {
         }
     }
 
-    // Accept step: copy candidate to nominal
-    // TODO: This will be moved to line search logic
-    for (int k = 0; k < _N; ++k) {
-        x_nom[k] = _x_candidate[k];
-        if (k < _N - 1) {
-            u_nom[k] = _u_candidate[k];
-        }
-    }
-
+    // Bind nodes to candidate trajectory for evaluation by ls_merit()/ls_filter()
+    _ocproblem.bind_trajectory(_x_candidate, _u_candidate);
     _stats.update_step_norm(_step_norm);
 }
 
+void SQPSolver::accept_step() {
+    auto& x_nom = _ocproblem.x_traj();
+    auto& u_nom = _ocproblem.u_traj();
+
+    // O(1) swap — no element copies
+    std::swap(x_nom, _x_candidate);
+    std::swap(u_nom, _u_candidate);
+
+    // Rebind nodes to the (now swapped) nominal trajectory
+    _ocproblem.bind_trajectory(x_nom, u_nom);
+}
+
 void SQPSolver::linearize() {
+    // Rebind nodes to nominal trajectory (safe reset after step/linesearch)
+    _ocproblem.bind_trajectory(_ocproblem.x_traj(), _ocproblem.u_traj());
 
     double total_cost = 0.;
     for (int i = 0; i < _N; i++)
