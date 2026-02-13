@@ -52,27 +52,30 @@ class AbstractFunction {
     virtual void allocate_slices() = 0;
 
     /**
-     * Evaluate the function value.
-     *
-     * @param var Input variables (decision variables)
-     * @param output Output buffer (residual/value), size = output_dim
+     * Evaluate the function value (public, non-virtual).
+     * Logs the call in DEBUG mode, then delegates to evaluate_impl().
      */
-    virtual void evaluate(VectorXdRef output) = 0;
+    void evaluate(VectorXdRef output) {
+        DEBUG_PRINT(_name << " - evaluate");
+        evaluate_impl(output);
+    }
 
     /**
-     * Compute the Jacobian (first derivatives) - legacy interface.
-     * @param jac Output Jacobian matrix
+     * Compute the Jacobian - legacy interface (public, non-virtual).
+     * Logs the call in DEBUG mode, then delegates to jacobian_impl().
      */
-    virtual void jacobian(MatrixXdRef jac) = 0;
+    void jacobian(MatrixXdRef jac) {
+        DEBUG_PRINT(_name << " - jacobian");
+        jacobian_impl(jac);
+    }
 
     /**
-     * Compute the Jacobian (first derivatives) - new interface.
+     * Compute the Jacobian - new interface (public, non-virtual).
      * Stores result in internal _jacobian matrix.
-     * Override this in derived classes for SQP solver compatibility.
      */
-    virtual void jacobian() {
-        // Default: call legacy interface with internal storage
-        jacobian(_jacobian);
+    void jacobian() {
+        DEBUG_PRINT(_name << " - jacobian");
+        jacobian_impl(_jacobian);
     }
 
     /**
@@ -108,4 +111,17 @@ class AbstractFunction {
     int get_input_dim() const { return _input_dim; }
     int get_output_dim() const { return _output_dim; }
     virtual std::string get_name() const { return _name; }
+
+   protected:
+    /**
+     * Implement the function evaluation.
+     * @param output Output buffer (residual/value), size = output_dim
+     */
+    virtual void evaluate_impl(VectorXdRef output) = 0;
+
+    /**
+     * Implement the Jacobian computation.
+     * @param jac Output Jacobian matrix
+     */
+    virtual void jacobian_impl(MatrixXdRef jac) = 0;
 };

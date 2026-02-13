@@ -21,12 +21,12 @@ void ConfigurationCost::allocate_slices() {
     _jacobian.setZero();
 }
 
-void ConfigurationCost::evaluate(VectorXdRef output) {
+void ConfigurationCost::evaluate_impl(VectorXdRef output) {
     // r = q ⊖ q_ref  (tangent vector from q_ref to q)
     pinocchio::difference(_node->model(), _q_ref, _node->q(), output);
 }
 
-void ConfigurationCost::jacobian(MatrixXdRef jac) {
+void ConfigurationCost::jacobian_impl(MatrixXdRef jac) {
     jac.setZero();
     _J_dq.setZero();
 
@@ -37,10 +37,6 @@ void ConfigurationCost::jacobian(MatrixXdRef jac) {
     // Fill left block: ∂r/∂q
     jac.leftCols(_node->nv()) = _J_dq;
     // Right block: ∂r/∂v = 0 (already zero from setZero)
-}
-
-void ConfigurationCost::jacobian() {
-    jacobian(_jacobian);
 }
 
 MatrixXdConstRef ConfigurationCost::get_jac_x() const {

@@ -29,7 +29,7 @@ void EulerIntegration::allocate_slices() {
 }
 
 
-void EulerIntegration::evaluate(VectorXdRef output) {
+void EulerIntegration::evaluate_impl(VectorXdRef output) {
     _q       = _node->q();
     _q_next  = _node->next_node->q();
     _vq      = _node->v();
@@ -49,7 +49,7 @@ void EulerIntegration::evaluate(VectorXdRef output) {
 
 }
 
-void EulerIntegration::jacobian(MatrixXdRef jac) {
+void EulerIntegration::jacobian_impl(MatrixXdRef jac) {
     _q = _node->q();
     _q_next = _node->next_node->q();
     _vq = _node->v();
@@ -86,10 +86,7 @@ void EulerIntegration::jacobian(MatrixXdRef jac) {
     jac.block(nv, 2*nv, nv, nv) = _dt * MatrixXd::Identity(nv, nv);
 }
 
-void EulerIntegration::jacobian() {
-    // Compute into internal storage
-    jacobian(_jacobian);
-}
+
 
 MatrixXdConstRef EulerIntegration::get_jac_x() const {
     // Return ∂g/∂x_k = [∂g/∂q_k | ∂g/∂v_k]

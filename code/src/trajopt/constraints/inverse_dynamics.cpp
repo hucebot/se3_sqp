@@ -1,5 +1,4 @@
 #include <trajopt/constraints/inverse_dynamics.h>
-#include <iostream>
 
 InvDynamics::InvDynamics() : AbstractConstraint() {
     _name = "inverse_dynamics";
@@ -30,7 +29,7 @@ void InvDynamics::allocate_slices() {
     _upper_bound =  effort;
 }
 
-void InvDynamics::evaluate(VectorXdRef output) {
+void InvDynamics::evaluate_impl(VectorXdRef output) {
     _q       = _node->q();
     _vq      = _node->v();
     _aq      = _node->u();
@@ -40,7 +39,7 @@ void InvDynamics::evaluate(VectorXdRef output) {
     output = _node->data().tau;
 }
 
-void InvDynamics::jacobian(MatrixXdRef jac) {
+void InvDynamics::jacobian_impl(MatrixXdRef jac) {
     _q = _node->q();
     _vq = _node->v();
     _aq = _node->u();
@@ -58,10 +57,6 @@ void InvDynamics::jacobian(MatrixXdRef jac) {
     jac.block(0, 2*_node->nv(), _node->nv(), _node->nv()) = _dtau_da;
 }
 
-void InvDynamics::jacobian() {
-    // Compute into internal storage
-    jacobian(_jacobian);
-}
 
 MatrixXdConstRef InvDynamics::get_jac_x() const {
     // Return ∂g/∂x_k = [∂g/∂q_k | ∂g/∂v_k]

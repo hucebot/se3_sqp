@@ -1,6 +1,14 @@
 #pragma once
 
 #include <Eigen/Dense>
+#include <iostream>
+
+#ifndef NDEBUG
+    #define DEBUG_PRINT(x) std::cout << x << std::endl
+#else
+    #define DEBUG_PRINT(x)
+#endif
+
 
 using str = std::string;
 
