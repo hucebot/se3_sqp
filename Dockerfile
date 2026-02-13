@@ -95,7 +95,41 @@ RUN ldconfig
 # Additional development tools
 RUN apt-get update && apt-get install -y \
     cmake-curses-gui \
+    gdb \
+    valgrind \
+    python3 \
+    python3-pip \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Python packages
+RUN pip3 install --no-cache-dir \
+    pin \
+    viser \
+    urdfpy
+
+# ============================================
+# Tracy Profiler - Frame Profiler
+# ============================================
+RUN apt-get update && apt-get install -y \
+    libcapstone-dev \
+    libdbus-1-dev \
+    libfreetype-dev \
+    libglfw3-dev \
+    libgtk-3-dev \
+    libtbb-dev \
+    libwayland-dev \
+    libxkbcommon-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 https://github.com/wolfpld/tracy.git /tmp/tracy && \
+    cd /tmp/tracy && \
+    cmake -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local && \
+    cmake --build build --parallel && \
+    cmake --install build && \
+    rm -rf /tmp/tracy
 
 # Create workspace
 WORKDIR /workspace
