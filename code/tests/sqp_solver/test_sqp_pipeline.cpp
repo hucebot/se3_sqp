@@ -147,10 +147,8 @@ TEST_F(SQPPipelineTest, ConvergesOnFeasibilityProblem) {
     // Check that the trajectory is consistent by evaluating dynamics residuals.
     for (int k = 0; k < N - 1; k++) {
         auto dyn = ocp->get_node(k).get_dynamics();
-        int nd = dyn->get_output_dim();
-        VectorXd residual(nd);
-        dyn->evaluate(residual);
-        EXPECT_LT(residual.norm(), 1e-3)
+        dyn->evaluate();
+        EXPECT_LT(dyn->get_value().norm(), 1e-3)
             << "Dynamics residual at node " << k << " should be small";
     }
 }

@@ -23,9 +23,9 @@ class InvDynamics : public AbstractConstraint {
 
     void allocate_slices() override;
 
-    void evaluate_impl(VectorXdRef output) override;
+    void evaluate_impl() override;
 
-    void jacobian_impl(MatrixXdRef jac) override;
+    void jacobian_impl() override;
 
     MatrixXdConstRef get_jac_x() const override;
     MatrixXd get_jac_u() const override;

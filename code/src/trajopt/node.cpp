@@ -71,40 +71,27 @@ void Node::rebind_constraints() {
     }
 }
 
-//TODO: I compute stuff twice, here and in the linearization, maybe it can be optimized somehow
-
 void Node::calc_cost(){
-    VectorXd val;
     _cost = 0.;
     for (auto& cost: _cost_list){
-        val.resize(cost->get_output_dim());
-        cost->evaluate(val);
-        _cost += val.transpose() * val; //NOTE - Add the weight
+        const VectorXd& val = cost->get_value();
+        _cost += cost->get_weight() * val.squaredNorm();
     }
 }
 
 void Node::calc_dynamics_defect(){
-    VectorXd val;
     _defect = 0.;
     if (_dynamics){
-        val.resize(_dynamics->get_output_dim());
-        _dynamics->evaluate(val);
-        _defect = val.cwiseAbs().maxCoeff();
+        _defect = _dynamics->get_value().cwiseAbs().maxCoeff();
     }
 }
 
-
 void Node::calc_constraint_violation(){
-    VectorXd val;
-    VectorXd lb;
-    VectorXd ub;
     _violation = 0.;
     for (auto& constraint: _constraint_list){
-        val.resize(constraint->get_output_dim());
-        constraint->evaluate(val);
-        lb = constraint->get_lower_bound();
-        ub = constraint->get_upper_bound();
-
+        const VectorXd& val = constraint->get_value();
+        const VectorXd& lb = constraint->get_lower_bound();
+        const VectorXd& ub = constraint->get_upper_bound();
         _violation += ((lb - val).cwiseMax(0.0) + (val - ub).cwiseMax(0.0)).maxCoeff();
     }
 }

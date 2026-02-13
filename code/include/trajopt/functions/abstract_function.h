@@ -14,9 +14,12 @@ class Node;
  * This includes costs, constraints, and dynamics. All derived classes must
  * implement:
  * - allocate_slices(): Register variable/data slices in the node
- * - evaluate(): Compute the function value
- * - jacobian(): Compute first derivatives
- * - hessian(): (Optional) Compute second derivatives
+ * - evaluate_impl(): Compute the function value
+ * - jacobian_impl(): Compute first derivatives
+ *
+ * Computation is decoupled from access:
+ * - Call evaluate() / jacobian() to trigger computation (stored internally).
+ * - Call get_value() / get_jac_x() / get_jac_u() to read stored results.
  *
  * Derived classes:
  * - AbstractCost: Adds weight/scaling for soft constraints
@@ -30,8 +33,9 @@ class AbstractFunction {
 
     Node* _node = nullptr;  // Owning node (set by Node::add_cost/add_constraint)
 
-    // Internal Jacobian storage (pre-allocated, size: _output_dim × _input_dim)
-    MatrixXd _jacobian;
+    // Internal storage (pre-allocated in allocate_slices())
+    VectorXd _value;    // result of last evaluate()
+    MatrixXd _jacobian; // result of last jacobian()
 
    public:
     AbstractFunction() : _name("") {}
@@ -46,37 +50,26 @@ class AbstractFunction {
 
     /**
      * Allocate function-specific slices in the node's registry.
-     * This is called during problem setup to register the function's
-     * variable and data requirements.
+     * Must also resize _value and _jacobian.
      */
     virtual void allocate_slices() = 0;
 
     /**
-     * Evaluate the function value (public, non-virtual).
-     * Logs the call in DEBUG mode, then delegates to evaluate_impl().
+     * Trigger computation of the function value.
+     * Result is stored in _value, accessible via get_value().
      */
-    void evaluate(VectorXdRef output) {
-        DEBUG_PRINT(_name << " - evaluate");
-        evaluate_impl(output);
-    }
+    void evaluate() { evaluate_impl(); }
 
     /**
-     * Compute the Jacobian - legacy interface (public, non-virtual).
-     * Logs the call in DEBUG mode, then delegates to jacobian_impl().
+     * Trigger computation of the Jacobian.
+     * Result is stored in _jacobian, accessible via get_jac_x() / get_jac_u().
      */
-    void jacobian(MatrixXdRef jac) {
-        DEBUG_PRINT(_name << " - jacobian");
-        jacobian_impl(jac);
-    }
+    void jacobian() { jacobian_impl(); }
 
     /**
-     * Compute the Jacobian - new interface (public, non-virtual).
-     * Stores result in internal _jacobian matrix.
+     * Get the stored function value (result of last evaluate()).
      */
-    void jacobian() {
-        DEBUG_PRINT(_name << " - jacobian");
-        jacobian_impl(_jacobian);
-    }
+    const VectorXd& get_value() const { return _value; }
 
     /**
      * Get Jacobian block w.r.t. state x (∂f/∂x).
@@ -94,34 +87,12 @@ class AbstractFunction {
         return MatrixXd::Zero(_output_dim, 0);  // Default: no control dependency
     }
 
-    // /**
-    //  * Compute the Hessian (second derivatives) - optional, mainly for costs.
-    //  * Default implementation does nothing (use Gauss-Newton approximation).
-    //  *
-    //  * @param x Input variables
-    //  * @param hess Hessian matrix (input_dim x input_dim, column-major)
-    //  */
-    // virtual void hessian(VectorXdConstRef x, VectorXdConstRef u,
-    //                      MatrixXdConstRef hes_xx, MatrixXdConstRef hes_uu) {
-    //     // Default: no second-order information (Gauss-Newton approximation)
-    //     // Can be overridden by derived classes for exact Hessian
-    // }
-
-    // Getters (dimensions determined by derived class implementation)
+    // Getters
     int get_input_dim() const { return _input_dim; }
     int get_output_dim() const { return _output_dim; }
     virtual std::string get_name() const { return _name; }
 
    protected:
-    /**
-     * Implement the function evaluation.
-     * @param output Output buffer (residual/value), size = output_dim
-     */
-    virtual void evaluate_impl(VectorXdRef output) = 0;
-
-    /**
-     * Implement the Jacobian computation.
-     * @param jac Output Jacobian matrix
-     */
-    virtual void jacobian_impl(MatrixXdRef jac) = 0;
+    virtual void evaluate_impl() = 0;
+    virtual void jacobian_impl() = 0;
 };

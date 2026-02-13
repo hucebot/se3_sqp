@@ -241,8 +241,9 @@ void SQPSolver::linearize() {
         {
             // std::cout<<"Linearizing dynamics"<<std::endl;
             auto dyn = _ocproblem.get_node(i).get_dynamics();
-            dyn->evaluate(_b[i]);
+            dyn->evaluate();
             dyn->jacobian();
+            _b[i] = dyn->get_value();
             _A[i] = dyn->get_jac_x();
             _B[i] = dyn->get_jac_u();
         }
@@ -263,14 +264,12 @@ void SQPSolver::linearize() {
         // std::cout<<"Linearizing costs"<<std::endl;
         for (auto& cost : _ocproblem.get_node(i).get_costs()) {
             std::cout<<"Linearizing :"<<cost->get_name()<< std::endl;
-            int out_dim = cost->get_output_dim();
-            VectorXd cost_val(out_dim);
-            cost->evaluate(cost_val);
+            cost->evaluate();
             cost->jacobian();
-            
 
-            MatrixXdConstRef Jx = cost->get_jac_x();  // out_dim × ndx
-            MatrixXd Ju = cost->get_jac_u();           // out_dim × ndu
+            const VectorXd& cost_val = cost->get_value();
+            MatrixXdConstRef Jx = cost->get_jac_x();
+            MatrixXd Ju = cost->get_jac_u();
             double w = cost->get_weight();
 
             _Q[i].noalias() += w * Jx.transpose() * Jx;
@@ -288,13 +287,12 @@ void SQPSolver::linearize() {
         // C = dg/dx,  D = dg/du
         // std::cout<<"Linearizing constraints"<<std::endl;
         int row = 0;
-        VectorXd residual;
         for (auto& con : _ocproblem.get_node(i).get_constraints()) {
             int nc = con->get_output_dim();
-            residual.resize(nc);
-            con->evaluate(residual);
+            con->evaluate();
             con->jacobian();
 
+            const VectorXd& residual = con->get_value();
             _C[i].middleRows(row, nc) = con->get_jac_x();
             _lg[i].segment(row, nc) = con->get_lower_bound() - residual;
             _ug[i].segment(row, nc) = con->get_upper_bound() - residual;
