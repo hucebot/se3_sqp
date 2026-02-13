@@ -9,10 +9,10 @@ SQPoptions::SQPoptions()
 void SQPoptions::defaults()
 {
     max_sqp_iters = 100;
-    ls_type = LSType::MERIT;
+    ls_type = LSType::FILTER;
     max_ls_iters = 20;
     ls_scale_factor = 0.5;
-    tolerance = 1e-6;
+    tolerance = 1e-3;
 }
 
 void SQPoptions::print() const

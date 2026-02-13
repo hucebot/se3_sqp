@@ -21,6 +21,7 @@ void SQPSolver::solve() {
         step();
         // TODO write tests for the pipeline
         if (_ls_function) {
+            DEBUG_PRINT("LS");
             for (int ls_iter = 0; ls_iter < _opts.max_ls_iters; ++ls_iter) {
                 if ((this->*_ls_function)()) break;
                 _ls_alpha *= _opts.ls_scale_factor;
@@ -31,6 +32,9 @@ void SQPSolver::solve() {
         accept_step();
 
         _stats.update();
+        _stats.update_cost(_ocproblem.cost());
+        _stats.update_constraint_violation(_ocproblem.constraint_violation());
+        _stats.update_dynamics_defect(_ocproblem.dynamics_defect());
         _stats.print();
         if (break_criteria()) break;
     }
@@ -40,6 +44,12 @@ void SQPSolver::solve() {
 void SQPSolver::init() {
     _N = _ocproblem.num_nodes();
     _ls_alpha = 1.0;
+
+    _prev_cost = 0.;
+    _prev_defect = 0.;
+    _prev_viol = 0.;
+
+    _opts.print();
 
     // Set line search function pointer based on options
     switch (_opts.ls_type) {
@@ -223,7 +233,6 @@ void SQPSolver::linearize() {
     // Rebind nodes to nominal trajectory (safe reset after step/linesearch)
     _ocproblem.bind_trajectory(_ocproblem.x_traj(), _ocproblem.u_traj());
 
-    double total_cost = 0.;
     for (int i = 0; i < _N; i++)
     {
         // std::cout<<i<<std::endl;
@@ -257,7 +266,6 @@ void SQPSolver::linearize() {
             int out_dim = cost->get_output_dim();
             VectorXd cost_val(out_dim);
             cost->evaluate(cost_val);
-            total_cost += 0.5 * cost_val.transpose() * cost_val;
             cost->jacobian();
             
 
@@ -273,7 +281,7 @@ void SQPSolver::linearize() {
                 _r[i].noalias() += w * Ju.transpose() * cost_val;
             }
         }
-        _stats.update_cost(total_cost);
+
 
         // Constraint linearization: lg <= C*dx + D*du <= ug
         // Linearized around current x: lg = lb - g(x),  ug = ub - g(x)

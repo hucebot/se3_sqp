@@ -18,7 +18,7 @@
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    int N = 300;
+    int N = 100;
     double dt = 0.01;
 
     OCP ocp(N);
@@ -39,7 +39,7 @@ int main() {
             node.add_constraint(std::make_shared<InvDynamics>());
         }
 
-        if (i==N-1) node.add_cost(std::make_shared<ConfigurationCost>(q_ref));
+        // if (i==N-1) node.add_cost(std::make_shared<ConfigurationCost>(q_ref));
             
         ocp.addNode(std::move(node));
     }
@@ -57,13 +57,15 @@ int main() {
     SQPSolver solver(ocp);
     solver.solve();
 
-    std::cout<<"state_trajectory"<<std::endl;
-    for (int k = 0; k < N; k++) 
-        std::cout<<"x["<<k<<"]"<<ocp.get_node(k).x().transpose()<<std::endl;  
+    std::cout<<"x["<<N-1<<"]"<<ocp.get_node(N-1).x().transpose()<<std::endl;    
     
-    std::cout<<"control_trajectory"<<std::endl;
-    for (int k = 0; k < N; k++) 
-        std::cout<<"u["<<k<<"]"<<ocp.get_node(k).u().transpose()<<std::endl;
+    // std::cout<<"state_trajectory"<<std::endl;
+    // for (int k = 0; k < N; k++) 
+    //     std::cout<<"x["<<k<<"]"<<ocp.get_node(k).x().transpose()<<std::endl;  
+    
+    // std::cout<<"control_trajectory"<<std::endl;
+    // for (int k = 0; k < N; k++) 
+    //     std::cout<<"u["<<k<<"]"<<ocp.get_node(k).u().transpose()<<std::endl;
 
     return 0;
 }

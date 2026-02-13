@@ -49,6 +49,11 @@ class SQPSolver {
     double _ls_alpha;
     double _step_norm;  // Norm of the accepted step (for convergence check)
 
+
+    double _prev_cost;
+    double _prev_defect;
+    double _prev_viol;
+
     // Initial state constraint: dx_0 = 0 (fix first state perturbation)
     std::vector<int> _idxbx;  // Indices of constrained state variables at stage 0
     VectorXd _lbx;            // Lower bound (zeros)

@@ -61,7 +61,7 @@ double OCP::dynamics_defect(){
 double OCP::constraint_violation(){
     _total_constraint_violation = 0.;
     for (auto& node: _horizon){
-        node.get_constraint_violation();
+        node.calc_constraint_violation();
         _total_constraint_violation += node.get_constraint_violation();
     }
     return _total_constraint_violation;
