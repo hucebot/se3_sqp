@@ -8,6 +8,7 @@ struct SQPstatistics {
     int number_of_iterations;
     double total_cost;
     double total_constraint_violation;
+    double total_dynamics_defect;
     double step_norm;
     int linesearch_iterations;
 
@@ -32,6 +33,7 @@ struct SQPstatistics {
     void update_iterations(int iter);
     void update_cost(double cost);
     void update_constraint_violation(double violation);
+    void update_dynamics_defect(double defect);
     void update_step_norm(double norm);
     void update_linesearch_iterations(int ls_iter);
 
