@@ -1,5 +1,5 @@
 #include <trajopt/node.h>
-
+#include <cmath>
 
 Node::Node(pinocchio::Model mdl)
     : _model_ptr(std::make_shared<pinocchio::Model>(std::move(mdl))),
@@ -9,6 +9,10 @@ Node::Node(pinocchio::Model mdl)
     _nq = _model_ptr->nq;
     _nv = _model_ptr->nv;
     // _x and _u are bound later via bind_trajectory()
+
+    _cost = 0.;
+    _defect = 0.;
+    _violation = 0.;
 }
 
 void Node::bind_trajectory(VectorXd* x, VectorXd* u) {
@@ -66,3 +70,41 @@ void Node::rebind_constraints() {
         cost->set_node(this);
     }
 }
+
+//TODO: I compute stuff twice, here and in the linearization, maybe it can be optimized somehow
+
+void Node::calc_cost(){
+    VectorXd val;
+    for (auto& cost: _cost_list){
+        cost->evaluate(val);
+        _cost += val.transpose() * val; //NOTE - Add the weight
+    }
+}
+
+void Node::calc_dynamics_defect(){
+    VectorXd val;
+    if (_dynamics){
+        _dynamics->evaluate(val);
+        _defect = val.cwiseAbs().maxCoeff();
+    }
+}
+
+
+void Node::calc_constraint_violation(){
+    VectorXd val;
+    VectorXd lb;
+    VectorXd ub;
+    for (auto& constraint: _constraint_list){
+        constraint->evaluate(val);
+        lb = constraint->get_lower_bound();
+        ub = constraint->get_upper_bound();
+
+        _violation += ((lb - val).cwiseMax(0.0) + (val - ub).cwiseMax(0.0)).maxCoeff();
+    }
+}
+
+
+
+
+
+

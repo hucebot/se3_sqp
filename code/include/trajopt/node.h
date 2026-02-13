@@ -35,6 +35,10 @@ class Node {
     VectorXd* _x_ptr = nullptr;
     VectorXd* _u_ptr = nullptr;
 
+    double _cost;
+    double _defect;
+    double _violation;
+
    public:
     Node(pinocchio::Model mdl);
     Node(Node&&) = default;
@@ -101,4 +105,13 @@ class Node {
     // Update all constraints' node pointers to point to this node
     // (needed after node is copied into a container)
     void rebind_constraints();
+
+    void calc_cost();
+    void calc_dynamics_defect();
+    void calc_constraint_violation();
+
+
+    const double get_cost(){ return _cost;}
+    const double get_dynamics_defect() { return _defect;}
+    const double get_constraint_violation(){ return _violation;}
 };
