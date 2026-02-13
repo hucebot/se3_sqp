@@ -38,3 +38,33 @@ void OCP::bind_trajectory(std::vector<VectorXd>& x, std::vector<VectorXd>& u) {
         _horizon[k].bind_trajectory(&x[k], &u[k]);
     }
 }
+
+
+double OCP::cost(){
+    _total_cost = 0.;
+    for (auto& node: _horizon){
+        node.calc_cost();
+        _total_cost += node.get_cost();
+    }
+    return _total_cost;
+}
+
+double OCP::dynamics_defect(){
+    _total_dynamics_defect = 0.;
+    for (auto& node: _horizon){
+        node.calc_dynamics_defect();
+        _total_dynamics_defect += node.get_dynamics_defect();
+    }
+    return _total_dynamics_defect;
+}
+
+double OCP::constraint_violation(){
+    _total_constraint_violation = 0.;
+    for (auto& node: _horizon){
+        node.get_constraint_violation();
+        _total_constraint_violation += node.get_constraint_violation();
+    }
+    return _total_constraint_violation;
+}
+
+

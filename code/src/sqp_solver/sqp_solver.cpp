@@ -257,13 +257,11 @@ void SQPSolver::linearize() {
             int out_dim = cost->get_output_dim();
             VectorXd cost_val(out_dim);
             cost->evaluate(cost_val);
-            std::cout<<"val :"<<cost_val.transpose()<< std::endl;
             total_cost += 0.5 * cost_val.transpose() * cost_val;
             cost->jacobian();
             
 
             MatrixXdConstRef Jx = cost->get_jac_x();  // out_dim × ndx
-            std::cout<<"Jx :"<<std::endl<<Jx<< std::endl;
             MatrixXd Ju = cost->get_jac_u();           // out_dim × ndu
             double w = cost->get_weight();
 

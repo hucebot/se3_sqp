@@ -19,6 +19,10 @@ class OCP {
     // Problem dimensions
     int _num_nodes;
 
+    double _total_cost;
+    double _total_dynamics_defect;
+    double _total_constraint_violation;
+
    public:
     OCP(int num_nodes);
     ~OCP();
@@ -40,6 +44,10 @@ class OCP {
 
     // Bind nodes to external trajectory (for SQP line search)
     void bind_trajectory(std::vector<VectorXd>& x, std::vector<VectorXd>& u);
+
+    double cost();
+    double dynamics_defect();
+    double constraint_violation();
 
     // Access to OCP-owned trajectory
     std::vector<VectorXd>& x_traj() { return _x_traj; }
