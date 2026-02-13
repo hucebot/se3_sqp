@@ -180,7 +180,8 @@ void SQPSolver::step() {
             _qp_solver.get_u(k, _du[k].data());
             _step_norm = std::max(_step_norm, (_ls_alpha * _du[k]).cwiseAbs().maxCoeff());
 
-            _u_candidate[k] = u_nom[k] + _ls_alpha * _du[k];
+            VectorXd scaled_du = _ls_alpha * _du[k];
+            _ocproblem.get_node(k).u_oplus(u_nom[k], scaled_du, _u_candidate[k]);
         }
     }
 

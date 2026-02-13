@@ -31,6 +31,11 @@ void Node::x_oplus(VectorXdRef x0, VectorXdRef dx, VectorXdRef x1){
     x1.tail(_nv) = v0 + dv;
 }
 
+void Node::u_oplus(VectorXdRef u0, VectorXdRef du, VectorXdRef u1) {
+    // Control u = a (acceleration) lives in Euclidean space R^nv
+    u1 = u0 + du;
+}
+
 void Node::add_cost(std::shared_ptr<AbstractCost> cost) {
     _cost_list.push_back(cost);
     cost->set_node(this);

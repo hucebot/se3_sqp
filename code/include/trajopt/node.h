@@ -79,7 +79,7 @@ class Node {
     pinocchio::Data& data() {return *_data_ptr;}
 
     void x_oplus(VectorXdRef x0, VectorXdRef dx, VectorXdRef x1);
-    // void u_oplus(VectorXdRef x0, VectorXdRef dx, VectorXdRef x1);
+    void u_oplus(VectorXdRef u0, VectorXdRef du, VectorXdRef u1);
 
     void cached_update();
 

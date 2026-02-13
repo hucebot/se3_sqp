@@ -1,40 +1,32 @@
-# EulerIntegration tests
-add_executable(test_euler_integration
-    integration_schemes/test_euler_integration.cpp
-)
+function(add_trajopt_test target source label)
+    add_executable(${target} ${source})
+    target_include_directories(${target} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/fixtures
+        ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    )
+    target_link_libraries(${target} PRIVATE
+        ${PROJECT_NAME}
+        GTest::gtest
+        GTest::gtest_main
+    )
+    gtest_discover_tests(${target} PROPERTIES LABELS ${label})
+endfunction()
 
-target_include_directories(test_euler_integration PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/fixtures
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils
-)
+file(GLOB_RECURSE TEST_SOURCES "**.cpp")
 
-target_link_libraries(test_euler_integration PRIVATE
-    ${PROJECT_NAME}
-    GTest::gtest
-    GTest::gtest_main
-)
+foreach(TEST_SOURCE ${TEST_SOURCES})
+    # Derive target name from file path relative to this directory
+    file(RELATIVE_PATH rel ${CMAKE_CURRENT_SOURCE_DIR} ${TEST_SOURCE})
+    string(REPLACE "/" "_" target ${rel})
+    string(REPLACE ".cpp" "" target ${target})
 
-# Register tests with CTest
-gtest_discover_tests(test_euler_integration
-    PROPERTIES LABELS "integration_schemes"
-)
+    # Use the subdirectory as the label
+    get_filename_component(subdir ${rel} DIRECTORY)
+    if(subdir STREQUAL "")
+        set(label "misc")
+    else()
+        set(label ${subdir})
+    endif()
 
-# InvDynamics tests
-add_executable(test_inverse_dynamics
-    constraints/test_inverse_dynamics.cpp
-)
-
-target_include_directories(test_inverse_dynamics PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/fixtures
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils
-)
-
-target_link_libraries(test_inverse_dynamics PRIVATE
-    ${PROJECT_NAME}
-    GTest::gtest
-    GTest::gtest_main
-)
-
-gtest_discover_tests(test_inverse_dynamics
-    PROPERTIES LABELS "constraints"
-)
+    add_trajopt_test(${target} ${TEST_SOURCE} ${label})
+endforeach()
