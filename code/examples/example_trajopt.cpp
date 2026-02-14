@@ -35,8 +35,10 @@ int main() {
         Node node(robot_mdl);
         if (i<N-1)
         {
-            node.add_dynamics(std::make_shared<EulerIntegration>(dt));
-            node.add_constraint(std::make_shared<InvDynamics>());
+            auto dynamics = std::make_shared<EulerIntegration>(dt);
+            auto constraint = std::make_shared<InvDynamics>();
+            node.add_dynamics(dynamics);
+            node.add_constraint(constraint);
         }
 
         // if (i==N-1) node.add_cost(std::make_shared<ConfigurationCost>(q_ref));
@@ -55,6 +57,12 @@ int main() {
     }
 
     SQPSolver solver(ocp);
+
+    SQPoptions opts;
+    opts.max_sqp_iters = 50;
+    opts.ls_type = LSType::FILTER;
+    solver.set_options(opts);
+
     solver.solve();
 
     std::cout<<"x["<<N-1<<"]"<<ocp.get_node(N-1).x().transpose()<<std::endl;    

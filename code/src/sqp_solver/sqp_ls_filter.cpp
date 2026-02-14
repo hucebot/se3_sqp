@@ -1,7 +1,6 @@
 #include <sqp_solver/sqp_solver.h>
 
 bool SQPSolver::ls_filter() {
-    DEBUG_PRINT("FILTER_LS");
     _last_cost   = _ocproblem.cost();
     _last_viol   = _ocproblem.constraint_violation();
     _last_defect = _ocproblem.dynamics_defect();

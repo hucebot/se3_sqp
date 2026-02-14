@@ -22,6 +22,8 @@ class AbstractCost : public AbstractFunction {
     AbstractCost() : AbstractFunction(), weight(1.0) {}
     virtual ~AbstractCost() {}
 
+    // TODO weight should be a matrix 
+
     /**
      * Get the weight/scaling factor for this cost
      */
@@ -32,6 +34,3 @@ class AbstractCost : public AbstractFunction {
      */
     void set_weight(double w) { weight = w; }
 };
-
-
-//TODO: I can cache the evaluation of the functions with a simple flag if the nodes state and controls haven't changed

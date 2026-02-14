@@ -9,6 +9,11 @@ SQPSolver::~SQPSolver() {
     // HPIPM memory automatically freed by HPIPMSolver destructor
 }
 
+void SQPSolver::set_options(const SQPoptions& opts) {
+    _opts = opts;
+    _opts.print();
+}
+
 void SQPSolver::solve() {
     _stats.start_timer();
     for (int i = 0; i < _opts.max_sqp_iters; i++) {
@@ -19,9 +24,7 @@ void SQPSolver::solve() {
 
         // Backtracking line search
         step();
-        // TODO write tests for the pipeline
         if (_ls_function) {
-            DEBUG_PRINT("LS");
             for (int ls_iter = 1; ls_iter < _opts.max_ls_iters; ++ls_iter) {
                 _stats.update_linesearch_iterations(ls_iter);
                 if ((this->*_ls_function)()) break;
@@ -60,8 +63,6 @@ void SQPSolver::init() {
     _prev_cost = 0.;
     _prev_defect = 0.;
     _prev_viol = 0.;
-
-    _opts.print();
 
     // Set line search function pointer based on options
     switch (_opts.ls_type) {
@@ -275,8 +276,6 @@ void SQPSolver::linearize() {
             _r[i].setZero();
         }
         
-
-        // std::cout<<"Linearizing costs"<<std::endl;
         for (auto& cost : _ocproblem.get_node(i).get_costs()) {
             DEBUG_PRINT("Linearizing :" << cost->get_name());
             cost->evaluate();

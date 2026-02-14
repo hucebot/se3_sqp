@@ -9,6 +9,8 @@ struct SQPoptions {
 
     double tolerance;
 
+    // TODO add verbose level option
+
     SQPoptions();
     void defaults();
     void print() const;
