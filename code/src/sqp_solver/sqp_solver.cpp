@@ -11,6 +11,11 @@ SQPSolver::~SQPSolver() {
 
 void SQPSolver::set_options(const SQPoptions& opts) {
     _opts = opts;
+    switch (_opts.ls_type) {
+        case LSType::MERIT:  _ls_function = &SQPSolver::ls_merit;  break;
+        case LSType::FILTER: _ls_function = &SQPSolver::ls_filter; break;
+        case LSType::NONE:   _ls_function = nullptr;               break;
+    }
     _opts.print();
 }
 
@@ -34,22 +39,18 @@ void SQPSolver::solve() {
         }
         accept_step();
 
-        // When no line search ran, _last_* were not populated by ls_filter().
-        // Compute once here so stats and _prev_* are always up to date.
+        // When no line search ran,  _candidate_* were not populated by ls_filter().
+        // Compute once here so stats and  _nominal_* are always up to date.
         if (!_ls_function) {
-            _last_cost   = _ocproblem.cost();
-            _last_viol   = _ocproblem.constraint_violation();
-            _last_defect = _ocproblem.dynamics_defect();
+             _candidate_cost   = _ocproblem.cost();
+             _candidate_viol   = _ocproblem.constraint_violation();
+             _candidate_defect = _ocproblem.dynamics_defect();
         }
 
-        _prev_cost   = _last_cost;
-        _prev_viol   = _last_viol;
-        _prev_defect = _last_defect;
-
         _stats.update();
-        _stats.update_cost(_last_cost);
-        _stats.update_constraint_violation(_last_viol);
-        _stats.update_dynamics_defect(_last_defect);
+        _stats.update_cost( _candidate_cost);
+        _stats.update_constraint_violation( _candidate_viol);
+        _stats.update_dynamics_defect( _candidate_defect);
         _stats.print();
         if (break_criteria()) break;
     }
@@ -60,9 +61,9 @@ void SQPSolver::init() {
     _N = _ocproblem.num_nodes();
     _ls_alpha = 1.0;
 
-    _prev_cost = 0.;
-    _prev_defect = 0.;
-    _prev_viol = 0.;
+     _nominal_cost = 0.;
+     _nominal_defect = 0.;
+     _nominal_viol = 0.;
 
     // Set line search function pointer based on options
     switch (_opts.ls_type) {
@@ -70,6 +71,9 @@ void SQPSolver::init() {
         case LSType::FILTER: _ls_function = &SQPSolver::ls_filter; break;
         case LSType::NONE:   _ls_function = nullptr;               break;
     }
+
+    // _opts = set_options(_opts.default());
+
     _Nx = _N;
     _Nu = _N-1;
 
@@ -277,7 +281,6 @@ void SQPSolver::linearize() {
         }
         
         for (auto& cost : _ocproblem.get_node(i).get_costs()) {
-            DEBUG_PRINT("Linearizing :" << cost->get_name());
             cost->evaluate();
             cost->jacobian();
 
@@ -320,6 +323,22 @@ void SQPSolver::linearize() {
             row += nc;
         }
 
+    }
+
+    _nominal_cost   = _ocproblem.cost();
+    _nominal_defect = _ocproblem.dynamics_defect();
+    _nominal_viol   = _ocproblem.constraint_violation();
+
+    // hold the merit values at the current nominal trajectory, not the previous iterate.
+    // Compute nominal merit values and subgradients for ls_merit() Armijo check.
+    // Must run after all evaluate()/jacobian() calls above so _value and _jac are fresh.
+    if (_opts.ls_type == LSType::MERIT) {
+        for (int k = 0; k < _N; ++k) {
+            auto& node = _ocproblem.get_node(k);
+            node.calc_cost_gradient();
+            node.calc_defect_gradient();
+            node.calc_violation_gradient();
+        }
     }
 }
 

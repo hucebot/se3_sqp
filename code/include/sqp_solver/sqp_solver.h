@@ -51,14 +51,14 @@ class SQPSolver {
     double _step_norm;  // Norm of the accepted step (for convergence check)
 
 
-    double _prev_cost;
-    double _prev_defect;
-    double _prev_viol;
+    double  _nominal_cost;
+    double  _nominal_defect;
+    double  _nominal_viol;
 
     // Values at the last accepted candidate (populated by ls_filter / LSType::NONE path)
-    double _last_cost   = 0.;
-    double _last_viol   = 0.;
-    double _last_defect = 0.;
+    double  _candidate_cost   = 0.;
+    double  _candidate_viol   = 0.;
+    double  _candidate_defect = 0.;
 
     // Initial state constraint: dx_0 = 0 (fix first state perturbation)
     std::vector<int> _idxbx;  // Indices of constrained state variables at stage 0

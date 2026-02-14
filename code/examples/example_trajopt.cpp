@@ -18,7 +18,7 @@
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    int N = 100;
+    int N = 300;
     double dt = 0.01;
 
     OCP ocp(N);
@@ -41,7 +41,11 @@ int main() {
             node.add_constraint(constraint);
         }
 
-        // if (i==N-1) node.add_cost(std::make_shared<ConfigurationCost>(q_ref));
+
+        auto conf = std::make_shared<ConfigurationCost>(q_ref);
+        if (i==N-1) conf->set_weight(1e3);
+        else conf->set_weight(1e-3);
+        node.add_cost(conf);
             
         ocp.addNode(std::move(node));
     }
@@ -51,7 +55,7 @@ int main() {
 
     // Set initial guess
     for (int k = 0; k < N; k++) {
-        ocp.get_node(k).q() << 0.1, 0.0;
+        ocp.get_node(k).q() << 0.5, 0.;
         ocp.get_node(k).v().setZero();
         ocp.get_node(k).u().setZero();             // control = 0
     }
@@ -59,8 +63,8 @@ int main() {
     SQPSolver solver(ocp);
 
     SQPoptions opts;
-    opts.max_sqp_iters = 50;
-    opts.ls_type = LSType::FILTER;
+    opts.max_sqp_iters = 100;
+    opts.ls_type = LSType::MERIT;
     solver.set_options(opts);
 
     solver.solve();
