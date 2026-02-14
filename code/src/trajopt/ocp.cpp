@@ -40,6 +40,14 @@ void OCP::bind_trajectory(std::vector<VectorXd>& x, std::vector<VectorXd>& u) {
 }
 
 
+void OCP::evaluate_all() {
+    for (auto& node : _horizon) {
+        if (node.get_dynamics()) node.get_dynamics()->evaluate();
+        for (auto& c : node.get_costs())       c->evaluate();
+        for (auto& c : node.get_constraints()) c->evaluate();
+    }
+}
+
 double OCP::cost(){
     _total_cost = 0.;
     for (auto& node: _horizon){

@@ -31,10 +31,22 @@ void SQPSolver::solve() {
         }
         accept_step();
 
+        // When no line search ran, _last_* were not populated by ls_filter().
+        // Compute once here so stats and _prev_* are always up to date.
+        if (!_ls_function) {
+            _last_cost   = _ocproblem.cost();
+            _last_viol   = _ocproblem.constraint_violation();
+            _last_defect = _ocproblem.dynamics_defect();
+        }
+
+        _prev_cost   = _last_cost;
+        _prev_viol   = _last_viol;
+        _prev_defect = _last_defect;
+
         _stats.update();
-        _stats.update_cost(_ocproblem.cost());
-        _stats.update_constraint_violation(_ocproblem.constraint_violation());
-        _stats.update_dynamics_defect(_ocproblem.dynamics_defect());
+        _stats.update_cost(_last_cost);
+        _stats.update_constraint_violation(_last_viol);
+        _stats.update_dynamics_defect(_last_defect);
         _stats.print();
         if (break_criteria()) break;
     }
@@ -78,6 +90,8 @@ void SQPSolver::init() {
     // Step storage (reused every iteration)
     _dx.resize(_Nx);
     _du.resize(_Nu);
+    _scaled_dx.resize(_Nx);
+    _scaled_du.resize(_Nu);
     // Trajectory storage
     _x_candidate.resize(_Nx);
     _u_candidate.resize(_Nu);
@@ -122,6 +136,8 @@ void SQPSolver::init() {
 
         _dx[k].setZero(_ndx);
         if (k<_Nu) _du[k].setZero(_ndu);
+        _scaled_dx[k].setZero(_ndx);
+        if (k<_Nu) _scaled_du[k].setZero(_ndu);
 
         _x_candidate[k].setZero(_ndx);
         if (k<_Nu) _u_candidate[k].setZero(_ndu);
@@ -156,7 +172,7 @@ void SQPSolver::init() {
     // Set solver options for maximum performance
     _qp_solver.set_iter_max(200);                 // Reasonable default
     _qp_solver.set_tol(1e-3, 1e-3, 1e-3, 1e-3);  // Tolerances
-    _qp_solver.set_warm_start(false);             // CRITICAL: Enable warm-starting (huge speedup)
+    _qp_solver.set_warm_start(true);              // CRITICAL: Enable warm-starting (huge speedup)
 
     // std::cout<<"inited_sqp"<<std::endl;
 }
@@ -198,22 +214,21 @@ void SQPSolver::step() {
 
     for (int k = 0; k < _N; ++k) {
         _qp_solver.get_x(k, _dx[k].data());
-        _step_norm = std::max(_step_norm, (_ls_alpha * _dx[k]).cwiseAbs().maxCoeff());
-
-        VectorXd scaled_dx = _ls_alpha * _dx[k];
-        _ocproblem.get_node(k).x_oplus(x_nom[k], scaled_dx, _x_candidate[k]);
+        _scaled_dx[k].noalias() = _ls_alpha * _dx[k];
+        _step_norm = std::max(_step_norm, _scaled_dx[k].cwiseAbs().maxCoeff());
+        _ocproblem.get_node(k).x_oplus(x_nom[k], _scaled_dx[k], _x_candidate[k]);
 
         if (k < _Nu) {
             _qp_solver.get_u(k, _du[k].data());
-            _step_norm = std::max(_step_norm, (_ls_alpha * _du[k]).cwiseAbs().maxCoeff());
-
-            VectorXd scaled_du = _ls_alpha * _du[k];
-            _ocproblem.get_node(k).u_oplus(u_nom[k], scaled_du, _u_candidate[k]);
+            _scaled_du[k].noalias() = _ls_alpha * _du[k];
+            _step_norm = std::max(_step_norm, _scaled_du[k].cwiseAbs().maxCoeff());
+            _ocproblem.get_node(k).u_oplus(u_nom[k], _scaled_du[k], _u_candidate[k]);
         }
     }
 
-    // Bind nodes to candidate trajectory for evaluation by ls_merit()/ls_filter()
+    // Bind nodes to candidate trajectory and refresh _value for LS checks
     _ocproblem.bind_trajectory(_x_candidate, _u_candidate);
+    _ocproblem.evaluate_all();
     _stats.update_step_norm(_step_norm);
 }
 
@@ -263,7 +278,7 @@ void SQPSolver::linearize() {
 
         // std::cout<<"Linearizing costs"<<std::endl;
         for (auto& cost : _ocproblem.get_node(i).get_costs()) {
-            std::cout<<"Linearizing :"<<cost->get_name()<< std::endl;
+            DEBUG_PRINT("Linearizing :" << cost->get_name());
             cost->evaluate();
             cost->jacobian();
 

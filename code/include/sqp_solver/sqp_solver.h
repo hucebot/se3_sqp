@@ -42,9 +42,10 @@ class SQPSolver {
     std::vector<VectorXd> _ug; // Upper bound: ub - g(x) (ng)
 
     // Step storage for full trajectory (pre-allocated for zero allocations)
-    std::vector<VectorXd> _dx;  // State steps: _dx[k] is VectorXd of size _ndx
-    std::vector<VectorXd>
-        _du;  // Control steps: _du[k] is VectorXd of size _ndu
+    std::vector<VectorXd> _dx;         // State steps: _dx[k] is VectorXd of size _ndx
+    std::vector<VectorXd> _du;         // Control steps: _du[k] is VectorXd of size _ndu
+    std::vector<VectorXd> _scaled_dx;  // Scratch: alpha * _dx[k], reused across step() calls
+    std::vector<VectorXd> _scaled_du;  // Scratch: alpha * _du[k], reused across step() calls
 
     double _ls_alpha;
     double _step_norm;  // Norm of the accepted step (for convergence check)
@@ -53,6 +54,11 @@ class SQPSolver {
     double _prev_cost;
     double _prev_defect;
     double _prev_viol;
+
+    // Values at the last accepted candidate (populated by ls_filter / LSType::NONE path)
+    double _last_cost   = 0.;
+    double _last_viol   = 0.;
+    double _last_defect = 0.;
 
     // Initial state constraint: dx_0 = 0 (fix first state perturbation)
     std::vector<int> _idxbx;  // Indices of constrained state variables at stage 0
@@ -97,6 +103,9 @@ class SQPSolver {
    public:
     SQPSolver(OCP& ocp);
     ~SQPSolver();
+
+    /// @brief set solver options before calling solve()
+    void set_options(const SQPoptions& opts);
 
     /// @brief solve the defined problem
     void solve();

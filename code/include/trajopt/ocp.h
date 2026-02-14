@@ -45,6 +45,10 @@ class OCP {
     // Bind nodes to external trajectory (for SQP line search)
     void bind_trajectory(std::vector<VectorXd>& x, std::vector<VectorXd>& u);
 
+    // Trigger evaluate() on all functions at the current node binding.
+    // Must be called after bind_trajectory() to refresh _value for LS checks.
+    void evaluate_all();
+
     double cost();
     double dynamics_defect();
     double constraint_violation();
