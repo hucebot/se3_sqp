@@ -37,7 +37,8 @@ void OCP::finalize() {
 
 void OCP::bind_trajectory(std::vector<VectorXd>& x, std::vector<VectorXd>& u) {
     for (int k = 0; k < _num_nodes; ++k) {
-        _horizon[k].bind_trajectory(&x[k], &u[k]);
+        VectorXd* u_ptr = (k < static_cast<int>(u.size())) ? &u[k] : nullptr;
+        _horizon[k].bind_trajectory(&x[k], u_ptr);
     }
 }
 

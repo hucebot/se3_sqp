@@ -70,10 +70,12 @@ nlohmann::json Node::to_json() const {
     nlohmann::json j;
     auto q_vec = q();
     auto v_vec = v();
-    auto u_vec = u();
     j["q"] = std::vector<double>(q_vec.data(), q_vec.data() + q_vec.size());
     j["v"] = std::vector<double>(v_vec.data(), v_vec.data() + v_vec.size());
-    j["u"] = std::vector<double>(u_vec.data(), u_vec.data() + u_vec.size());
+    if (_u_ptr && _u_ptr->size() > 0) {
+        auto u_vec = u();
+        j["u"] = std::vector<double>(u_vec.data(), u_vec.data() + u_vec.size());
+    }
     return j;
 }
 

@@ -42,10 +42,10 @@ int main() {
         }
 
 
-        auto conf = std::make_shared<ConfigurationCost>(q_ref);
-        if (i==N-1) conf->set_weight(1e3);
-        else conf->set_weight(1e-3);
-        node.add_cost(conf);
+        // auto conf = std::make_shared<ConfigurationCost>(q_ref);
+        // if (i==N-1) conf->set_weight(1e3);
+        // else conf->set_weight(1e-3);
+        // node.add_cost(conf);
             
         ocp.addNode(std::move(node));
     }
@@ -55,7 +55,7 @@ int main() {
 
     // Set initial guess
     for (int k = 0; k < N; k++) {
-        ocp.get_node(k).q() << 0.5, 0.;
+        ocp.get_node(k).q() << 0.1, 0.;
         ocp.get_node(k).v().setZero();
         ocp.get_node(k).u().setZero();             // control = 0
     }
