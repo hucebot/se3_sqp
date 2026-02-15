@@ -1,5 +1,7 @@
 #include <trajopt/ocp.h>
 
+#include <fstream>
+
 OCP::OCP(int num_nodes) : _num_nodes(num_nodes) {
     _horizon.reserve(num_nodes);
     _x_traj.reserve(num_nodes);
@@ -37,4 +39,25 @@ void OCP::bind_trajectory(std::vector<VectorXd>& x, std::vector<VectorXd>& u) {
     for (int k = 0; k < _num_nodes; ++k) {
         _horizon[k].bind_trajectory(&x[k], &u[k]);
     }
+}
+
+void OCP::save_trajectory(const std::string& filepath, double dt,
+                           const std::string& urdf_path) const {
+    const Node& n0 = _horizon[0];
+    nlohmann::json j;
+    j["N"]         = _num_nodes;
+    j["dt"]        = dt;
+    j["nq"]        = n0.nq();
+    j["nv"]        = n0.nv();
+    j["nu"]        = n0.nu();
+    j["urdf_path"] = urdf_path;
+
+    nlohmann::json traj = nlohmann::json::array();
+    for (const Node& node : _horizon) {
+        traj.push_back(node.to_json());
+    }
+    j["trajectory"] = traj;
+
+    std::ofstream out(filepath);
+    out << j.dump(2);
 }

@@ -57,13 +57,8 @@ int main() {
     SQPSolver solver(ocp);
     solver.solve();
 
-    std::cout<<"state_trajectory"<<std::endl;
-    for (int k = 0; k < N; k++) 
-        std::cout<<"x["<<k<<"]"<<ocp.get_node(k).x().transpose()<<std::endl;  
-    
-    std::cout<<"control_trajectory"<<std::endl;
-    for (int k = 0; k < N; k++) 
-        std::cout<<"u["<<k<<"]"<<ocp.get_node(k).u().transpose()<<std::endl;
+    ocp.save_trajectory("/workspace/trajectory.json", dt, urdf_path);
+    std::cout << "Trajectory saved to /workspace/trajectory.json" << std::endl;
 
     return 0;
 }
