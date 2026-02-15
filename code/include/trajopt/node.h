@@ -6,6 +6,7 @@
 
 #include <array>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/multibody/model.hpp>
@@ -101,4 +102,7 @@ class Node {
     // Update all constraints' node pointers to point to this node
     // (needed after node is copied into a container)
     void rebind_constraints();
+
+    // Serialize this node's state and control to JSON
+    nlohmann::json to_json() const;
 };
