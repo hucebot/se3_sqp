@@ -20,6 +20,7 @@ else
         --name "${CONTAINER_NAME}" \
         -v "${WORKSPACE_DIR}:/workspace" \
         -w /workspace \
+        -p 8080:8080 \
         "${IMAGE_NAME}" \
         /bin/bash
 fi

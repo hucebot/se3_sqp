@@ -3,6 +3,8 @@
 #include <trajopt/node.h>
 
 #include <Eigen/Dense>
+#include <nlohmann/json.hpp>
+#include <string>
 #include <vector>
 
 class Node;
@@ -58,4 +60,8 @@ class OCP {
     std::vector<VectorXd>& u_traj() { return _u_traj; }
     const std::vector<VectorXd>& x_traj() const { return _x_traj; }
     const std::vector<VectorXd>& u_traj() const { return _u_traj; }
+
+    // Serialize final trajectory to a JSON file
+    void save_trajectory(const std::string& filepath, double dt = 0.0,
+                         const std::string& urdf_path = "") const;
 };

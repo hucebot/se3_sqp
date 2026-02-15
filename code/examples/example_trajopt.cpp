@@ -69,15 +69,8 @@ int main() {
 
     solver.solve();
 
-    std::cout<<"x["<<N-1<<"]"<<ocp.get_node(N-1).x().transpose()<<std::endl;    
-    
-    // std::cout<<"state_trajectory"<<std::endl;
-    // for (int k = 0; k < N; k++) 
-    //     std::cout<<"x["<<k<<"]"<<ocp.get_node(k).x().transpose()<<std::endl;  
-    
-    // std::cout<<"control_trajectory"<<std::endl;
-    // for (int k = 0; k < N; k++) 
-    //     std::cout<<"u["<<k<<"]"<<ocp.get_node(k).u().transpose()<<std::endl;
+    ocp.save_trajectory("/workspace/code/resources/trajectories/trajectory.json", dt, urdf_path);
+    std::cout << "Trajectory saved to /workspace/trajectory.json" << std::endl;
 
     return 0;
 }

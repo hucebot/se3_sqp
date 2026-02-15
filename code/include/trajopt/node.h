@@ -6,6 +6,7 @@
 
 #include <array>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/multibody/model.hpp>
@@ -148,4 +149,6 @@ class Node {
     const double get_cost(){ return _cost;}
     const double get_dynamics_defect() { return _defect;}
     const double get_constraint_violation(){ return _violation;}
+    // Serialize this node's state and control to JSON
+    nlohmann::json to_json() const;
 };

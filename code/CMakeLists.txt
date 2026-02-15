@@ -26,6 +26,7 @@ find_package(blasfeo REQUIRED)
 find_package(hpipm REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(example-robot-data REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 # ========================================
 # LIBRARY
@@ -41,6 +42,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     blasfeo
     hpipm
     pinocchio::pinocchio
+    nlohmann_json::nlohmann_json
 )
 
 # ========================================

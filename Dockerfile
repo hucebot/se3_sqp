@@ -106,7 +106,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip3 install --no-cache-dir \
     pin \
     viser \
-    urdfpy
+    yourdfpy
 
 # ============================================
 # Tracy Profiler - Frame Profiler
@@ -130,6 +130,13 @@ RUN git clone --depth 1 https://github.com/wolfpld/tracy.git /tmp/tracy && \
     cmake --build build --parallel && \
     cmake --install build && \
     rm -rf /tmp/tracy
+
+# ============================================
+# nlohmann/json - C++ JSON Library
+# ============================================
+RUN apt-get update && apt-get install -y \
+    nlohmann-json3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create workspace
 WORKDIR /workspace
