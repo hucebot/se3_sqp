@@ -57,7 +57,7 @@ int main() {
     SQPSolver solver(ocp);
     solver.solve();
 
-    ocp.save_trajectory("/workspace/trajectory.json", dt, urdf_path);
+    ocp.save_trajectory("/workspace/code/resources/trajectories/trajectory.json", dt, urdf_path);
     std::cout << "Trajectory saved to /workspace/trajectory.json" << std::endl;
 
     return 0;
