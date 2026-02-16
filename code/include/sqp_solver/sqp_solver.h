@@ -47,6 +47,11 @@ class SQPSolver {
     std::vector<VectorXd> _scaled_dx;  // Scratch: alpha * _dx[k], reused across step() calls
     std::vector<VectorXd> _scaled_du;  // Scratch: alpha * _du[k], reused across step() calls
 
+    // Lagrange multipliers (dual variables from QP)
+    std::vector<VectorXd> _pi;         // Dynamics multipliers: _pi[k], k=0..N-2, each ndx
+    std::vector<VectorXd> _lam_lg;     // General constraint lower multipliers, each ng
+    std::vector<VectorXd> _lam_ug;     // General constraint upper multipliers, each ng
+
     double _ls_alpha;
     double _step_norm;  // Norm of the accepted step (for convergence check)
     double _current_reg; // Current adaptive regularization value
@@ -98,7 +103,10 @@ class SQPSolver {
     /// Returns true if candidate is acceptable to the filter.
     bool ls_filter();
 
-    /// Check convergence (step norm below tolerance)
+    /// Compute NLP-level KKT stationarity residual using multipliers
+    double compute_kkt_residual();
+
+    /// Check convergence (KKT + feasibility, with step norm fallback)
     bool break_criteria();
 
    public:

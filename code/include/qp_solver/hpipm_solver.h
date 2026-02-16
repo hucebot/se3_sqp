@@ -151,6 +151,16 @@ class HPIPMSolver {
         d_ocp_qp_sol_get_pi(stage, &_qp_sol, pi_out);
     }
 
+    /** Extract general constraint lower bound multipliers lam_lg_k for stage k */
+    inline void get_lam_lg(int stage, double* out) {
+        d_ocp_qp_sol_get_lam_lg(stage, &_qp_sol, out);
+    }
+
+    /** Extract general constraint upper bound multipliers lam_ug_k for stage k */
+    inline void get_lam_ug(int stage, double* out) {
+        d_ocp_qp_sol_get_lam_ug(stage, &_qp_sol, out);
+    }
+
     // === Solver Diagnostics ===
 
     /** Get QP solver convergence status (0=success, 1=max_iter, 2=min_step, 3=NaN) */

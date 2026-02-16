@@ -118,6 +118,10 @@ void SQPSolver::init() {
     // Step storage (reused every iteration)
     _dx.resize(_Nx);
     _du.resize(_Nu);
+    // Lagrange multipliers
+    _pi.resize(_Nu);
+    _lam_lg.resize(_Nx);
+    _lam_ug.resize(_Nx);
     _scaled_dx.resize(_Nx);
     _scaled_du.resize(_Nu);
     // Trajectory storage
@@ -165,6 +169,9 @@ void SQPSolver::init() {
 
         _dx[k].setZero(_ndx);
         if (k<_Nu) _du[k].setZero(_ndu);
+        if (k<_Nu) _pi[k].setZero(_ndx);
+        _lam_lg[k].setZero(_ng);
+        _lam_ug[k].setZero(_ng);
         _scaled_dx[k].setZero(_ndx);
         if (k<_Nu) _scaled_du[k].setZero(_ndu);
 
@@ -221,6 +228,7 @@ void SQPSolver::populate_qp() {
         if (k<_Nu){
             _qp_solver.set_R(k, _R[k].data());
             _qp_solver.set_r(k, _r[k].data());
+            _qp_solver.set_S(k, _S[k].data());
         }
 
         _qp_solver.set_C(k, _C[k].data());
@@ -253,6 +261,13 @@ void SQPSolver::step() {
             _step_norm = std::max(_step_norm, _scaled_du[k].cwiseAbs().maxCoeff());
             _ocproblem.get_node(k).u_oplus(u_nom[k], _scaled_du[k], _u_candidate[k]);
         }
+
+        //TODO - update the l_{k+1} = l_k + a dl_k
+        // Extract Lagrange multipliers from QP solution
+        _qp_solver.get_lam_lg(k, _lam_lg[k].data());
+        _qp_solver.get_lam_ug(k, _lam_ug[k].data());
+        if (k < _Nu)
+            _qp_solver.get_pi(k, _pi[k].data());
     }
 
     // Bind nodes to candidate trajectory and refresh _value for LS checks
