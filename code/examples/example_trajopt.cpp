@@ -2,6 +2,7 @@
 #include "trajopt/node.h"
 #include "sqp_solver/sqp_solver.h"
 
+#include "trajopt/constraints/integration_schemes/semi-euler.h"
 #include "trajopt/constraints/integration_schemes/euler.h"
 #include "trajopt/constraints/inverse_dynamics.h"
 #include "trajopt/costs/configuration_cost.h"
@@ -28,14 +29,14 @@ int main() {
     pinocchio::urdf::buildModel(urdf_path, robot_mdl);
 
     Vector2d q_ref;
-    q_ref << M_PI_2, -M_PI_2;
+    q_ref << M_PI, 0.;
 
     for (int i = 0; i < N; i++)
     {
         Node node(robot_mdl);
         if (i<N-1)
         {
-            auto dynamics = std::make_shared<EulerIntegration>(dt);
+            auto dynamics = std::make_shared<SemiEulerIntegration>(dt);
             auto constraint = std::make_shared<InvDynamics>();
             node.add_dynamics(dynamics);
             node.add_constraint(constraint);
@@ -55,7 +56,7 @@ int main() {
 
     // Set initial guess
     for (int k = 0; k < N; k++) {
-        ocp.get_node(k).q() << 0.5, 0.;
+        ocp.get_node(k).q() << 0.0, 0.;
         ocp.get_node(k).v().setZero();
         ocp.get_node(k).u().setZero();             // control = 0
     }
