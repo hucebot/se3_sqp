@@ -6,17 +6,17 @@
 #include <pinocchio/multibody/model.hpp>
 
 /**
- * EulerIntegration implements explicit Euler as an equality constraint.
+ * SemiEulerIntegration implements explicit Euler as an equality constraint.
  *
  * For state x = [q; v] and control u = a (acceleration):
- *   q_{k+1} = q_k ⊕ (dt * v_k)   (Pinocchio integrate for Lie groups)
  *   v_{k+1} = v_k + dt * a_k
+ *   q_{k+1} = q_k ⊕ (dt * v_{k+1})   (Pinocchio integrate for Lie groups)
  *
  * Constraint residual (equality to zero):
  *   g = [ q_{k+1} ⊖ integrate(q_k, dt * v_k) ]
  *       [ v_{k+1} - v_k - dt * a_k           ]
  */
-class EulerIntegration : public AbstractConstraint {
+class SemiEulerIntegration : public AbstractConstraint {
    private:
     double _dt;
 
@@ -33,9 +33,9 @@ class EulerIntegration : public AbstractConstraint {
 
 
    public:
-    explicit EulerIntegration(double dt);
+    explicit SemiEulerIntegration(double dt);
 
-    ~EulerIntegration() = default;
+    ~SemiEulerIntegration() = default;
 
     void allocate_slices() override;
 

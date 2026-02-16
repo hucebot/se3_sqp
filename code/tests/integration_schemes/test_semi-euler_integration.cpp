@@ -1,22 +1,22 @@
 #include <gtest/gtest.h>
-#include <trajopt/constraints/integration_schemes/euler.h>
+#include <trajopt/constraints/integration_schemes/semi-euler.h>
 #include <trajopt/node.h>
 #include <pinocchio/algorithm/joint-configuration.hpp>
 #include "pinocchio_fixtures.h"
 #include "numerical_differentiation.h"
 
-class EulerIntegrationTest : public DoubleIntegratorFixture {};
+class SemiEulerIntegrationTest : public DoubleIntegratorFixture {};
 
-TEST_F(EulerIntegrationTest, ZeroResidualWhenDynamicsSatisfied) {
+TEST_F(SemiEulerIntegrationTest, ZeroResidualWhenDynamicsSatisfied) {
     node->q()(0) = 1.0;
     node->v()(0) = 2.0;
     node->u()(0) = 3.0;
 
     // Next state satisfies Euler dynamics exactly
-    next_node->q()(0) = 1.0 + dt * 2.0;
     next_node->v()(0) = 2.0 + dt * 3.0;
+    next_node->q()(0) = 1.0 + dt * next_node->v()(0);
 
-    auto euler = std::make_shared<EulerIntegration>(dt);
+    auto euler = std::make_shared<SemiEulerIntegration>(dt);
     node->add_dynamics(euler);
 
     euler->evaluate();
@@ -24,7 +24,7 @@ TEST_F(EulerIntegrationTest, ZeroResidualWhenDynamicsSatisfied) {
     EXPECT_LT(euler->get_value().norm(), 1e-10);
 }
 
-TEST_F(EulerIntegrationTest, JacobianMatchesFiniteDifferences) {
+TEST_F(SemiEulerIntegrationTest, JacobianMatchesFiniteDifferences) {
     const int nv = model.nv;
 
     node->q()(0) = 1.0;
@@ -33,7 +33,7 @@ TEST_F(EulerIntegrationTest, JacobianMatchesFiniteDifferences) {
     next_node->q()(0) = 0.3;
     next_node->v()(0) = 0.7;
 
-    auto euler = std::make_shared<EulerIntegration>(dt);
+    auto euler = std::make_shared<SemiEulerIntegration>(dt);
     node->add_dynamics(euler);
 
     euler->jacobian();

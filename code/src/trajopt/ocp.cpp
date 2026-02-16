@@ -37,9 +37,47 @@ void OCP::finalize() {
 
 void OCP::bind_trajectory(std::vector<VectorXd>& x, std::vector<VectorXd>& u) {
     for (int k = 0; k < _num_nodes; ++k) {
-        _horizon[k].bind_trajectory(&x[k], &u[k]);
+        VectorXd* u_ptr = (k < static_cast<int>(u.size())) ? &u[k] : nullptr;
+        _horizon[k].bind_trajectory(&x[k], u_ptr);
     }
 }
+
+
+void OCP::evaluate_all() {
+    for (auto& node : _horizon) {
+        if (node.get_dynamics()) node.get_dynamics()->evaluate();
+        for (auto& c : node.get_costs())       c->evaluate();
+        for (auto& c : node.get_constraints()) c->evaluate();
+    }
+}
+
+double OCP::cost(){
+    _total_cost = 0.;
+    for (auto& node: _horizon){
+        node.calc_cost();
+        _total_cost += node.get_cost();
+    }
+    return _total_cost;
+}
+
+double OCP::dynamics_defect(){
+    _total_dynamics_defect = 0.;
+    for (auto& node: _horizon){
+        node.calc_dynamics_defect();
+        _total_dynamics_defect += node.get_dynamics_defect();
+    }
+    return _total_dynamics_defect;
+}
+
+double OCP::constraint_violation(){
+    _total_constraint_violation = 0.;
+    for (auto& node: _horizon){
+        node.calc_constraint_violation();
+        _total_constraint_violation += node.get_constraint_violation();
+    }
+    return _total_constraint_violation;
+}
+
 
 void OCP::save_trajectory(const std::string& filepath, double dt,
                            const std::string& urdf_path) const {

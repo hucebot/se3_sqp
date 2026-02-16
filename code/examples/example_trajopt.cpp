@@ -2,6 +2,7 @@
 #include "trajopt/node.h"
 #include "sqp_solver/sqp_solver.h"
 
+#include "trajopt/constraints/integration_schemes/semi-euler.h"
 #include "trajopt/constraints/integration_schemes/euler.h"
 #include "trajopt/constraints/inverse_dynamics.h"
 #include "trajopt/costs/configuration_cost.h"
@@ -35,11 +36,17 @@ int main() {
         Node node(robot_mdl);
         if (i<N-1)
         {
-            node.add_dynamics(std::make_shared<EulerIntegration>(dt));
-            node.add_constraint(std::make_shared<InvDynamics>());
+            auto dynamics = std::make_shared<SemiEulerIntegration>(dt);
+            auto constraint = std::make_shared<InvDynamics>();
+            node.add_dynamics(dynamics);
+            node.add_constraint(constraint);
         }
 
-        if (i==N-1) node.add_cost(std::make_shared<ConfigurationCost>(q_ref));
+
+        auto conf = std::make_shared<ConfigurationCost>(q_ref);
+        if (i==N-1) conf->set_weight(1e3);
+        else conf->set_weight(1e-9);
+        node.add_cost(conf);
             
         ocp.addNode(std::move(node));
     }
@@ -49,12 +56,18 @@ int main() {
 
     // Set initial guess
     for (int k = 0; k < N; k++) {
-        ocp.get_node(k).q() << 0.1, 0.0;
+        ocp.get_node(k).q() << 0.0, 0.;
         ocp.get_node(k).v().setZero();
         ocp.get_node(k).u().setZero();             // control = 0
     }
 
     SQPSolver solver(ocp);
+
+    SQPoptions opts;
+    opts.max_sqp_iters = 1000;
+    opts.ls_type = LSType::MERIT;
+    solver.set_options(opts);
+
     solver.solve();
 
     ocp.save_trajectory("/workspace/code/resources/trajectories/trajectory.json", dt, urdf_path);

@@ -42,12 +42,29 @@ class SQPSolver {
     std::vector<VectorXd> _ug; // Upper bound: ub - g(x) (ng)
 
     // Step storage for full trajectory (pre-allocated for zero allocations)
-    std::vector<VectorXd> _dx;  // State steps: _dx[k] is VectorXd of size _ndx
-    std::vector<VectorXd>
-        _du;  // Control steps: _du[k] is VectorXd of size _ndu
+    std::vector<VectorXd> _dx;         // State steps: _dx[k] is VectorXd of size _ndx
+    std::vector<VectorXd> _du;         // Control steps: _du[k] is VectorXd of size _ndu
+    std::vector<VectorXd> _scaled_dx;  // Scratch: alpha * _dx[k], reused across step() calls
+    std::vector<VectorXd> _scaled_du;  // Scratch: alpha * _du[k], reused across step() calls
+
+    // Lagrange multipliers (dual variables from QP)
+    std::vector<VectorXd> _pi;         // Dynamics multipliers: _pi[k], k=0..N-2, each ndx
+    std::vector<VectorXd> _lam_lg;     // General constraint lower multipliers, each ng
+    std::vector<VectorXd> _lam_ug;     // General constraint upper multipliers, each ng
 
     double _ls_alpha;
     double _step_norm;  // Norm of the accepted step (for convergence check)
+    double _current_reg; // Current adaptive regularization value
+
+
+    double  _nominal_cost;
+    double  _nominal_defect;
+    double  _nominal_viol;
+
+    // Values at the last accepted candidate (populated by ls_filter / LSType::NONE path)
+    double  _candidate_cost   = 0.;
+    double  _candidate_viol   = 0.;
+    double  _candidate_defect = 0.;
 
     // Initial state constraint: dx_0 = 0 (fix first state perturbation)
     std::vector<int> _idxbx;  // Indices of constrained state variables at stage 0
@@ -57,18 +74,47 @@ class SQPSolver {
     SQPstatistics _stats;
     SQPoptions _opts;
 
+    /// Allocate all storage and configure QP solver from OCP dimensions
     void init();
+
+    /// Rebind nodes to nominal trajectory, then linearize dynamics, costs,
+    /// and constraints around the current nominal. Populates A,B,b,Q,q,R,r,C,D,lg,ug.
     void linearize();
-    void populate_qp();  // Transfer linearization to QP solver
+
+    /// Transfer linearization matrices into the HPIPM QP solver
+    void populate_qp();
+
+    /// Compute candidate trajectory from QP step (_dx,_du) at current _ls_alpha.
+    /// Binds nodes to _x_candidate/_u_candidate so ls functions can evaluate directly.
     void step();
-    bool* linesearch();
+
+    /// Swap candidate trajectory into nominal (O(1)) and rebind nodes
+    void accept_step();
+
+    /// Function pointer to active line search (set once in init from _opts.ls_type).
+    /// nullptr when LSType::NONE.
+    bool (SQPSolver::*_ls_function)();
+
+    /// L1 merit function check. Nodes are already bound to candidates by step().
+    /// Returns true if Armijo condition is satisfied.
     bool ls_merit();
+
+    /// Filter-based acceptance check. Nodes are already bound to candidates by step().
+    /// Returns true if candidate is acceptable to the filter.
     bool ls_filter();
+
+    /// Compute NLP-level KKT stationarity residual using multipliers
+    double compute_kkt_residual();
+
+    /// Check convergence (KKT + feasibility, with step norm fallback)
     bool break_criteria();
 
    public:
     SQPSolver(OCP& ocp);
     ~SQPSolver();
+
+    /// @brief set solver options before calling solve()
+    void set_options(const SQPoptions& opts);
 
     /// @brief solve the defined problem
     void solve();

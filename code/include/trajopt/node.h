@@ -36,6 +36,21 @@ class Node {
     VectorXd* _x_ptr = nullptr;
     VectorXd* _u_ptr = nullptr;
 
+    double _cost;
+    double _defect;
+    double _violation;
+
+    // Gradients of merit terms w.r.t. tangent state (ndx) and control (ndu)
+    VectorXd _grad_cost_x;
+    VectorXd _grad_cost_u;
+    VectorXd _grad_defect_x;
+    VectorXd _grad_defect_u;
+    VectorXd _grad_violation_x;
+    VectorXd _grad_violation_u;
+
+    // Scratch buffer for violation computation (avoids per-call heap allocations)
+    VectorXd _viol_tmp;
+
    public:
     Node(pinocchio::Model mdl);
     Node(Node&&) = default;
@@ -103,6 +118,37 @@ class Node {
     // (needed after node is copied into a container)
     void rebind_constraints();
 
+    void calc_cost();
+    void calc_dynamics_defect();
+    void calc_constraint_violation();
+
+    /**
+     * Compute subgradients of each merit term w.r.t. tangent state and control.
+     *
+     * Requires evaluate() and jacobian() to have been called on all
+     * costs/constraints first.
+     *
+     * Gradient dimensions:
+     *   x component: ndx = 2*nv  (tangent space of the state manifold)
+     *   u component: ndu = nv
+     *
+     * For defect and violation the functions are non-smooth (L∞ norms /
+     * max-based), so a subgradient is returned selecting the max-active component.
+     */
+    void calc_cost_gradient();
+    void calc_defect_gradient();
+    void calc_violation_gradient();
+
+    const VectorXd& get_cost_grad_x() const { return _grad_cost_x; }
+    const VectorXd& get_cost_grad_u() const { return _grad_cost_u; }
+    const VectorXd& get_defect_grad_x() const { return _grad_defect_x; }
+    const VectorXd& get_defect_grad_u() const { return _grad_defect_u; }
+    const VectorXd& get_violation_grad_x() const { return _grad_violation_x; }
+    const VectorXd& get_violation_grad_u() const { return _grad_violation_u; }
+
+    const double get_cost(){ return _cost;}
+    const double get_dynamics_defect() { return _defect;}
+    const double get_constraint_violation(){ return _violation;}
     // Serialize this node's state and control to JSON
     nlohmann::json to_json() const;
 };

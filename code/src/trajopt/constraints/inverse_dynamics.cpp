@@ -19,6 +19,7 @@ void InvDynamics::allocate_slices() {
 
     // Columns: [q_k(nv), v_k(nv), u_k(nv)]
 
+    _value.resize(_output_dim);
     _jacobian.resize(_output_dim, _input_dim);
     _jacobian.setZero();
 
@@ -29,32 +30,27 @@ void InvDynamics::allocate_slices() {
     _upper_bound =  effort;
 }
 
-void InvDynamics::evaluate_impl(VectorXdRef output) {
-    _q       = _node->q();
-    _vq      = _node->v();
-    _aq      = _node->u();
-
-    pinocchio::rnea(_node->model(), _node->data(), _q, _vq, _aq);
-
-    output = _node->data().tau;
-}
-
-void InvDynamics::jacobian_impl(MatrixXdRef jac) {
-    _q = _node->q();
+void InvDynamics::evaluate_impl() {
+    _q  = _node->q();
     _vq = _node->v();
     _aq = _node->u();
+    pinocchio::rnea(_node->model(), _node->data(), _q, _vq, _aq);
+    _value = _node->data().tau;
+}
 
-    jac.setZero();
+void InvDynamics::jacobian_impl() {
+    _q  = _node->q();
+    _vq = _node->v();
+    _aq = _node->u();
+    _jacobian.setZero();
     _dtau_dq.setZero();
     _dtau_dv.setZero();
     _dtau_da.setZero();
-    
     pinocchio::computeRNEADerivatives(_node->model(), _node->data(), _q, _vq, _aq, _dtau_dq, _dtau_dv, _dtau_da);
     _dtau_da.template triangularView<Eigen::StrictlyLower>() = _dtau_da.transpose().template triangularView<Eigen::StrictlyLower>();
-
-    jac.block(0, 0, _node->nv(), _node->nv()) = _dtau_dq;
-    jac.block(0, _node->nv(), _node->nv(), _node->nv()) = _dtau_dv;
-    jac.block(0, 2*_node->nv(), _node->nv(), _node->nv()) = _dtau_da;
+    _jacobian.block(0, 0,           _node->nv(), _node->nv()) = _dtau_dq;
+    _jacobian.block(0, _node->nv(), _node->nv(), _node->nv()) = _dtau_dv;
+    _jacobian.block(0, 2*_node->nv(), _node->nv(), _node->nv()) = _dtau_da;
 }
 
 

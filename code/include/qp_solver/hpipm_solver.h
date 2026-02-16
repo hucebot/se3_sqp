@@ -134,8 +134,7 @@ class HPIPMSolver {
         d_ocp_qp_ipm_solve(&_qp, &_qp_sol, &_qp_arg, &_qp_ws);
     }
 
-    // === Solution Extraction (ALL INLINE) ===
-    // Note: Can't be const because HPIPM doesn't use const (poor API design)
+    // === Solution Extraction ===
 
     /** Extract control solution u_k for stage k */
     inline void get_u(int stage, double* u_out) {
@@ -152,7 +151,33 @@ class HPIPMSolver {
         d_ocp_qp_sol_get_pi(stage, &_qp_sol, pi_out);
     }
 
-    // === Solver Options (ALL INLINE) ===
+    /** Extract general constraint lower bound multipliers lam_lg_k for stage k */
+    inline void get_lam_lg(int stage, double* out) {
+        d_ocp_qp_sol_get_lam_lg(stage, &_qp_sol, out);
+    }
+
+    /** Extract general constraint upper bound multipliers lam_ug_k for stage k */
+    inline void get_lam_ug(int stage, double* out) {
+        d_ocp_qp_sol_get_lam_ug(stage, &_qp_sol, out);
+    }
+
+    // === Solver Diagnostics ===
+
+    /** Get QP solver convergence status (0=success, 1=max_iter, 2=min_step, 3=NaN) */
+    inline int get_status() {
+        int status;
+        d_ocp_qp_ipm_get_status(&_qp_ws, &status);
+        return status;
+    }
+
+    /** Get number of IPM iterations used in last solve */
+    inline int get_iter() {
+        int iter;
+        d_ocp_qp_ipm_get_iter(&_qp_ws, &iter);
+        return iter;
+    }
+
+    // === Solver Options ===
 
     /** Set maximum IPM iterations */
     inline void set_iter_max(int max_iter) {

@@ -8,8 +8,11 @@ struct SQPstatistics {
     int number_of_iterations;
     double total_cost;
     double total_constraint_violation;
+    double total_dynamics_defect;
     double step_norm;
     int linesearch_iterations;
+    int qp_status;          // HPIPM convergence status (0=success, 1=max_iter, 2=min_step, 3=NaN)
+    int qp_iterations;      // Number of IPM iterations in last QP solve
 
     // Timing
     double total_time_ms;
@@ -32,8 +35,10 @@ struct SQPstatistics {
     void update_iterations(int iter);
     void update_cost(double cost);
     void update_constraint_violation(double violation);
+    void update_dynamics_defect(double defect);
     void update_step_norm(double norm);
     void update_linesearch_iterations(int ls_iter);
+    void update_qp_info(int status, int iters);
 
     // Timing functions
     void start_timer();

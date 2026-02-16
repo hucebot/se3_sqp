@@ -7,31 +7,25 @@
 class ConfigurationCostTest : public DoubleIntegratorFixture {};
 
 TEST_F(ConfigurationCostTest, ZeroResidualAtReference) {
-    const int nv = model.nv;
-
     VectorXd q_ref = node->q();  // reference = current config (zero)
     auto cost = std::make_shared<ConfigurationCost>(q_ref);
     node->add_cost(cost);
 
-    VectorXd residual(nv);
-    cost->evaluate(residual);
+    cost->evaluate();
 
-    EXPECT_LT(residual.norm(), 1e-12);
+    EXPECT_LT(cost->get_value().norm(), 1e-12);
 }
 
 TEST_F(ConfigurationCostTest, NonZeroResidualAwayFromReference) {
-    const int nv = model.nv;
-
     VectorXd q_ref = node->q();  // reference at zero
     node->q()(0) = 1.0;          // perturb current config
 
     auto cost = std::make_shared<ConfigurationCost>(q_ref);
     node->add_cost(cost);
 
-    VectorXd residual(nv);
-    cost->evaluate(residual);
+    cost->evaluate();
 
-    EXPECT_GT(residual.norm(), 1e-6);
+    EXPECT_GT(cost->get_value().norm(), 1e-6);
 }
 
 TEST_F(ConfigurationCostTest, JacobianMatchesFiniteDifferences) {
@@ -47,15 +41,13 @@ TEST_F(ConfigurationCostTest, JacobianMatchesFiniteDifferences) {
     auto cost = std::make_shared<ConfigurationCost>(q_ref);
     node->add_cost(cost);
 
-    // Analytical Jacobian (nv × 2*nv)
-    MatrixXd analytical_jac(nv, 2 * nv);
-    cost->jacobian(analytical_jac);
+    cost->jacobian();
+    MatrixXd analytical_jac = cost->get_jac_x();
 
     // Numerical Jacobian via Lie-group perturbations (state only, no control)
     auto eval_func = [&]() -> VectorXd {
-        VectorXd out(nv);
-        cost->evaluate(out);
-        return out;
+        cost->evaluate();
+        return cost->get_value();
     };
 
     MatrixXd numerical_jac = numerical_jacobian_node(
@@ -65,8 +57,6 @@ TEST_F(ConfigurationCostTest, JacobianMatchesFiniteDifferences) {
 }
 
 TEST_F(ConfigurationCostTest, NoControlDependency) {
-    const int nv = model.nv;
-
     VectorXd q_ref = node->q();
     auto cost = std::make_shared<ConfigurationCost>(q_ref);
     node->add_cost(cost);
