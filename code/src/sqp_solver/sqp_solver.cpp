@@ -26,6 +26,7 @@ void SQPSolver::solve() {
         linearize();
         populate_qp();
         _qp_solver.solve();
+        _stats.update_qp_info(_qp_solver.get_status(), _qp_solver.get_iter());
 
         // Backtracking line search
         step();

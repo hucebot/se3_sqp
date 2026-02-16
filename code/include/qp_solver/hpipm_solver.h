@@ -152,7 +152,23 @@ class HPIPMSolver {
         d_ocp_qp_sol_get_pi(stage, &_qp_sol, pi_out);
     }
 
-    // === Solver Options (ALL INLINE) ===
+    // === Solver Diagnostics ===
+
+    /** Get QP solver convergence status (0=success, 1=max_iter, 2=min_step, 3=NaN) */
+    inline int get_status() {
+        int status;
+        d_ocp_qp_ipm_get_status(&_qp_ws, &status);
+        return status;
+    }
+
+    /** Get number of IPM iterations used in last solve */
+    inline int get_iter() {
+        int iter;
+        d_ocp_qp_ipm_get_iter(&_qp_ws, &iter);
+        return iter;
+    }
+
+    // === Solver Options ===
 
     /** Set maximum IPM iterations */
     inline void set_iter_max(int max_iter) {
