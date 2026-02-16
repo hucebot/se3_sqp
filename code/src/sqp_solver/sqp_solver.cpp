@@ -21,16 +21,26 @@ void SQPSolver::set_options(const SQPoptions& opts) {
 
 void SQPSolver::solve() {
     _stats.start_timer();
+    _current_reg = _opts.regularization;
     for (int i = 0; i < _opts.max_sqp_iters; i++) {
-        _ls_alpha = 1.;
         linearize();
         populate_qp();
         _qp_solver.solve();
         _stats.update_qp_info(_qp_solver.get_status(), _qp_solver.get_iter());
 
+        // if (_qp_solver.get_status() != 0) {
+        //     _current_reg *= _opts.regularization_scale;
+        //     std::cerr << "WARNING: QP solver failed with status " << _qp_solver.get_status()
+        //               << " at SQP iteration " << i
+        //               << ", increasing regularization to " << _current_reg << std::endl;
+        // } else {
+        //     _current_reg = _opts.regularization;
+        // }
+
         // Backtracking line search
         step();
         if (_ls_function) {
+            _ls_alpha = 1.;
             for (int ls_iter = 1; ls_iter < _opts.max_ls_iters; ++ls_iter) {
                 _stats.update_linesearch_iterations(ls_iter);
                 if ((this->*_ls_function)()) break;
@@ -38,7 +48,17 @@ void SQPSolver::solve() {
                 step();
             }
         }
-        accept_step();
+
+        // Adaptive regularization: scale up when line search took minimum step, reset otherwise
+        if (_ls_function && _ls_alpha < std::pow(_opts.ls_scale_factor, _opts.max_ls_iters - 1) + 1e-12) {
+            _current_reg *= _opts.regularization_scale;
+            // continue;
+        } else {
+            accept_step();
+            _current_reg = _opts.regularization;
+        }
+
+
 
         // When no line search ran,  _candidate_* were not populated by ls_filter().
         // Compute once here so stats and  _nominal_* are always up to date.
@@ -61,10 +81,11 @@ void SQPSolver::solve() {
 void SQPSolver::init() {
     _N = _ocproblem.num_nodes();
     _ls_alpha = 1.0;
+    _current_reg = _opts.regularization;
 
-     _nominal_cost = 0.;
-     _nominal_defect = 0.;
-     _nominal_viol = 0.;
+    _nominal_cost = 0.;
+    _nominal_defect = 0.;
+    _nominal_viol = 0.;
 
     // Set line search function pointer based on options
     switch (_opts.ls_type) {
@@ -88,10 +109,11 @@ void SQPSolver::init() {
     _q.resize(_Nx);
     _R.resize(_Nu); //control
     _r.resize(_Nu);
-    // Constraints: 
+    _S.resize(_Nu); //cross term
+    // Constraints:
     _C.resize(_Nx);   //state
-    _D.resize(_Nu); //control 
-    _lg.resize(_Nx); 
+    _D.resize(_Nu); //control
+    _lg.resize(_Nx);
     _ug.resize(_Nx);
     // Step storage (reused every iteration)
     _dx.resize(_Nx);
@@ -132,6 +154,7 @@ void SQPSolver::init() {
         if (k<_Nu){
             _R[k].setIdentity(_ndu, _ndu);  // Default: identity cost on control
             _r[k].setZero(_ndu);
+            _S[k].setZero(_ndu, _ndx);      // Cross term
         }
 
         // Pre-allocate constraint matrices (ng x ndx/ndu) per stage
@@ -279,8 +302,9 @@ void SQPSolver::linearize() {
         if (i<_Nu){
             _R[i].setZero();
             _r[i].setZero();
+            _S[i].setZero();
         }
-        
+
         for (auto& cost : _ocproblem.get_node(i).get_costs()) {
             cost->evaluate();
             cost->jacobian();
@@ -296,8 +320,15 @@ void SQPSolver::linearize() {
             if (Ju.cols() > 0 && i < _Nu) {
                 _R[i].noalias() += w * Ju.transpose() * Ju;
                 _r[i].noalias() += w * Ju.transpose() * cost_val;
+                _S[i].noalias() += w * Ju.transpose() * Jx;
             }
         }
+
+        //TODO - move this so we don't relinearise
+        // Hessian regularization for positive definiteness
+        _Q[i].diagonal().array() += _current_reg;
+        if (i < _Nu)
+            _R[i].diagonal().array() += _current_reg;
 
 
         // Constraint linearization: lg <= C*dx + D*du <= ug

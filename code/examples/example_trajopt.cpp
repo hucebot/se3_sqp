@@ -28,7 +28,7 @@ int main() {
     pinocchio::urdf::buildModel(urdf_path, robot_mdl);
 
     Vector2d q_ref;
-    q_ref << M_PI, 0.;
+    q_ref << M_PI_2, -M_PI_2;
 
     for (int i = 0; i < N; i++)
     {
@@ -42,10 +42,10 @@ int main() {
         }
 
 
-        // auto conf = std::make_shared<ConfigurationCost>(q_ref);
-        // if (i==N-1) conf->set_weight(1e3);
-        // else conf->set_weight(1e-3);
-        // node.add_cost(conf);
+        auto conf = std::make_shared<ConfigurationCost>(q_ref);
+        if (i==N-1) conf->set_weight(1e3);
+        else conf->set_weight(1e-9);
+        node.add_cost(conf);
             
         ocp.addNode(std::move(node));
     }
@@ -55,7 +55,7 @@ int main() {
 
     // Set initial guess
     for (int k = 0; k < N; k++) {
-        ocp.get_node(k).q() << 0.1, 0.;
+        ocp.get_node(k).q() << 0.5, 0.;
         ocp.get_node(k).v().setZero();
         ocp.get_node(k).u().setZero();             // control = 0
     }
@@ -63,7 +63,7 @@ int main() {
     SQPSolver solver(ocp);
 
     SQPoptions opts;
-    opts.max_sqp_iters = 100;
+    opts.max_sqp_iters = 1000;
     opts.ls_type = LSType::MERIT;
     solver.set_options(opts);
 

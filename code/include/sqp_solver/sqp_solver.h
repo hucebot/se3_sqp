@@ -49,6 +49,7 @@ class SQPSolver {
 
     double _ls_alpha;
     double _step_norm;  // Norm of the accepted step (for convergence check)
+    double _current_reg; // Current adaptive regularization value
 
 
     double  _nominal_cost;

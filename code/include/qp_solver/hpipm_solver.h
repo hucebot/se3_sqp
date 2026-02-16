@@ -134,8 +134,7 @@ class HPIPMSolver {
         d_ocp_qp_ipm_solve(&_qp, &_qp_sol, &_qp_arg, &_qp_ws);
     }
 
-    // === Solution Extraction (ALL INLINE) ===
-    // Note: Can't be const because HPIPM doesn't use const (poor API design)
+    // === Solution Extraction ===
 
     /** Extract control solution u_k for stage k */
     inline void get_u(int stage, double* u_out) {

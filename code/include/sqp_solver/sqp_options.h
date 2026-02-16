@@ -8,6 +8,8 @@ struct SQPoptions {
     double ls_scale_factor;
 
     double tolerance;
+    double regularization;        // Hessian regularization: Q += reg*I, R += reg*I
+    double regularization_scale;  // Scale-up factor on QP failure (adaptive)
 
     // TODO add verbose level option
 

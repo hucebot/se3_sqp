@@ -30,8 +30,8 @@ URDF_DIR  = RESOURCES
 
 
 def find_files() -> tuple[dict[str, Path], dict[str, Path]]:
-    trajs = {p.name: p for p in sorted(TRAJ_DIR.glob("*.json"))} if TRAJ_DIR.exists() else {}
-    urdfs = {p.name: p for p in sorted(URDF_DIR.glob("*.urdf"))}
+    trajs = {p.name: p for p in sorted(TRAJ_DIR.rglob("*.json"))} if TRAJ_DIR.exists() else {}
+    urdfs = {p.name: p for p in sorted(URDF_DIR.rglob("*.urdf"))}
     return trajs, urdfs
 
 
@@ -55,7 +55,7 @@ def main(traj_path: Path) -> None:
     server.gui.configure_theme(dark_mode=True)
 
     # Scene decoration
-    server.scene.world_axes.visible = True
+    # server.scene.world_axes.visible = True
     server.scene.add_grid(
         "/floor",
         width=6.0,
