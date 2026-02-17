@@ -37,9 +37,6 @@ bool SQPSolver::ls_merit() {
         }
     }
 
-    // If dphi >= 0 the merit can't decrease (no cost, or already feasible):
-    // accept immediately to avoid stalling on a degenerate Armijo condition.
-    if (dphi >= 0.0) return true;
 
     return phi_alpha <= phi_0 + eta * _ls_alpha * dphi;
 }

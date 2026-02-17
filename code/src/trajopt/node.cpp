@@ -96,7 +96,7 @@ void Node::calc_cost(){
     _cost = 0.;
     for (auto& cost: _cost_list){
         const VectorXd& val = cost->get_value();
-        _cost +=  val.dot(cost->get_weight() * val);
+        _cost += 0.5 * val.dot(cost->get_weight() * val);
     }
 }
 
@@ -117,20 +117,19 @@ void Node::calc_constraint_violation(){
     }
 }
 
-
+//TODO fix weights
 void Node::calc_cost_gradient() {
     _grad_cost_x.setZero();
     _grad_cost_u.setZero();
     for (const auto& cost : _cost_list) {
         const VectorXd& f = cost->get_value();
-        const double scale = 2.0 * cost->get_weight();
         // get_jac_x() returns MatrixXdConstRef (Eigen::Ref wrapper) — no data copy
         auto Jx = cost->get_jac_x();
-        _grad_cost_x.noalias() += scale * (Jx.transpose() * f);
+        _grad_cost_x.noalias() +=  cost->get_weight() * (Jx.transpose() * f);
         // get_jac_u() returns MatrixXd by value; cols()==0 means no control dep
         auto Ju = cost->get_jac_u();
         if (Ju.cols() > 0) {
-            _grad_cost_u.noalias() += scale * (Ju.transpose() * f);
+            _grad_cost_u.noalias() +=  cost->get_weight() * (Ju.transpose() * f);
         }
     }
 }

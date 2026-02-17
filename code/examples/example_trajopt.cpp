@@ -53,7 +53,7 @@ int main() {
         vel->set_weight(1e-9);
         if (i==N-1){
             conf->set_weight(1e3);
-            vel->set_weight(1e3);
+            vel->set_weight(1e0);
         } 
         node.add_cost(conf);
         node.add_cost(vel);
