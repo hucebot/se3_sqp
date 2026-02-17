@@ -1,13 +1,16 @@
 #include <gtest/gtest.h>
 #include <trajopt/costs/configuration_cost.h>
 #include <trajopt/node.h>
+#include <pinocchio/algorithm/joint-configuration.hpp>
 #include "pinocchio_fixtures.h"
 #include "numerical_differentiation.h"
 
 class ConfigurationCostTest : public DoubleIntegratorFixture {};
 
 TEST_F(ConfigurationCostTest, ZeroResidualAtReference) {
-    VectorXd q_ref = node->q();  // reference = current config (zero)
+    // Set node to a random valid config, then use it as the reference
+    node->q() = pinocchio::randomConfiguration(model);
+    VectorXd q_ref = node->q();
     auto cost = std::make_shared<ConfigurationCost>(q_ref);
     node->add_cost(cost);
 
@@ -17,8 +20,8 @@ TEST_F(ConfigurationCostTest, ZeroResidualAtReference) {
 }
 
 TEST_F(ConfigurationCostTest, NonZeroResidualAwayFromReference) {
-    VectorXd q_ref = node->q();  // reference at zero
-    node->q()(0) = 1.0;          // perturb current config
+    VectorXd q_ref = pinocchio::randomConfiguration(model);
+    node->q() = pinocchio::randomConfiguration(model);
 
     auto cost = std::make_shared<ConfigurationCost>(q_ref);
     node->add_cost(cost);
@@ -32,11 +35,10 @@ TEST_F(ConfigurationCostTest, JacobianMatchesFiniteDifferences) {
     const int nv = model.nv;
 
     // Non-trivial state
-    node->q()(0) = 0.7;
-    node->v()(0) = 0.3;
+    node->q() = pinocchio::randomConfiguration(model);
+    node->v() = VectorXd::Random(nv);
 
-    VectorXd q_ref(model.nq);
-    q_ref(0) = 0.2;
+    VectorXd q_ref = pinocchio::randomConfiguration(model);
 
     auto cost = std::make_shared<ConfigurationCost>(q_ref);
     node->add_cost(cost);
@@ -44,7 +46,7 @@ TEST_F(ConfigurationCostTest, JacobianMatchesFiniteDifferences) {
     cost->jacobian();
     MatrixXd analytical_jac = cost->get_jac_x();
 
-    // Numerical Jacobian via Lie-group perturbations (state only, no control)
+    // Manifold-aware numerical Jacobian (state only, no control)
     auto eval_func = [&]() -> VectorXd {
         cost->evaluate();
         return cost->get_value();
@@ -57,7 +59,7 @@ TEST_F(ConfigurationCostTest, JacobianMatchesFiniteDifferences) {
 }
 
 TEST_F(ConfigurationCostTest, NoControlDependency) {
-    VectorXd q_ref = node->q();
+    VectorXd q_ref = pinocchio::randomConfiguration(model);
     auto cost = std::make_shared<ConfigurationCost>(q_ref);
     node->add_cost(cost);
 

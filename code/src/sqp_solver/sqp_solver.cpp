@@ -176,8 +176,8 @@ void SQPSolver::init() {
         _scaled_dx[k].setZero(_ndx);
         if (k<_Nu) _scaled_du[k].setZero(_ndu);
 
-        _x_candidate[k].setZero(_ndx);
-        if (k<_Nu) _u_candidate[k].setZero(_ndu);
+        _x_candidate[k].setZero(_nx);
+        if (k<_Nu) _u_candidate[k].setZero(_nu);
 
         if (k==0) //
         {

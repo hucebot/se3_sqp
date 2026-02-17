@@ -2,6 +2,7 @@
 #include <trajopt/constraints/inverse_dynamics.h>
 #include <trajopt/costs/configuration_cost.h>
 #include <trajopt/node.h>
+#include <pinocchio/algorithm/joint-configuration.hpp>
 #include "pinocchio_fixtures.h"
 #include "numerical_differentiation.h"
 
@@ -47,12 +48,12 @@ static double fd_directional(
 // =============================================================================
 
 TEST_F(NodeMeritDerivativeTest, CostGradientMatchesFiniteDifferences) {
-    // Random state and control
-    node->q() = VectorXd::Random(model.nq);
+    // Random valid state and control
+    node->q() = pinocchio::randomConfiguration(model);
     node->v() = VectorXd::Random(model.nv);
     node->u() = VectorXd::Random(node->nu());
 
-    VectorXd q_ref = VectorXd::Random(model.nq);
+    VectorXd q_ref = pinocchio::randomConfiguration(model);
     auto cost = std::make_shared<ConfigurationCost>(q_ref);
     node->add_cost(cost);
 
@@ -95,8 +96,8 @@ TEST_F(NodeMeritDerivativeTest, DefectGradientMatchesFiniteDifferences) {
     node->add_dynamics(dyn);
 
     int valid_trials = 0;
-    for (int seed = 0; seed < 20 && valid_trials < 5; ++seed) {
-        node->q() = VectorXd::Random(model.nq);
+    for (int seed = 0; seed < 40 && valid_trials < 5; ++seed) {
+        node->q() = pinocchio::randomConfiguration(model);
         node->v() = VectorXd::Random(model.nv);
         node->u() = VectorXd::Random(node->nu());
 
@@ -155,9 +156,10 @@ TEST_F(NodeMeritDerivativeTest, ViolationGradientMatchesFiniteDifferences) {
     auto con = std::make_shared<InvDynamics>();
     node->add_constraint(con);
 
+    const int nv = model.nv;
     int valid_trials = 0;
-    for (int seed = 0; seed < 20 && valid_trials < 5; ++seed) {
-        node->q() = VectorXd::Random(model.nq);
+    for (int seed = 0; seed < 40 && valid_trials < 5; ++seed) {
+        node->q() = pinocchio::randomConfiguration(model);
         node->v() = VectorXd::Random(model.nv);
         node->u() = VectorXd::Random(node->nu());
 
@@ -170,7 +172,7 @@ TEST_F(NodeMeritDerivativeTest, ViolationGradientMatchesFiniteDifferences) {
         VectorXd lb = g0.array() - 1e6;   // no lower violations
         VectorXd ub = g0;
         ub(0) -= 2.0;   // component 0: violation = 2.0
-        ub(1) -= 0.5;   // component 1: violation = 0.5
+        if (nv > 1) ub(1) -= 0.5;   // component 1: violation = 0.5
         con->set_bounds(lb, ub);
 
         con->jacobian();

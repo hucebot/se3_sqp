@@ -6,12 +6,15 @@
 #include <trajopt/constraints/inverse_dynamics.h>
 #include <trajopt/costs/configuration_cost.h>
 
-#include <pinocchio/parsers/urdf.hpp>
 #include <pinocchio/multibody/model.hpp>
+#include <pinocchio/algorithm/joint-configuration.hpp>
 
 #include <cmath>
+#include <random>
 
-// Helper to build a simple pendubot OCP for testing
+#include "pinocchio_fixtures.h"
+
+// Helper to build a simple floating+2R OCP for testing
 class SQPPipelineTest : public ::testing::Test {
    protected:
     static constexpr int N = 10;
@@ -20,8 +23,11 @@ class SQPPipelineTest : public ::testing::Test {
     std::unique_ptr<OCP> ocp;
 
     void SetUp() override {
-        const std::string urdf_path = "/workspace/code/resources/pendubot.urdf";
-        pinocchio::urdf::buildModel(urdf_path, model);
+        std::mt19937 gen(std::random_device{}());
+        model = buildRandomFloating2R(gen);
+
+        // Terminal cost reference: neutral configuration
+        VectorXd q_ref = pinocchio::neutral(model);
 
         ocp = std::make_unique<OCP>(N);
         for (int i = 0; i < N; i++) {
@@ -30,13 +36,19 @@ class SQPPipelineTest : public ::testing::Test {
                 node.add_dynamics(std::make_shared<EulerIntegration>(dt));
                 node.add_constraint(std::make_shared<InvDynamics>());
             }
+            if (i == N - 1) {
+                auto cost = std::make_shared<ConfigurationCost>(q_ref);
+                cost->set_weight(1e3);
+                node.add_cost(cost);
+            }
             ocp->addNode(std::move(node));
         }
         ocp->finalize();
 
-        // Set a non-trivial initial guess
+        // Set a non-trivial initial guess (away from reference)
+        VectorXd q0 = pinocchio::randomConfiguration(model);
         for (int k = 0; k < N; k++) {
-            ocp->get_node(k).q() << 0.1, 0.0;
+            ocp->get_node(k).q() = q0;
             ocp->get_node(k).v().setZero();
             ocp->get_node(k).u().setZero();
         }
@@ -51,11 +63,6 @@ TEST_F(SQPPipelineTest, StepBindsNodesToCandidates) {
 
     // Save nominal x[0]
     VectorXd x_nom_0 = ocp->get_node(0).x();
-
-    // Run one iteration up to step()
-    // We access solve internals indirectly: solve with max_sqp_iters=1, ls_type=NONE
-    // After solve, nodes should be on nominal (accept_step rebinds)
-    // Instead, test the invariant: after solve, nominal trajectory has been updated
 
     // The node should still be readable
     EXPECT_EQ(ocp->get_node(0).x().size(), model.nq + model.nv);
@@ -74,10 +81,9 @@ TEST_F(SQPPipelineTest, AcceptStepUpdatesNominal) {
 
     // Solve one iteration (full step, no linesearch)
     SQPSolver solver(*ocp);
-    solver.solve();  // Will run with default opts (MERIT ls, but stub returns true)
+    solver.solve();
 
     // After solve, nominal trajectory should have changed
-    // (the QP step is non-trivial because we have dynamics + inverse dynamics constraints)
     bool x_changed = false;
     for (int k = 0; k < N; k++) {
         if (!ocp->x_traj()[k].isApprox(x_before[k], 1e-15)) {
@@ -144,7 +150,6 @@ TEST_F(SQPPipelineTest, ConvergesOnFeasibilityProblem) {
     solver.solve();
 
     // After convergence, dynamics constraints should be nearly satisfied.
-    // Check that the trajectory is consistent by evaluating dynamics residuals.
     for (int k = 0; k < N - 1; k++) {
         auto dyn = ocp->get_node(k).get_dynamics();
         dyn->evaluate();
@@ -161,7 +166,6 @@ TEST_F(SQPPipelineTest, NodeBindingConsistentAfterSolve) {
     solver.solve();
 
     // After solve completes, nodes must be bound to the nominal trajectory.
-    // Verify by checking that node.x() returns the same data as ocp.x_traj().
     for (int k = 0; k < N; k++) {
         EXPECT_TRUE(ocp->get_node(k).x().isApprox(ocp->x_traj()[k]))
             << "Node " << k << " should be bound to nominal trajectory after solve";

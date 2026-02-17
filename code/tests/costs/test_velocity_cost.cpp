@@ -1,13 +1,14 @@
 #include <gtest/gtest.h>
 #include <trajopt/costs/velocity_cost.h>
 #include <trajopt/node.h>
+#include <pinocchio/algorithm/joint-configuration.hpp>
 #include "pinocchio_fixtures.h"
 #include "numerical_differentiation.h"
 
 class VelocityCostTest : public DoubleIntegratorFixture {};
 
 TEST_F(VelocityCostTest, ZeroResidualAtReference) {
-    VectorXd v_ref = node->v();  // reference = current config (zero)
+    VectorXd v_ref = node->v();  // reference = current velocity (zero)
     auto cost = std::make_shared<VelocityCost>(v_ref);
     node->add_cost(cost);
 
@@ -17,10 +18,10 @@ TEST_F(VelocityCostTest, ZeroResidualAtReference) {
 }
 
 TEST_F(VelocityCostTest, NonZeroResidualAwayFromReference) {
-    VectorXd q_ref = node->v();  // reference at zero
-    node->v()(0) = 1.0;          // perturb current config
+    VectorXd v_ref = node->v();  // reference at zero
+    node->v() = VectorXd::Random(model.nv);
 
-    auto cost = std::make_shared<VelocityCost>(q_ref);
+    auto cost = std::make_shared<VelocityCost>(v_ref);
     node->add_cost(cost);
 
     cost->evaluate();
@@ -32,19 +33,18 @@ TEST_F(VelocityCostTest, JacobianMatchesFiniteDifferences) {
     const int nv = model.nv;
 
     // Non-trivial state
-    node->q()(0) = 0.7;
-    node->v()(0) = 0.3;
+    node->q() = pinocchio::randomConfiguration(model);
+    node->v() = VectorXd::Random(nv);
 
-    VectorXd q_ref(model.nq);
-    q_ref(0) = 0.2;
+    VectorXd v_ref = VectorXd::Random(nv);
 
-    auto cost = std::make_shared<VelocityCost>(q_ref);
+    auto cost = std::make_shared<VelocityCost>(v_ref);
     node->add_cost(cost);
 
     cost->jacobian();
     MatrixXd analytical_jac = cost->get_jac_x();
 
-    // Numerical Jacobian via Lie-group perturbations (state only, no control)
+    // Manifold-aware numerical Jacobian (state only, no control)
     auto eval_func = [&]() -> VectorXd {
         cost->evaluate();
         return cost->get_value();
@@ -57,8 +57,8 @@ TEST_F(VelocityCostTest, JacobianMatchesFiniteDifferences) {
 }
 
 TEST_F(VelocityCostTest, NoControlDependency) {
-    VectorXd q_ref = node->q();
-    auto cost = std::make_shared<VelocityCost>(q_ref);
+    VectorXd v_ref = VectorXd::Random(model.nv);
+    auto cost = std::make_shared<VelocityCost>(v_ref);
     node->add_cost(cost);
 
     cost->jacobian();
