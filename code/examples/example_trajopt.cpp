@@ -6,6 +6,7 @@
 #include "trajopt/constraints/integration_schemes/euler.h"
 #include "trajopt/constraints/inverse_dynamics.h"
 #include "trajopt/costs/configuration_cost.h"
+#include "trajopt/costs/velocity_cost.h"
 
 #include <pinocchio/parsers/urdf.hpp>
 #include <pinocchio/multibody/model.hpp>
@@ -19,7 +20,7 @@
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    int N = 300;
+    int N = 100;
     double dt = 0.01;
 
     OCP ocp(N);
@@ -31,6 +32,9 @@ int main() {
     Vector2d q_ref;
     q_ref << M_PI, 0.;
 
+    Vector2d v_ref;
+    v_ref << 0., 0.;
+    
     for (int i = 0; i < N; i++)
     {
         Node node(robot_mdl);
@@ -44,9 +48,15 @@ int main() {
 
 
         auto conf = std::make_shared<ConfigurationCost>(q_ref);
-        if (i==N-1) conf->set_weight(1e3);
-        else conf->set_weight(1e-9);
+        conf->set_weight(0.);
+        auto vel = std::make_shared<VelocityCost>(v_ref);
+        vel->set_weight(1e-9);
+        if (i==N-1){
+            conf->set_weight(1e3);
+            vel->set_weight(1e3);
+        } 
         node.add_cost(conf);
+        node.add_cost(vel);
             
         ocp.addNode(std::move(node));
     }

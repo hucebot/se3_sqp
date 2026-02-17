@@ -53,6 +53,7 @@ void SQPSolver::solve() {
         if (_ls_function && _ls_alpha < std::pow(_opts.ls_scale_factor, _opts.max_ls_iters - 1) + 1e-12) {
             _current_reg *= _opts.regularization_scale;
             // continue;
+            DEBUG_PRINT("reg_size : "<< _current_reg);
         } else {
             accept_step();
             _current_reg = _opts.regularization;
