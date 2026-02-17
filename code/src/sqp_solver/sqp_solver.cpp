@@ -28,14 +28,6 @@ void SQPSolver::solve() {
         _qp_solver.solve();
         _stats.update_qp_info(_qp_solver.get_status(), _qp_solver.get_iter());
 
-        // if (_qp_solver.get_status() != 0) {
-        //     _current_reg *= _opts.regularization_scale;
-        //     std::cerr << "WARNING: QP solver failed with status " << _qp_solver.get_status()
-        //               << " at SQP iteration " << i
-        //               << ", increasing regularization to " << _current_reg << std::endl;
-        // } else {
-        //     _current_reg = _opts.regularization;
-        // }
 
         // Backtracking line search
         step();
@@ -52,8 +44,6 @@ void SQPSolver::solve() {
         // Adaptive regularization: scale up when line search took minimum step, reset otherwise
         if (_ls_function && _ls_alpha < std::pow(_opts.ls_scale_factor, _opts.max_ls_iters - 1) + 1e-12) {
             _current_reg *= _opts.regularization_scale;
-            // continue;
-            DEBUG_PRINT("reg_size : "<< _current_reg);
         } else {
             accept_step();
             _current_reg = _opts.regularization;
@@ -328,15 +318,15 @@ void SQPSolver::linearize() {
             const VectorXd& cost_val = cost->get_value();
             MatrixXdConstRef Jx = cost->get_jac_x();
             MatrixXd Ju = cost->get_jac_u();
-            double w = cost->get_weight();
+            const MatrixXd& W = cost->get_weight();
 
-            _Q[i].noalias() += w * Jx.transpose() * Jx;
-            _q[i].noalias() += w * Jx.transpose() * cost_val;
+            _Q[i].noalias() += Jx.transpose() * W * Jx;
+            _q[i].noalias() += Jx.transpose() * W * cost_val;
 
             if (Ju.cols() > 0 && i < _Nu) {
-                _R[i].noalias() += w * Ju.transpose() * Ju;
-                _r[i].noalias() += w * Ju.transpose() * cost_val;
-                _S[i].noalias() += w * Ju.transpose() * Jx;
+                _R[i].noalias() += Ju.transpose() * W * Ju;
+                _r[i].noalias() += Ju.transpose() * W * cost_val;
+                _S[i].noalias() += Ju.transpose() * W * Jx;
             }
         }
 

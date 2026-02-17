@@ -117,19 +117,18 @@ void Node::calc_constraint_violation(){
     }
 }
 
-//TODO fix weights
 void Node::calc_cost_gradient() {
     _grad_cost_x.setZero();
     _grad_cost_u.setZero();
     for (const auto& cost : _cost_list) {
         const VectorXd& f = cost->get_value();
-        // get_jac_x() returns MatrixXdConstRef (Eigen::Ref wrapper) — no data copy
+        const MatrixXd& W = cost->get_weight();
         auto Jx = cost->get_jac_x();
-        _grad_cost_x.noalias() +=  cost->get_weight() * (Jx.transpose() * f);
-        // get_jac_u() returns MatrixXd by value; cols()==0 means no control dep
         auto Ju = cost->get_jac_u();
+
+        _grad_cost_x.noalias() += Jx.transpose() * W * f;
         if (Ju.cols() > 0) {
-            _grad_cost_u.noalias() +=  cost->get_weight() * (Ju.transpose() * f);
+            _grad_cost_u.noalias() += Ju.transpose() * W * f;
         }
     }
 }

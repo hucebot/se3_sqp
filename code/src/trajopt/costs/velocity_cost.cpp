@@ -13,16 +13,16 @@ VelocityCost::VelocityCost()
 void VelocityCost::allocate_slices() {
     int nv = _node->nv();
 
-    // Residual lives in tangent space: q ⊖ q_ref (dimension nv)
     _output_dim = nv;
-    // Input is full state [q; v], dimension 2*nv (no control dependency)
-    _input_dim = 2 * nv;
+    _input_dim = _node->ndx() + _node->ndu();
 
     if (_v_ref.size()==0){
         _v_ref.resize(_output_dim);
         _v_ref.setZero();
     }
 
+    _weight.resize(_output_dim, _output_dim);
+    _weight.setIdentity();
 
     // Jacobian: (nv × 2*nv), right half (∂r/∂v) stays zero
     _value.resize(_output_dim);
@@ -39,7 +39,7 @@ void VelocityCost::jacobian_impl() {
 }
 
 MatrixXdConstRef VelocityCost::get_jac_x() const {
-    return _jacobian;
+    return _jacobian.leftCols(_node->ndx());
 }
 
 MatrixXd VelocityCost::get_jac_u() const {

@@ -16,10 +16,10 @@
  */
 class AbstractCost : public AbstractFunction {
    protected:
-    double weight;  // Cost weight/scaling factor
+    MatrixXd _weight;  // Cost weight/scaling factor
 
    public:
-    AbstractCost() : AbstractFunction(), weight(1.0) {}
+    AbstractCost() : AbstractFunction() {}
     virtual ~AbstractCost() {}
 
     // TODO weight should be a matrix 
@@ -27,10 +27,21 @@ class AbstractCost : public AbstractFunction {
     /**
      * Get the weight/scaling factor for this cost
      */
-    double get_weight() const { return weight; }
+    MatrixXd get_weight() const { return _weight; }
 
     /**
      * Set the weight/scaling factor for this cost
      */
-    void set_weight(double w) { weight = w; }
+    void set_weight(double w) { _weight = Eigen::MatrixXd(_output_dim, _output_dim).setIdentity() * w;}
+
+    void set_weight(const MatrixXd& w) {
+        if (w.rows() != _output_dim || w.cols() != _output_dim) {
+            throw std::invalid_argument(
+                _name + ": Weight matrix must be " +
+                std::to_string(_output_dim) + "x" + std::to_string(_output_dim) +
+                ", but got " + std::to_string(w.rows()) + "x" + std::to_string(w.cols())
+            );
+        }
+        _weight = w;
+    }
 };
