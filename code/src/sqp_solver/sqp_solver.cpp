@@ -390,14 +390,40 @@ void SQPSolver::linearize() {
     }
 }
 
-bool SQPSolver::break_criteria() {
-    // Check if the step norm is below tolerance (converged)
-    // This is the 2-norm of the accepted step: ||alpha * [dx; du]||
-    if (_step_norm < _opts.tolerance) {
-        return true;  // Converged
+double SQPSolver::compute_kkt_residual() {
+    double kkt = 0.0;
+    for (int k = 0; k < _N; ++k) {
+        // Stationarity w.r.t. state
+        VectorXd grad_x = _q[k];
+        grad_x.noalias() += _C[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
+        if (k > 0)   grad_x.noalias() += _A[k-1].transpose() * _pi[k-1];
+        if (k < _Nu) grad_x.noalias() -= _pi[k];
+        kkt = std::max(kkt, grad_x.lpNorm<Eigen::Infinity>());
+
+        // Stationarity w.r.t. control
+        if (k < _Nu) {
+            VectorXd grad_u = _r[k];
+            grad_u.noalias() += _S[k] * _dx[k];
+            grad_u.noalias() += _D[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
+            grad_u.noalias() += _B[k].transpose() * _pi[k];
+            kkt = std::max(kkt, grad_u.lpNorm<Eigen::Infinity>());
+        }
     }
+    return kkt;
+}
 
-    //TODO copy converge criteria from opensot
+bool SQPSolver::break_criteria() {
+    double dual_infeas = compute_kkt_residual();
+    _stats.update_dual_infeasibility(dual_infeas);
 
-    return false;  // Not converged yet
+    bool dual_feasible = (dual_infeas < _opts.tolerance);
+    bool primal_feasible = (_candidate_defect < _opts.tolerance &&
+                            _candidate_viol < _opts.tolerance);
+
+    if (dual_feasible && primal_feasible) return true;
+
+    // Fallback: step norm (backward-compatible safety)
+    if (_step_norm < _opts.tolerance) return true;
+
+    return false;
 }

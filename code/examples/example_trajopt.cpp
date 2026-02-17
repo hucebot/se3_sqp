@@ -50,7 +50,7 @@ int main() {
         auto conf = std::make_shared<ConfigurationCost>(q_ref);
         conf->set_weight(0.);
         auto vel = std::make_shared<VelocityCost>(v_ref);
-        vel->set_weight(1e-9);
+        vel->set_weight(1e-6);
         if (i==N-1){
             conf->set_weight(1e3);
             vel->set_weight(1e0);
