@@ -75,6 +75,7 @@ int main() {
 
     SQPoptions opts;
     opts.max_sqp_iters = 1000;
+    opts.tolerance = 1e-1;
     opts.ls_type = LSType::MERIT;
     solver.set_options(opts);
 

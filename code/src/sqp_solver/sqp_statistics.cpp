@@ -14,6 +14,7 @@ void SQPstatistics::reset()
     total_constraint_violation = 0.0;
     total_dynamics_defect = 0.0;
     step_norm = 0.0;
+    dual_infeasibility = 0.0;
     linesearch_iterations = 0;
     qp_status = 0;
     qp_iterations = 0;
@@ -42,7 +43,7 @@ void SQPstatistics::print_to_file(const std::string& filename, int verbosity) co
 
 void SQPstatistics::print_internal(std::ostream& os, int verbosity) const
 {
-    os << std::scientific << std::setprecision(4);
+    os << std::scientific << std::setprecision(2);
 
     if (verbosity == 0)
     {
@@ -50,22 +51,24 @@ void SQPstatistics::print_internal(std::ostream& os, int verbosity) const
         if (number_of_iterations == 1 || number_of_iterations % 10 == 0)
         {
             os << std::setw(6) << "Iter"
-               << std::setw(16) << "Cost"
-               << std::setw(16) << "Violation"
-               << std::setw(16) << "Defect"
-               << std::setw(16) << "StepNorm"
-               << std::setw(6) << "LS"
+               << std::setw(10) << "Cost"
+               << std::setw(10) << "Violation"
+               << std::setw(10) << "Defect"
+               << std::setw(10) << "DualInf"
+               << std::setw(10) << "||d||"
+               << std::setw(4) << "LS"
                << std::setw(10) << "QP[s/i]"
-               << std::setw(12) << "Time(ms)" << std::endl;
+               << std::setw(8) << "t(ms)" << std::endl;
         }
         os << std::setw(6) << number_of_iterations
-           << std::setw(16) << total_cost
-           << std::setw(16) << total_constraint_violation
-           << std::setw(16) << total_dynamics_defect
-           << std::setw(16) << step_norm
-           << std::setw(6) << linesearch_iterations
+           << std::setw(10) << total_cost
+           << std::setw(10) << total_constraint_violation
+           << std::setw(10) << total_dynamics_defect
+           << std::setw(10) << dual_infeasibility
+           << std::setw(10) << step_norm
+           << std::setw(4) << linesearch_iterations
            << std::setw(4) << qp_status << " /" << std::setw(4) << qp_iterations
-           << std::fixed << std::setw(12) << std::setprecision(3) << last_iteration_time_ms << std::endl;
+           << std::fixed << std::setw(8) << std::setprecision(3) << last_iteration_time_ms << std::endl;
     }
     else if (verbosity == 1)
     {
@@ -75,12 +78,13 @@ void SQPstatistics::print_internal(std::ostream& os, int verbosity) const
         os << "  Total Cost:             " << total_cost << std::endl;
         os << "  Constraint Violation:   " << total_constraint_violation << std::endl;
         os << "  Dynamics Defect:        " << total_dynamics_defect << std::endl;
+        os << "  Dual Infeasibility:     " << dual_infeasibility << std::endl;
         os << "  Step Norm:              " << step_norm << std::endl;
         os << "  Linesearch Iterations:  " << linesearch_iterations << std::endl;
         {
             const char* status_str[] = {"OK", "MAX_ITER", "MIN_STEP", "NaN"};
             const char* s = (qp_status >= 0 && qp_status <= 3) ? status_str[qp_status] : "UNKNOWN";
-            os << "  QP:                     " << s << " in " << qp_iterations << " iters" << std::endl;
+            os << "  QP info:                " << s << " in " << qp_iterations << " iters" << std::endl;
         }
         os << "  Last Iteration Time:    " << std::fixed << std::setprecision(3) << last_iteration_time_ms << " ms" << std::endl;
         os << "  Total Time:             " << std::setprecision(3) << total_time_ms / 1000.0 << " s" << std::endl;
@@ -127,6 +131,11 @@ void SQPstatistics::update_dynamics_defect(double defect)
 void SQPstatistics::update_step_norm(double norm)
 {
     step_norm = norm;
+}
+
+void SQPstatistics::update_dual_infeasibility(double dual_infeas)
+{
+    dual_infeasibility = dual_infeas;
 }
 
 void SQPstatistics::update_linesearch_iterations(int ls_iter)

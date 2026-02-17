@@ -10,6 +10,7 @@ struct SQPstatistics {
     double total_constraint_violation;
     double total_dynamics_defect;
     double step_norm;
+    double dual_infeasibility;    // KKT stationarity residual (gradient of Lagrangian)
     int linesearch_iterations;
     int qp_status;          // HPIPM convergence status (0=success, 1=max_iter, 2=min_step, 3=NaN)
     int qp_iterations;      // Number of IPM iterations in last QP solve
@@ -37,6 +38,7 @@ struct SQPstatistics {
     void update_constraint_violation(double violation);
     void update_dynamics_defect(double defect);
     void update_step_norm(double norm);
+    void update_dual_infeasibility(double dual_infeas);
     void update_linesearch_iterations(int ls_iter);
     void update_qp_info(int status, int iters);
 
