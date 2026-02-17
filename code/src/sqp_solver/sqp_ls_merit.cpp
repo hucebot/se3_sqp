@@ -5,12 +5,10 @@
 #include <iostream>
 
 bool SQPSolver::ls_merit() {
-    // L1 merit function: φ(α) = cost + μ*(defect + violation)
-    // Armijo condition:  φ(α) ≤ φ(0) + η·α·φ'(0)
-    //
+
     // TODO: promote mu / eta to SQPoptions when tuning needs arise.
     constexpr double mu  = 1.0;   // L1 penalty weight
-    constexpr double eta = 1e-4;   // Armijo sufficient-decrease constant
+
 
     // Candidate values (nodes already bound to x_candidate by step())
     _candidate_cost   = _ocproblem.cost();
@@ -37,6 +35,5 @@ bool SQPSolver::ls_merit() {
         }
     }
 
-
-    return phi_alpha <= phi_0 + eta * _ls_alpha * dphi;
+    return phi_alpha <= phi_0 + _opts.ls_merit_eta * _ls_alpha * dphi;
 }

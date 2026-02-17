@@ -22,8 +22,6 @@ class AbstractCost : public AbstractFunction {
     AbstractCost() : AbstractFunction() {}
     virtual ~AbstractCost() {}
 
-    // TODO weight should be a matrix 
-
     /**
      * Get the weight/scaling factor for this cost
      */

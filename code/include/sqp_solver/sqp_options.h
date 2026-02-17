@@ -6,6 +6,7 @@ struct SQPoptions {
     LSType ls_type;
     int max_ls_iters;
     double ls_scale_factor;
+    double ls_merit_eta;
 
     double tolerance;
     double regularization;        // Hessian regularization: Q += reg*I, R += reg*I
