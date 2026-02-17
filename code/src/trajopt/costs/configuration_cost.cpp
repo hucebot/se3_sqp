@@ -1,26 +1,21 @@
 #include <trajopt/costs/configuration_cost.h>
 #include <trajopt/node.h>
 
-ConfigurationCost::ConfigurationCost(const VectorXd& q_ref)
-    : AbstractCost(), _q_ref(q_ref) {
+ConfigurationCost::ConfigurationCost(const VectorXd& q_ref, double weight)
+    : AbstractCost(weight), _q_ref(q_ref) {
     _name = "configuration_cost";
 }
 
-void ConfigurationCost::allocate_slices() {
+ConfigurationCost::ConfigurationCost(const VectorXd& q_ref, const MatrixXd& weight)
+    : AbstractCost(weight), _q_ref(q_ref) {
+    _name = "configuration_cost";
+}
+
+void ConfigurationCost::allocate_slices_impl() {
     int nv = _node->nv();
-
     _output_dim = nv;
-    _input_dim =_node->ndx() + _node->ndu();
-
+    _input_dim = _node->ndx() + _node->ndu();
     _J_dq.resize(nv, nv);
-
-    _weight.resize(_output_dim, _output_dim);
-    _weight.setIdentity();
-
-    // Jacobian: (nv × 2*nv), right half (∂r/∂v) stays zero
-    _value.resize(_output_dim);
-    _jacobian.resize(_output_dim, _input_dim);
-    _jacobian.setZero();
 }
 
 void ConfigurationCost::evaluate_impl() {

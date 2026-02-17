@@ -11,10 +11,11 @@ class VelocityCost : public AbstractCost {
     VectorXd _v_ref;
 
    public:
-    explicit VelocityCost(const VectorXd& v_ref);
-    explicit VelocityCost();
+    explicit VelocityCost(const VectorXd& v_ref, double weight = 1.0);
+    VelocityCost(const VectorXd& v_ref, const MatrixXd& weight);
+    explicit VelocityCost(double weight = 1.0);
 
-    void allocate_slices() override;
+    void allocate_slices_impl() override;
 
     void evaluate_impl() override;
 

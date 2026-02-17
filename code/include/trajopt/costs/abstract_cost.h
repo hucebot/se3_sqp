@@ -5,40 +5,60 @@
 /**
  * AbstractCost extends AbstractFunction with cost-specific semantics.
  *
- * Costs represent soft constraints with weights/scaling factors.
- * They contribute to the objective function being minimized.
- *
  * Derived classes must implement:
- * - allocate_slices(): Register variable slices
- * - evaluate(): Compute cost value
- * - jacobian(): Compute gradient
- * - hessian(): (Optional) Compute Hessian for better convergence
+ * - allocate_slices_impl(): Set _output_dim, _input_dim, and custom members
+ * - evaluate_impl(): Compute cost value
+ * - jacobian_impl(): Compute first derivatives
  */
 class AbstractCost : public AbstractFunction {
    protected:
-    MatrixXd _weight;  // Cost weight/scaling factor
+    MatrixXd _weight;
+    double _scalar_weight;
+    MatrixXd _matrix_weight;
+
+    virtual void allocate_slices_impl() = 0;
 
    public:
-    AbstractCost() : AbstractFunction() {}
+    AbstractCost(double weight = 1.0)
+        : AbstractFunction(), _scalar_weight(weight) {}
+
+    AbstractCost(const MatrixXd& weight)
+        : AbstractFunction(), _scalar_weight(1.0), _matrix_weight(weight) {}
+
     virtual ~AbstractCost() {}
 
-    /**
-     * Get the weight/scaling factor for this cost
-     */
+    void allocate_slices() override {
+        allocate_slices_impl();
+        if (_matrix_weight.size() > 0) {
+            if (_matrix_weight.rows() != _output_dim || _matrix_weight.cols() != _output_dim) {
+                throw std::invalid_argument(
+                    _name + ": Weight matrix must be " +
+                    std::to_string(_output_dim) + "x" + std::to_string(_output_dim) +
+                    ", but got " + std::to_string(_matrix_weight.rows()) + "x" +
+                    std::to_string(_matrix_weight.cols()));
+            }
+            _weight = _matrix_weight;
+        } else {
+            _weight = MatrixXd::Identity(_output_dim, _output_dim) * _scalar_weight;
+        }
+        _value.resize(_output_dim);
+        _jacobian.resize(_output_dim, _input_dim);
+        _jacobian.setZero();
+    }
+
     MatrixXd get_weight() const { return _weight; }
 
-    /**
-     * Set the weight/scaling factor for this cost
-     */
-    void set_weight(double w) { _weight = Eigen::MatrixXd(_output_dim, _output_dim).setIdentity() * w;}
+    void set_weight(double w) {
+        _scalar_weight = w;
+        _weight = MatrixXd::Identity(_output_dim, _output_dim) * w;
+    }
 
     void set_weight(const MatrixXd& w) {
         if (w.rows() != _output_dim || w.cols() != _output_dim) {
             throw std::invalid_argument(
                 _name + ": Weight matrix must be " +
                 std::to_string(_output_dim) + "x" + std::to_string(_output_dim) +
-                ", but got " + std::to_string(w.rows()) + "x" + std::to_string(w.cols())
-            );
+                ", but got " + std::to_string(w.rows()) + "x" + std::to_string(w.cols()));
         }
         _weight = w;
     }

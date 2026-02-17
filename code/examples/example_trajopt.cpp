@@ -34,29 +34,26 @@ int main() {
     Vector2d v_ref;
     v_ref << 0., 0.;
 
-    for (int i = 0; i < N; i++) {
+    // Running nodes
+    for (int i = 0; i < N - 1; i++) {
         Node node(robot_mdl);
-        if (i < N - 1) {
-            auto dynamics = std::make_shared<SemiEulerIntegration>(dt);
-            auto constraint = std::make_shared<InvDynamics>();
-            node.add_dynamics(dynamics);
-            node.add_constraint(constraint);
-        }
 
-        auto conf = std::make_shared<ConfigurationCost>(q_ref);
-        node.add_cost(conf);
-        auto vel = std::make_shared<VelocityCost>();
-        node.add_cost(vel);
-        auto acc = std::make_shared<AccelerationCost>();
-        node.add_cost(acc);
+        node.add_dynamics(std::make_shared<SemiEulerIntegration>(dt));
+        node.add_constraint(std::make_shared<InvDynamics>());
 
-        conf->set_weight(0.);
-        vel->set_weight(1e-6);
-        acc->set_weight(1e-9);
-        if (i == N - 1) {
-            conf->set_weight(1e3);
-            vel->set_weight(1e0);
-        }
+        node.add_cost(std::make_shared<ConfigurationCost>(q_ref, 0.));
+        node.add_cost(std::make_shared<VelocityCost>(1e-6));
+        node.add_cost(std::make_shared<AccelerationCost>(1e-9));
+
+        ocp.addNode(std::move(node));
+    }
+
+    // Terminal node
+    {
+        Node node(robot_mdl);
+
+        node.add_cost(std::make_shared<ConfigurationCost>(q_ref, 1e3));
+        node.add_cost(std::make_shared<VelocityCost>(1e0));
 
         ocp.addNode(std::move(node));
     }
@@ -82,10 +79,8 @@ int main() {
 
     solver.solve();
 
-    ocp.save_trajectory(
-        "/workspace/code/resources/trajectories/trajectory.json", dt,
-        urdf_path);
-    std::cout << "Trajectory saved to /workspace/trajectory.json" << std::endl;
+    ocp.save_trajectory("/workspace/code/resources/trajectories/trajectory.json", dt, urdf_path);
+
 
     return 0;
 }

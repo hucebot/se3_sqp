@@ -1,32 +1,27 @@
 #include <trajopt/costs/velocity_cost.h>
 
-VelocityCost::VelocityCost(const VectorXd& v_ref)
-    : AbstractCost(), _v_ref(v_ref) {
+VelocityCost::VelocityCost(const VectorXd& v_ref, double weight)
+    : AbstractCost(weight), _v_ref(v_ref) {
     _name = "velocity_cost";
 }
-VelocityCost::VelocityCost()
-    : AbstractCost() {
+VelocityCost::VelocityCost(const VectorXd& v_ref, const MatrixXd& weight)
+    : AbstractCost(weight), _v_ref(v_ref) {
+    _name = "velocity_cost";
+}
+VelocityCost::VelocityCost(double weight)
+    : AbstractCost(weight) {
     _name = "velocity_cost";
 }
 
-void VelocityCost::allocate_slices() {
+void VelocityCost::allocate_slices_impl() {
     int nv = _node->nv();
-
     _output_dim = nv;
     _input_dim = _node->ndx() + _node->ndu();
 
-    if (_v_ref.size()==0){
+    if (_v_ref.size() == 0) {
         _v_ref.resize(_output_dim);
         _v_ref.setZero();
     }
-
-    _weight.resize(_output_dim, _output_dim);
-    _weight.setIdentity();
-
-    // Jacobian: (nv × 2*nv), right half (∂r/∂v) stays zero
-    _value.resize(_output_dim);
-    _jacobian.resize(_output_dim, _input_dim);
-    _jacobian.setZero();
 }
 
 void VelocityCost::evaluate_impl() {

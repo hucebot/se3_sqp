@@ -79,6 +79,7 @@ class AbstractFunction {
         return _jacobian;  // Default: return full Jacobian
     }
 
+    //TODO fix this, jac_x and jac_u  return different things
     /**
      * Get Jacobian block w.r.t. control u (∂f/∂u).
      * Override in derived classes that depend on control.

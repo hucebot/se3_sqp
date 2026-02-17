@@ -25,9 +25,10 @@ class ConfigurationCost : public AbstractCost {
     MatrixXd _J_dq;
 
    public:
-    explicit ConfigurationCost(const VectorXd& q_ref);
+    explicit ConfigurationCost(const VectorXd& q_ref, double weight = 1.0);
+    ConfigurationCost(const VectorXd& q_ref, const MatrixXd& weight);
 
-    void allocate_slices() override;
+    void allocate_slices_impl() override;
 
     void evaluate_impl() override;
 

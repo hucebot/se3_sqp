@@ -13,10 +13,11 @@ class AccelerationCost : public AbstractCost {
     VectorXd _a_ref;
 
    public:
-    explicit AccelerationCost(const VectorXd& a_ref);
-    explicit AccelerationCost(); 
+    explicit AccelerationCost(const VectorXd& a_ref, double weight = 1.0);
+    AccelerationCost(const VectorXd& a_ref, const MatrixXd& weight);
+    explicit AccelerationCost(double weight = 1.0);
 
-    void allocate_slices() override;
+    void allocate_slices_impl() override;
 
     void evaluate_impl() override;
 

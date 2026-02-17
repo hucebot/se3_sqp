@@ -1,36 +1,31 @@
 #include <trajopt/costs/acceleration_cost.h>
 
-AccelerationCost::AccelerationCost(const VectorXd& a_ref)
-    : AbstractCost(), _a_ref(a_ref) {
+AccelerationCost::AccelerationCost(const VectorXd& a_ref, double weight)
+    : AbstractCost(weight), _a_ref(a_ref) {
     _name = "acceleration_cost";
 }
-AccelerationCost::AccelerationCost()
-    : AbstractCost() {
+AccelerationCost::AccelerationCost(const VectorXd& a_ref, const MatrixXd& weight)
+    : AbstractCost(weight), _a_ref(a_ref) {
+    _name = "acceleration_cost";
+}
+AccelerationCost::AccelerationCost(double weight)
+    : AbstractCost(weight) {
     _name = "acceleration_cost";
 }
 
-void AccelerationCost::allocate_slices() {
+void AccelerationCost::allocate_slices_impl() {
     int nv = _node->nv();
-
     _output_dim = nv;
     _input_dim = _node->ndx() + _node->ndu();
 
-    if (_a_ref.size()==0){
+    if (_a_ref.size() == 0) {
         _a_ref.resize(_output_dim);
         _a_ref.setZero();
     }
-
-    _weight.resize(_output_dim, _output_dim);
-    _weight.setIdentity();
-
-    // Jacobian: (nv × 2*nv), right half (∂r/∂v) stays zero
-    _value.resize(_output_dim);
-    _jacobian.resize(_output_dim, _input_dim);
-    _jacobian.setZero();
 }
 
 void AccelerationCost::evaluate_impl() {
-    _value = _node->u() - _a_ref; //TODO: change with forces
+    _value = _node->a() - _a_ref; //TODO: change when forces
 }
 
 void AccelerationCost::jacobian_impl() {

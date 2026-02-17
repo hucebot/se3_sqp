@@ -1,6 +1,7 @@
 #include <trajopt/ocp.h>
 
 #include <fstream>
+#include <iostream>
 
 OCP::OCP(int num_nodes) : _num_nodes(num_nodes) {
     _horizon.reserve(num_nodes);
@@ -98,4 +99,5 @@ void OCP::save_trajectory(const std::string& filepath, double dt,
 
     std::ofstream out(filepath);
     out << j.dump(2);
+    std::cout << "Trajectory saved to " << filepath << std::endl;
 }
