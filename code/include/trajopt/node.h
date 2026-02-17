@@ -71,8 +71,10 @@ class Node {
     // Zero-copy segment accessors for state components
     auto q() { return _x_ptr->head(_nq); }
     auto v() { return _x_ptr->tail(_nv); }
+    auto a() { return _u_ptr->head(_nv); }
     auto q() const { return _x_ptr->head(_nq); }
     auto v() const { return _x_ptr->tail(_nv); }
+    auto a() const { return _u_ptr->head(_nv); }
 
     // Full state/control accessors
     VectorXdRef x() { return *_x_ptr; }

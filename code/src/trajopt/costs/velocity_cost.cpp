@@ -1,5 +1,4 @@
 #include <trajopt/costs/velocity_cost.h>
-#include <trajopt/node.h>
 
 VelocityCost::VelocityCost(const VectorXd& v_ref)
     : AbstractCost(), _v_ref(v_ref) {

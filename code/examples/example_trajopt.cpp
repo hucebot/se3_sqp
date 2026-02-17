@@ -12,6 +12,7 @@
 #include "trajopt/constraints/inverse_dynamics.h"
 #include "trajopt/costs/configuration_cost.h"
 #include "trajopt/costs/velocity_cost.h"
+#include "trajopt/costs/acceleration_cost.h"
 #include "trajopt/node.h"
 #include "trajopt/ocp.h"
 
@@ -43,12 +44,15 @@ int main() {
         }
 
         auto conf = std::make_shared<ConfigurationCost>(q_ref);
-        auto vel = std::make_shared<VelocityCost>(v_ref);
         node.add_cost(conf);
+        auto vel = std::make_shared<VelocityCost>();
         node.add_cost(vel);
+        auto acc = std::make_shared<AccelerationCost>();
+        node.add_cost(acc);
 
         conf->set_weight(0.);
         vel->set_weight(1e-6);
+        acc->set_weight(1e-9);
         if (i == N - 1) {
             conf->set_weight(1e3);
             vel->set_weight(1e0);
