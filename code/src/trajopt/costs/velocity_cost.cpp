@@ -5,6 +5,10 @@ VelocityCost::VelocityCost(const VectorXd& v_ref)
     : AbstractCost(), _v_ref(v_ref) {
     _name = "velocity_cost";
 }
+VelocityCost::VelocityCost()
+    : AbstractCost() {
+    _name = "velocity_cost";
+}
 
 void VelocityCost::allocate_slices() {
     int nv = _node->nv();
@@ -13,6 +17,11 @@ void VelocityCost::allocate_slices() {
     _output_dim = nv;
     // Input is full state [q; v], dimension 2*nv (no control dependency)
     _input_dim = 2 * nv;
+
+    if (_v_ref.size()==0){
+        _v_ref.resize(_output_dim);
+        _v_ref.setZero();
+    }
 
 
     // Jacobian: (nv × 2*nv), right half (∂r/∂v) stays zero
@@ -26,8 +35,6 @@ void VelocityCost::evaluate_impl() {
 }
 
 void VelocityCost::jacobian_impl() {
-    _jacobian.setZero();
-
     _jacobian.middleCols(_node->nv(), _node->nv()).setIdentity();
 }
 

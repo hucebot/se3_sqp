@@ -17,6 +17,7 @@ class VelocityCost : public AbstractCost {
 
    public:
     explicit VelocityCost(const VectorXd& v_ref);
+    VelocityCost();
 
     void allocate_slices() override;
 
