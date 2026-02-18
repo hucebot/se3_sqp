@@ -25,11 +25,13 @@ void AccelerationCost::allocate_slices_impl() {
 }
 
 void AccelerationCost::evaluate_impl() {
-    _value = _node->a() - _a_ref; //TODO: change when forces
+    _value = _node->a() - _a_ref;
 }
 
 void AccelerationCost::jacobian_impl() {
+    // Jacobian w.r.t acceleration is identity, w.r.t forces is zero
     _jacobian.middleCols(2*_node->nv(), _node->nv()).setIdentity();
+    // Force columns are already zero from _jacobian.setZero() in base class
 }
 
 MatrixXdConstRef AccelerationCost::get_jac_x() const {
@@ -37,5 +39,6 @@ MatrixXdConstRef AccelerationCost::get_jac_x() const {
 }
 
 MatrixXd AccelerationCost::get_jac_u() const {
-    return _jacobian.middleCols(2*_node->nv(), _node->nv());
+    // Return all control columns (acceleration + forces)
+    return _jacobian.rightCols(_node->ndu());
 }

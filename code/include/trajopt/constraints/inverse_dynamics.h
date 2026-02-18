@@ -5,6 +5,7 @@
 
 #include "pinocchio/algorithm/rnea.hpp"
 #include "pinocchio/algorithm/rnea-derivatives.hpp"
+#include "pinocchio/algorithm/frames.hpp"
 
 
 class InvDynamics : public AbstractConstraint {
@@ -13,10 +14,19 @@ class InvDynamics : public AbstractConstraint {
     VectorXd _q;
     VectorXd _vq;
     VectorXd _aq;
-    VectorXd _res;
     MatrixXd _dtau_dq;
     MatrixXd _dtau_dv;
     MatrixXd _dtau_da;
+
+    // External forces (size = model.njoints, all initialized to zero)
+    PINOCCHIO_ALIGNED_STD_VECTOR(pinocchio::Force) _fext;
+
+    // Frame Jacobian scratch buffer (6 x nv)
+    MatrixXd _Jframe;
+
+   private:
+    // Helper to build external forces vector from contact forces
+    void build_fext();
 
    public:
     explicit InvDynamics();
