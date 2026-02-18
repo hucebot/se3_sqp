@@ -21,6 +21,8 @@ class FrameTranslationCost : public AbstractCost {
                          const Eigen::Vector3d& p_ref,
                          const MatrixXd& weight);
 
+    void set_node(Node* node) override { AbstractCost::set_node(node); _ft.set_node(node); }
+
     void allocate_dims() override;
     void evaluate_impl() override;
     void jacobian_impl() override;

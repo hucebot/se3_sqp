@@ -17,6 +17,8 @@ class FrameTranslationConstraint : public AbstractConstraint {
     explicit FrameTranslationConstraint(const std::string& frame_name,
                                         const Eigen::Vector3d& p_ref = Eigen::Vector3d::Zero());
 
+    void set_node(Node* node) override { AbstractConstraint::set_node(node); _ft.set_node(node); }
+
     void allocate_dims() override;
     void evaluate_impl() override;
     void jacobian_impl() override;

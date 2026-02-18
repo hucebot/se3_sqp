@@ -13,7 +13,6 @@ FrameTranslationCost::FrameTranslationCost(
 }
 
 void FrameTranslationCost::allocate_dims() {
-    _ft.set_node(_node);
     _ft.allocate_slices();
 
     _output_dim = _ft.get_output_dim();

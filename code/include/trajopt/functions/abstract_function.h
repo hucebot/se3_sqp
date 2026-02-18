@@ -45,7 +45,7 @@ class AbstractFunction {
      * Set the owning node. Called by Node::add_cost/add_constraint.
      * Must be called before allocate_slices().
      */
-    void set_node(Node* node) { _node = node; }
+    virtual void set_node(Node* node) { _node = node; }
     Node* get_node() const { return _node; }
 
     /**

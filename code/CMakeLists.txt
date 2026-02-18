@@ -8,12 +8,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ========================================
 # RELEASE BUILD OPTIMIZATIONS
 # ========================================
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mno-avx -DNDEBUG" CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -mno-avx -DNDEBUG" CACHE STRING "" FORCE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 
+# pinocchio was built without AVX (SSE only, 16-byte Eigen alignment).
+# -march=native enables AVX → Eigen uses 32-byte alignment, mismatching pinocchio's
+# allocator across the shared library boundary (heap corruption on free).
+# -mno-avx keeps all other -march=native tuning while matching pinocchio's alignment.
+
 add_compile_options(
-    $<$<CONFIG:Release>:-ffast-math>
     $<$<CONFIG:Release>:-funroll-loops>
     $<$<CONFIG:Release>:-finline-functions>
 )
