@@ -1,7 +1,10 @@
 # TODO
 
-- **External forces**: implement contact forces as decision variables in the OCP.
-  Full plan in `plan_external_forces.md`. Start with Node contact storage (Step 1).
+- Refactor allocate slices for constraints
+
+- node.tau()
+
+- cached pinocchio computations
 
 - **Friction** Cone constraint
 

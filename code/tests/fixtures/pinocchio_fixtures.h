@@ -75,6 +75,34 @@ inline pinocchio::Model buildRandomFloating2R(std::mt19937& gen) {
                        Eigen::Vector3d(0., 0., link2_length / 2.0)));
     model.addJointFrame(joint2_id);
 
+    // Add contact frames for testing external forces
+    // Contact on link 1
+    model.addFrame(pinocchio::Frame(
+        "contact_1",
+        joint1_id,
+        model.getFrameId("revolute_1"),
+        pinocchio::SE3(Eigen::Matrix3d::Identity(), Eigen::Vector3d(0., 0., 0.3)),
+        pinocchio::BODY
+    ));
+
+    // Contact on link 2 (end effector)
+    model.addFrame(pinocchio::Frame(
+        "contact_2",
+        joint2_id,
+        model.getFrameId("revolute_2"),
+        pinocchio::SE3(Eigen::Matrix3d::Identity(), Eigen::Vector3d(0., 0., 0.5)),
+        pinocchio::BODY
+    ));
+
+    // Alias for end effector
+    model.addFrame(pinocchio::Frame(
+        "end_effector",
+        joint2_id,
+        model.getFrameId("revolute_2"),
+        pinocchio::SE3(Eigen::Matrix3d::Identity(), Eigen::Vector3d(0., 0., 0.5)),
+        pinocchio::BODY
+    ));
+
     // Position limits (needed for pinocchio::randomConfiguration)
     model.lowerPositionLimit.head<3>().setConstant(-10.0);
     model.upperPositionLimit.head<3>().setConstant(10.0);
