@@ -66,6 +66,61 @@ void Node::add_dynamics(std::shared_ptr<AbstractConstraint> constraint) {
     constraint->allocate_slices();
 }
 
+void Node::add_contact(const std::string& frame_name) {
+    // Check if contact already registered
+    if (_contact_name_to_idx.count(frame_name) > 0) {
+        throw std::runtime_error("Contact '" + frame_name + "' already registered");
+    }
+
+    // Look up frame ID from model
+    if (!_model_ptr->existFrame(frame_name)) {
+        throw std::runtime_error("Frame '" + frame_name + "' does not exist in model");
+    }
+    int frame_id = _model_ptr->getFrameId(frame_name);
+    int parent_joint_id = _model_ptr->frames[frame_id].parentJoint;
+
+    Contact contact;
+    contact.name = frame_name;
+    contact.frame_id = frame_id;
+    contact.parent_joint_id = parent_joint_id;
+    contact.active = true;
+
+    int idx = static_cast<int>(_contacts.size());
+    _contacts.push_back(contact);
+    _contact_name_to_idx[frame_name] = idx;
+
+    // Resize gradient vectors since control dimension changed
+    _grad_cost_u.conservativeResize(ndu());
+    _grad_defect_u.conservativeResize(ndu());
+    _grad_violation_u.conservativeResize(ndu());
+    // Zero out new entries (3 new dimensions)
+    _grad_cost_u.tail(3).setZero();
+    _grad_defect_u.tail(3).setZero();
+    _grad_violation_u.tail(3).setZero();
+}
+
+void Node::add_contacts(const std::vector<std::string>& frame_names) {
+    for (const auto& name : frame_names) {
+        add_contact(name);
+    }
+}
+
+void Node::set_active_contacts(const std::vector<std::string>& names) {
+    // Deactivate all contacts first
+    for (auto& contact : _contacts) {
+        contact.active = false;
+    }
+
+    // Activate the named contacts using fast lookup
+    for (const auto& name : names) {
+        auto it = _contact_name_to_idx.find(name);
+        if (it == _contact_name_to_idx.end()) {
+            throw std::runtime_error("Contact '" + name + "' not registered. Call add_contact() first.");
+        }
+        _contacts[it->second].active = true;
+    }
+}
+
 nlohmann::json Node::to_json() const {
     nlohmann::json j;
     auto q_vec = q();
@@ -73,8 +128,18 @@ nlohmann::json Node::to_json() const {
     j["q"] = std::vector<double>(q_vec.data(), q_vec.data() + q_vec.size());
     j["v"] = std::vector<double>(v_vec.data(), v_vec.data() + v_vec.size());
     if (_u_ptr && _u_ptr->size() > 0) {
-        auto u_vec = u();
-        j["u"] = std::vector<double>(u_vec.data(), u_vec.data() + u_vec.size());
+        auto a_vec = a();
+        j["a"] = std::vector<double>(a_vec.data(), a_vec.data() + a_vec.size());
+
+        // Serialize contact forces with frame names
+        if (n_contacts() > 0) {
+            nlohmann::json forces = nlohmann::json::object();
+            for (int i = 0; i < n_contacts(); ++i) {
+                auto f_vec = fc(i);
+                forces[_contacts[i].name] = std::vector<double>(f_vec.data(), f_vec.data() + f_vec.size());
+            }
+            j["contact_forces"] = forces;
+        }
     }
     return j;
 }

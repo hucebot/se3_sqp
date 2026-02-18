@@ -24,6 +24,15 @@
  * the Node needing to know constraint-specific details.
  */
 class Node {
+   public:
+    // Contact representation for external forces
+    struct Contact {
+        std::string name;         // frame name (for user API)
+        int frame_id;             // pinocchio frame index
+        int parent_joint_id;      // parent joint index (cached for efficiency)
+        bool active = true;       // toggle for MPC
+    };
+
    private:
     // Placeholder for dynamics constraint
     std::shared_ptr<AbstractConstraint> _dynamics;
@@ -31,6 +40,10 @@ class Node {
     // Constraints and costs
     std::vector<std::shared_ptr<AbstractCost>> _cost_list;
     std::vector<std::shared_ptr<AbstractConstraint>> _constraint_list;
+
+    // Contact configuration
+    std::vector<Contact> _contacts;                             // maintains registration order (for Jacobian indexing)
+    std::unordered_map<std::string, int> _contact_name_to_idx;  // fast O(1) lookup by name
 
     // Pointers to trajectory data (owned by OCP)
     VectorXd* _x_ptr = nullptr;
@@ -76,6 +89,12 @@ class Node {
     auto v() const { return _x_ptr->tail(_nv); }
     auto a() const { return _u_ptr->head(_nv); }
 
+    // Contact force accessors (i-th contact force in u)
+    auto fc(int i) { return _u_ptr->segment(_nv + 3*i, 3); }
+    auto fc(int i) const { return _u_ptr->segment(_nv + 3*i, 3); }
+    auto fc() { return _u_ptr->tail(3 * n_contacts()); }  // all forces stacked
+    auto fc() const { return _u_ptr->tail(3 * n_contacts()); }
+
     // Full state/control accessors
     VectorXdRef x() { return *_x_ptr; }
     VectorXdRef u() { return *_u_ptr; }
@@ -87,8 +106,8 @@ class Node {
     int nv() const { return _nv; }
     int nx() const { return _nq + _nv; }
     int ndx() const { return _nv + _nv; }
-    int nu() const { return _nv; }
-    int ndu() const { return _nv; }
+    int nu() const { return _nv + 3 * n_contacts(); }
+    int ndu() const { return _nv + 3 * n_contacts(); }  // forces are Euclidean
 
     // Model access
     pinocchio::Model& model() { return *_model_ptr; }
@@ -104,6 +123,13 @@ class Node {
     void add_cost(std::shared_ptr<AbstractCost> cost);
     void add_dynamics(std::shared_ptr<AbstractConstraint> dynamics);
     void add_constraint(std::shared_ptr<AbstractConstraint> constraint);
+
+    // Contact management
+    void add_contact(const std::string& frame_name);
+    void add_contacts(const std::vector<std::string>& frame_names);
+    void set_active_contacts(const std::vector<std::string>& names);
+    int n_contacts() const { return static_cast<int>(_contacts.size()); }
+    const std::vector<Contact>& contacts() const { return _contacts; }
 
     // Access to constraint and cost lists
     const std::vector<std::shared_ptr<AbstractCost>>& get_costs() const {
