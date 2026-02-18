@@ -1,9 +1,5 @@
 # TODO
 
-- Refactor allocate slices for constraints
-
-- node.tau()
-
 - cached pinocchio computations
 
 - **Friction** Cone constraint

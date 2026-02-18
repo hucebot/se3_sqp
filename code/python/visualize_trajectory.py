@@ -71,7 +71,7 @@ def main(traj_path: Path) -> None:
     with server.gui.add_folder("Playback"):
         playing      = server.gui.add_checkbox("Play", initial_value=True)
         speed_slider = server.gui.add_slider(
-            "Speed", min=0.1, max=1.0, step=0.1, initial_value=1.0
+            "Speed", min=0.1, max=2.0, step=0.1, initial_value=1.0
         )
         frame_slider = server.gui.add_slider(
             "Frame", min=0, max=state["N"] - 1, step=1, initial_value=0
@@ -116,6 +116,7 @@ def main(traj_path: Path) -> None:
     def _(_) -> None:
         idx = min(frame_slider.value, state["N"] - 1)
         try:
+            state["k"] = idx
             viser_robot[0].update_cfg(np.array(state["traj"][idx]["q"]))
         except ValueError as e:
             print(f"[error] update_cfg: {e}")

@@ -49,6 +49,9 @@ class Node {
     VectorXd* _x_ptr = nullptr;
     VectorXd* _u_ptr = nullptr;
 
+    // Pointer to inverse dynamics torque value (linked by InvDynamics constraint)
+    VectorXd* _tau_ptr = nullptr;
+
     double _cost;
     double _defect;
     double _violation;
@@ -94,6 +97,17 @@ class Node {
     auto fc(int i) const { return _u_ptr->segment(_nv + 3*i, 3); }
     auto fc() { return _u_ptr->tail(3 * n_contacts()); }  // all forces stacked
     auto fc() const { return _u_ptr->tail(3 * n_contacts()); }
+
+    // Torque accessor (returns inverse dynamics constraint value)
+    VectorXdConstRef tau() const {
+        if (!_tau_ptr) {
+            throw std::runtime_error("No inverse dynamics constraint linked. Call add_constraint(std::make_shared<InvDynamics>()) first.");
+        }
+        return *_tau_ptr;
+    }
+
+    // Allow InvDynamics constraint to link its _value vector
+    void link_tau(VectorXd* tau_ptr) { _tau_ptr = tau_ptr; }
 
     // Full state/control accessors
     VectorXdRef x() { return *_x_ptr; }

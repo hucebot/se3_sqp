@@ -141,6 +141,12 @@ nlohmann::json Node::to_json() const {
             j["contact_forces"] = forces;
         }
     }
+
+    // Serialize torques if inverse dynamics constraint is linked
+    if (_tau_ptr && _tau_ptr->size() > 0) {
+        j["tau"] = std::vector<double>(_tau_ptr->data(), _tau_ptr->data() + _tau_ptr->size());
+    }
+
     return j;
 }
 
