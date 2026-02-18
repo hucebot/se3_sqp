@@ -1,18 +1,14 @@
 # TODO
 
-- cached pinocchio computations
-
 - **Friction** Cone constraint
 
-- remove example robot data & Docker file optimization 
-
 - **Contact constraint**
+
+- remove example robot data & Docker file optimization 
 
 - joint limits
 
 - Frame orientation cost
-
-- **Franka** example
 
 - Contact scheduler (copy from openSoT)
 

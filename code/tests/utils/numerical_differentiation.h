@@ -84,17 +84,20 @@ inline MatrixXd numerical_jacobian_node(
             dx(i) = eps;
             node.x_oplus(x0, dx, x_pert);
             node.x() = x_pert;
+            node.invalidate_cache();
             VectorXd f_plus = func();
 
             dx(i) = -eps;
             node.x_oplus(x0, dx, x_pert);
             node.x() = x_pert;
+            node.invalidate_cache();
             VectorXd f_minus = func();
 
             jac.col(col++) = (f_plus - f_minus) / (2.0 * eps);
             dx(i) = 0.0;
         }
         node.x() = x0;
+        node.invalidate_cache();
     }
 
     if (perturb_u) {
@@ -103,17 +106,20 @@ inline MatrixXd numerical_jacobian_node(
             du(i) = eps;
             node.u_oplus(u0, du, u_pert);
             node.u() = u_pert;
+            node.invalidate_cache();
             VectorXd f_plus = func();
 
             du(i) = -eps;
             node.u_oplus(u0, du, u_pert);
             node.u() = u_pert;
+            node.invalidate_cache();
             VectorXd f_minus = func();
 
             jac.col(col++) = (f_plus - f_minus) / (2.0 * eps);
             du(i) = 0.0;
         }
         node.u() = u0;
+        node.invalidate_cache();
     }
 
     return jac;

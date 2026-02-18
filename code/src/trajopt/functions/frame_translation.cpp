@@ -20,8 +20,8 @@ void FrameTranslation::allocate_dims() {
 }
 
 void FrameTranslation::evaluate_impl() {
-    pinocchio::forwardKinematics(_node->model(), _node->data(), _node->q());
-    pinocchio::updateFramePlacement(_node->model(), _node->data(), _frame_id);
+    // Ensure FK and frame placements are computed (cached on node)
+    _node->require_frame_placements();
 
     _value = _node->data().oMf[_frame_id].translation() - _p_ref;
 }

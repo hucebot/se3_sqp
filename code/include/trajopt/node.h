@@ -7,7 +7,9 @@
 #include <array>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <pinocchio/algorithm/frames.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
+#include <pinocchio/algorithm/kinematics.hpp>
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/multibody/model.hpp>
 #include <stdexcept>
@@ -66,6 +68,13 @@ class Node {
 
     // Scratch buffer for violation computation (avoids per-call heap allocations)
     VectorXd _viol_tmp;
+
+    // Cache flags for Pinocchio computations (dirty-flag pattern)
+    enum CacheFlag : uint8_t {
+        CACHE_FK               = 1 << 0,  // forwardKinematics(q)
+        CACHE_FRAME_PLACEMENTS = 1 << 1,  // updateFramePlacements
+    };
+    uint8_t _cache_flags = 0;
 
    public:
     Node(pinocchio::Model mdl);
@@ -132,7 +141,9 @@ class Node {
     void x_oplus(VectorXdRef x0, VectorXdRef dx, VectorXdRef x1);
     void u_oplus(VectorXdRef u0, VectorXdRef du, VectorXdRef u1);
 
-    void cached_update();
+    void invalidate_cache();
+    void require_forward_kinematics();
+    void require_frame_placements();
 
     void add_cost(std::shared_ptr<AbstractCost> cost);
     void add_dynamics(std::shared_ptr<AbstractConstraint> dynamics);

@@ -64,9 +64,8 @@ void InvDynamics::evaluate_impl() {
     _vq = _node->v();
     _aq = _node->a();
 
-    // Forward kinematics to get frame poses
-    pinocchio::forwardKinematics(_node->model(), _node->data(), _q);
-    pinocchio::updateFramePlacements(_node->model(), _node->data());
+    // Ensure FK and frame placements are computed (cached on node)
+    _node->require_frame_placements();
 
     // Build external forces from active contacts
     build_fext();

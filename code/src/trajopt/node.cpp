@@ -26,10 +26,26 @@ Node::Node(pinocchio::Model mdl)
 void Node::bind_trajectory(VectorXd* x, VectorXd* u) {
     _x_ptr = x;
     _u_ptr = u;
+    invalidate_cache();
 }
 
-void Node::cached_update(){
-    //TODO - update the pinocchio data and cache the computations
+void Node::invalidate_cache(){
+    _cache_flags = 0;
+}
+
+void Node::require_forward_kinematics(){
+    if (!(_cache_flags & CACHE_FK)) {
+        pinocchio::forwardKinematics(*_model_ptr, *_data_ptr, q());
+        _cache_flags |= CACHE_FK;
+    }
+}
+
+void Node::require_frame_placements(){
+    require_forward_kinematics();
+    if (!(_cache_flags & CACHE_FRAME_PLACEMENTS)) {
+        pinocchio::updateFramePlacements(*_model_ptr, *_data_ptr);
+        _cache_flags |= CACHE_FRAME_PLACEMENTS;
+    }
 }
 
 void Node::x_oplus(VectorXdRef x0, VectorXdRef dx, VectorXdRef x1){
