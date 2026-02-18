@@ -31,7 +31,7 @@ class InvDynamics : public AbstractConstraint {
    public:
     explicit InvDynamics();
 
-    void allocate_slices() override;
+    void allocate_dims() override;
 
     void evaluate_impl() override;
 

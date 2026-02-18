@@ -5,9 +5,7 @@ InvDynamics::InvDynamics() : AbstractConstraint() {
     // Note: Allocation deferred to allocate_slices() since _node is not set yet
 }
 
-void InvDynamics::allocate_slices() {
-    // Now _node is set, we can allocate based on dimensions
-    int nq = _node->nq();
+void InvDynamics::allocate_dims() {
     int nv = _node->nv();
     int nc = _node->n_contacts();
 
@@ -18,10 +16,6 @@ void InvDynamics::allocate_slices() {
     _dtau_dv.resize(nv, nv);
     _dtau_da.resize(nv, nv);
 
-    _value.resize(_output_dim);
-    _jacobian.resize(_output_dim, _input_dim);
-    _jacobian.setZero();
-
     // Allocate external forces vector (size = model.njoints, all zero)
     _fext.resize(_node->model().njoints, pinocchio::Force::Zero());
 
@@ -29,10 +23,12 @@ void InvDynamics::allocate_slices() {
     _Jframe.resize(6, nv);
 
     // Set bounds from model effort limits
-    // effortLimit is nv-dimensional; joints with limit 0 are unactuated (tau = 0)
     const VectorXd& effort = _node->model().effortLimit;
     _lower_bound = -effort;
     _upper_bound =  effort;
+
+    _node->link_tau(&_value);
+
 }
 
 void InvDynamics::build_fext() {
@@ -71,10 +67,6 @@ void InvDynamics::evaluate_impl() {
     // Forward kinematics to get frame poses
     pinocchio::forwardKinematics(_node->model(), _node->data(), _q);
     pinocchio::updateFramePlacements(_node->model(), _node->data());
-    // pinocchio::computeForwardKinematicsDerivatives(_mdl, _data,
-    //                              getJointPosition(),
-    //                              getJointVelocity(),
-    //                              getJointAcceleration());
 
     // Build external forces from active contacts
     build_fext();

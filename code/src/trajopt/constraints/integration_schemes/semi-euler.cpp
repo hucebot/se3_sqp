@@ -6,8 +6,7 @@ SemiEulerIntegration::SemiEulerIntegration(double dt) : AbstractConstraint(), _d
     // Note: Allocation deferred to allocate_slices() since _node is not set yet
 }
 
-void SemiEulerIntegration::allocate_slices() {
-    // Now _node is set, we can allocate based on dimensions
+void SemiEulerIntegration::allocate_dims() {
     int nq = _node->nq();
     int nv = _node->nv();
 
@@ -16,13 +15,8 @@ void SemiEulerIntegration::allocate_slices() {
     _J_v.resize(nv, nv);
     _J_diff_qnext.resize(nv, nv);
 
-    // Pre-allocate Jacobian: (2*nv × 5*nv)
-    // Columns: [q_k(nv), v_k(nv), u_k(nv), q_{k+1}(nv), v_{k+1}(nv)]
     _output_dim = 2 * nv;
     _input_dim = 3 * nv;  // [x_k, u_k, x_{k+1}] = [2*nv, nv, 2*nv]
-    _value.resize(_output_dim);
-    _jacobian.resize(_output_dim, _input_dim);
-    _jacobian.setZero();
 
     // Set bounds to zero (equality constraint)
     set_equality_to_zero();

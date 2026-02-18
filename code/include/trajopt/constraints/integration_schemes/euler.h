@@ -37,7 +37,7 @@ class EulerIntegration : public AbstractConstraint {
 
     ~EulerIntegration() = default;
 
-    void allocate_slices() override;
+    void allocate_dims() override;
 
     void evaluate_impl() override;
 

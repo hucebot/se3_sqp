@@ -15,7 +15,7 @@ class VelocityCost : public AbstractCost {
     VelocityCost(const VectorXd& v_ref, const MatrixXd& weight);
     explicit VelocityCost(double weight = 1.0);
 
-    void allocate_slices_impl() override;
+    void allocate_dims() override;
 
     void evaluate_impl() override;
 

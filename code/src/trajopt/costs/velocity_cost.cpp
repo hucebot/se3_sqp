@@ -13,7 +13,7 @@ VelocityCost::VelocityCost(double weight)
     _name = "velocity_cost";
 }
 
-void VelocityCost::allocate_slices_impl() {
+void VelocityCost::allocate_dims() {
     int nv = _node->nv();
     _output_dim = nv;
     _input_dim = _node->ndx() + _node->ndu();

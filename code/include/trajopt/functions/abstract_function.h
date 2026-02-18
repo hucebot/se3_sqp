@@ -50,9 +50,16 @@ class AbstractFunction {
 
     /**
      * Allocate function-specific slices in the node's registry.
-     * Must also resize _value and _jacobian.
+     * Calls allocate_dims() to set dimensions and custom members,
+     * then resizes _value and _jacobian, then calls post_allocate().
      */
-    virtual void allocate_slices() = 0;
+    void allocate_slices() {
+        allocate_dims();
+        _value.resize(_output_dim);
+        _jacobian.resize(_output_dim, _input_dim);
+        _jacobian.setZero();
+        post_allocate();
+    }
 
     /**
      * Trigger computation of the function value.
@@ -94,6 +101,12 @@ class AbstractFunction {
     virtual std::string get_name() const { return _name; }
 
    protected:
+    /** Set _output_dim, _input_dim, and allocate custom members. */
+    virtual void allocate_dims() = 0;
+
+    /** Hook called after _value/_jacobian are resized. Default: no-op. */
+    virtual void post_allocate() {}
+
     virtual void evaluate_impl() = 0;
     virtual void jacobian_impl() = 0;
 };

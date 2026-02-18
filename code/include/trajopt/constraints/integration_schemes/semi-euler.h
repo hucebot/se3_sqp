@@ -37,7 +37,7 @@ class SemiEulerIntegration : public AbstractConstraint {
 
     ~SemiEulerIntegration() = default;
 
-    void allocate_slices() override;
+    void allocate_dims() override;
 
     void evaluate_impl() override;
 

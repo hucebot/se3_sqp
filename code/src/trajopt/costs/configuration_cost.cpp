@@ -11,7 +11,7 @@ ConfigurationCost::ConfigurationCost(const VectorXd& q_ref, const MatrixXd& weig
     _name = "configuration_cost";
 }
 
-void ConfigurationCost::allocate_slices_impl() {
+void ConfigurationCost::allocate_dims() {
     int nv = _node->nv();
     _output_dim = nv;
     _input_dim = _node->ndx() + _node->ndu();

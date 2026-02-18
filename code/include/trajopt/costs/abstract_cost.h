@@ -6,7 +6,7 @@
  * AbstractCost extends AbstractFunction with cost-specific semantics.
  *
  * Derived classes must implement:
- * - allocate_slices_impl(): Set _output_dim, _input_dim, and custom members
+ * - allocate_dims(): Set _output_dim, _input_dim, and custom members
  * - evaluate_impl(): Compute cost value
  * - jacobian_impl(): Compute first derivatives
  */
@@ -16,19 +16,7 @@ class AbstractCost : public AbstractFunction {
     double _scalar_weight;
     MatrixXd _matrix_weight;
 
-    virtual void allocate_slices_impl() = 0;
-
-   public:
-    AbstractCost(double weight = 1.0)
-        : AbstractFunction(), _scalar_weight(weight) {}
-
-    AbstractCost(const MatrixXd& weight)
-        : AbstractFunction(), _scalar_weight(1.0), _matrix_weight(weight) {}
-
-    virtual ~AbstractCost() {}
-
-    void allocate_slices() override {
-        allocate_slices_impl();
+    void post_allocate() override {
         if (_matrix_weight.size() > 0) {
             if (_matrix_weight.rows() != _output_dim || _matrix_weight.cols() != _output_dim) {
                 throw std::invalid_argument(
@@ -41,10 +29,16 @@ class AbstractCost : public AbstractFunction {
         } else {
             _weight = MatrixXd::Identity(_output_dim, _output_dim) * _scalar_weight;
         }
-        _value.resize(_output_dim);
-        _jacobian.resize(_output_dim, _input_dim);
-        _jacobian.setZero();
     }
+
+   public:
+    AbstractCost(double weight = 1.0)
+        : AbstractFunction(), _scalar_weight(weight) {}
+
+    AbstractCost(const MatrixXd& weight)
+        : AbstractFunction(), _scalar_weight(1.0), _matrix_weight(weight) {}
+
+    virtual ~AbstractCost() {}
 
     MatrixXd get_weight() const { return _weight; }
 

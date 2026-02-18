@@ -13,7 +13,7 @@ AccelerationCost::AccelerationCost(double weight)
     _name = "acceleration_cost";
 }
 
-void AccelerationCost::allocate_slices_impl() {
+void AccelerationCost::allocate_dims() {
     int nv = _node->nv();
     _output_dim = nv;
     _input_dim = _node->ndx() + _node->ndu();

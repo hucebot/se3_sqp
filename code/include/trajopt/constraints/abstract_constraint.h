@@ -12,9 +12,9 @@
  * They can be equality constraints (lower == upper) or inequality constraints.
  *
  * Derived classes must implement:
- * - allocate_slices(): Register variable slices
- * - evaluate(): Compute constraint residual
- * - jacobian(): Compute constraint Jacobian
+ * - allocate_dims(): Set _output_dim, _input_dim, and custom members
+ * - evaluate_impl(): Compute constraint residual
+ * - jacobian_impl(): Compute constraint Jacobian
  *
  * Constraint form: lower <= g(x) <= upper
  */
