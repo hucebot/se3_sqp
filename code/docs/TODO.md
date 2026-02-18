@@ -6,9 +6,7 @@
 
 - **Contact constraint**
 
-- Frame translation cost
-
-- Frame translation constraint
+- joint limits
 
 - Frame orientation cost
 

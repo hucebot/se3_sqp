@@ -30,15 +30,13 @@ void SQPSolver::solve() {
 
 
         // Backtracking line search
+        _ls_alpha = 1.;
         step();
-        if (_ls_function) {
-            _ls_alpha = 1.;
-            for (int ls_iter = 1; ls_iter < _opts.max_ls_iters; ++ls_iter) {
-                _stats.update_linesearch_iterations(ls_iter);
-                if ((this->*_ls_function)()) break;
-                _ls_alpha *= _opts.ls_scale_factor;
-                step();
-            }
+        for (int ls_iter = 1; (ls_iter < _opts.max_ls_iters) && _ls_function; ++ls_iter) {
+            _stats.update_linesearch_iterations(ls_iter);
+            if ((this->*_ls_function)()) break;
+            _ls_alpha *= _opts.ls_scale_factor;
+            step();
         }
 
         // Adaptive regularization: scale up when line search took minimum step, reset otherwise
