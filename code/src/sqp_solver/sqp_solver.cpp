@@ -429,8 +429,8 @@ bool SQPSolver::break_criteria() {
 
     if (dual_feasible && primal_feasible) return true;
 
-    // // Fallback: step norm (backward-compatible safety)
-    // if ((_step_norm < _opts.tolerance) && primal_feasible) return true;
+    // Fallback: step norm (backward-compatible safety)
+    if ((_step_norm < _opts.tolerance) && primal_feasible) return true;
 
     return false;
 }

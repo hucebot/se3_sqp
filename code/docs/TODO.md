@@ -2,8 +2,6 @@
 
 - remove example robot data & Docker file optimization 
 
-- joint limits
-
 - remove get_jac_x and get_jac_u from implementations
 
 - Frame orientation cost

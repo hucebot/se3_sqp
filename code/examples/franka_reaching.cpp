@@ -3,6 +3,7 @@
 #include <trajopt/node.h>
 #include <trajopt/constraints/integration_schemes/euler.h>
 #include <trajopt/constraints/inverse_dynamics.h>
+#include "trajopt/constraints/joint_limits_constraint.h"
 #include <trajopt/costs/velocity_cost.h>
 #include <trajopt/costs/acceleration_cost.h>
 #include <trajopt/costs/frame_translation_cost.h>
@@ -59,6 +60,7 @@ int main() {
         if (k < N - 1) {
             node.add_dynamics(std::make_shared<EulerIntegration>(dt));
             node.add_constraint(std::make_shared<InvDynamics>());
+            node.add_constraint(std::make_shared<JointLimitsConstraint>());
         }
 
         // Smoothness: penalize velocity and acceleration
@@ -100,7 +102,7 @@ int main() {
     opts.max_sqp_iters = 100;
     opts.ls_type = LSType::MERIT;
     opts.max_ls_iters = 5;
-    opts.tolerance = 1e-2;
+    opts.tolerance = 1e-9;
     solver.set_options(opts);
 
     std::cout << "Solving...\n";

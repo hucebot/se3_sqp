@@ -34,12 +34,14 @@ int main() {
     Vector2d v_ref;
     v_ref << 0., 0.;
 
+    //TODO tip cost
+
     // Running nodes
     for (int i = 0; i < N - 1; i++) {
         Node node(robot_mdl);
 
         node.add_dynamics(std::make_shared<SemiEulerIntegration>(dt));
-        node.add_constraint(std::make_shared<InvDynamics>());
+        node.add_constraint(std::make_shared<InvDynamics>());        
 
         node.add_cost(std::make_shared<ConfigurationCost>(q_ref, 0.));
         node.add_cost(std::make_shared<VelocityCost>(1e-6));
@@ -52,7 +54,7 @@ int main() {
     {
         Node node(robot_mdl);
 
-        node.add_cost(std::make_shared<ConfigurationCost>(q_ref, 1e3));
+        node.add_cost(std::make_shared<ConfigurationCost>(q_ref, 1e0));
         node.add_cost(std::make_shared<VelocityCost>(1e0));
 
         ocp.addNode(std::move(node));
