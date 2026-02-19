@@ -52,6 +52,16 @@ class SQPSolver {
     std::vector<VectorXd> _lam_lg;     // General constraint lower multipliers, each ng
     std::vector<VectorXd> _lam_ug;     // General constraint upper multipliers, each ng
 
+    // QP-solution multipliers (raw from QP solve)
+    std::vector<VectorXd> _pi_qp;
+    std::vector<VectorXd> _lam_lg_qp;
+    std::vector<VectorXd> _lam_ug_qp;
+
+    // Candidate multipliers (blended with α, analogous to _x_candidate/_u_candidate)
+    std::vector<VectorXd> _pi_candidate;
+    std::vector<VectorXd> _lam_lg_candidate;
+    std::vector<VectorXd> _lam_ug_candidate;
+
     double _ls_alpha;
     double _step_norm;  // Norm of the accepted step (for convergence check)
     double _current_reg; // Current adaptive regularization value

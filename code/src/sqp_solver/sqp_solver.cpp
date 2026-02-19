@@ -111,6 +111,12 @@ void SQPSolver::init() {
     _pi.resize(_Nu);
     _lam_lg.resize(_Nx);
     _lam_ug.resize(_Nx);
+    _pi_qp.resize(_Nu);
+    _lam_lg_qp.resize(_Nx);
+    _lam_ug_qp.resize(_Nx);
+    _pi_candidate.resize(_Nu);
+    _lam_lg_candidate.resize(_Nx);
+    _lam_ug_candidate.resize(_Nx);
     _scaled_dx.resize(_Nx);
     _scaled_du.resize(_Nu);
     // Trajectory storage
@@ -161,6 +167,12 @@ void SQPSolver::init() {
         if (k<_Nu) _pi[k].setZero(_ndx);
         _lam_lg[k].setZero(_ng);
         _lam_ug[k].setZero(_ng);
+        if (k<_Nu) _pi_qp[k].setZero(_ndx);
+        _lam_lg_qp[k].setZero(_ng);
+        _lam_ug_qp[k].setZero(_ng);
+        if (k<_Nu) _pi_candidate[k].setZero(_ndx);
+        _lam_lg_candidate[k].setZero(_ng);
+        _lam_ug_candidate[k].setZero(_ng);
         _scaled_dx[k].setZero(_ndx);
         if (k<_Nu) _scaled_du[k].setZero(_ndu);
 
@@ -251,12 +263,15 @@ void SQPSolver::step() {
             _ocproblem.get_node(k).u_oplus(u_nom[k], _scaled_du[k], _u_candidate[k]);
         }
 
-        //TODO - update the l_{k+1} = l_k + a dl_k
-        // Extract Lagrange multipliers from QP solution
-        _qp_solver.get_lam_lg(k, _lam_lg[k].data());
-        _qp_solver.get_lam_ug(k, _lam_ug[k].data());
-        if (k < _Nu)
-            _qp_solver.get_pi(k, _pi[k].data());
+        // Multiplier update: λ_candidate = λ + α·(λ_QP - λ)
+        _qp_solver.get_lam_lg(k, _lam_lg_qp[k].data());
+        _qp_solver.get_lam_ug(k, _lam_ug_qp[k].data());
+        _lam_lg_candidate[k] = _lam_lg[k] + _ls_alpha * (_lam_lg_qp[k] - _lam_lg[k]);
+        _lam_ug_candidate[k] = _lam_ug[k] + _ls_alpha * (_lam_ug_qp[k] - _lam_ug[k]);
+        if (k < _Nu) {
+            _qp_solver.get_pi(k, _pi_qp[k].data());
+            _pi_candidate[k] = _pi[k] + _ls_alpha * (_pi_qp[k] - _pi[k]);
+        }
     }
 
     // Bind nodes to candidate trajectory and refresh _value for LS checks
@@ -272,6 +287,9 @@ void SQPSolver::accept_step() {
     // O(1) swap — no element copies
     std::swap(x_nom, _x_candidate);
     std::swap(u_nom, _u_candidate);
+    std::swap(_pi, _pi_candidate);
+    std::swap(_lam_lg, _lam_lg_candidate);
+    std::swap(_lam_ug, _lam_ug_candidate);
 
     // Rebind nodes to the (now swapped) nominal trajectory
     _ocproblem.bind_trajectory(x_nom, u_nom);
