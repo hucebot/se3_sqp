@@ -10,6 +10,7 @@
 #include <pinocchio/algorithm/frames.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
 #include <pinocchio/algorithm/kinematics.hpp>
+#include <pinocchio/algorithm/kinematics-derivatives.hpp>
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/multibody/model.hpp>
 #include <stdexcept>
@@ -71,7 +72,7 @@ class Node {
 
     // Cache flags for Pinocchio computations (dirty-flag pattern)
     enum CacheFlag : uint8_t {
-        CACHE_FK               = 1 << 0,  // forwardKinematics(q)
+        CACHE_FK               = 1 << 0,  // forwardKinematics(q,v)
         CACHE_FRAME_PLACEMENTS = 1 << 1,  // updateFramePlacements
     };
     uint8_t _cache_flags = 0;

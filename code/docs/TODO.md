@@ -2,8 +2,6 @@
 
 - **Friction** Cone constraint
 
-- **Contact constraint**
-
 - remove example robot data & Docker file optimization 
 
 - joint limits

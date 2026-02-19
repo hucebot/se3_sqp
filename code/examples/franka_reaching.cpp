@@ -76,7 +76,7 @@ int main() {
             radius * std::cos(angle)
         );
 
-        double weight = (k == 0 || k == N - 1) ? 1e3 : 1e2;
+        double weight = (k == 0 || k == N - 1) ? 1e0 : 1e0;
         auto ee_cost = std::make_shared<FrameTranslationCost>(ee_frame, p_target, weight);
         node.add_cost(ee_cost);
 
@@ -120,7 +120,9 @@ int main() {
             double t = static_cast<double>(k) / (N - 1);
             double angle = 2.0 * M_PI * t;
             Eigen::Vector3d p_target = center + Eigen::Vector3d(
-                0.0, radius * std::cos(angle), radius * std::sin(angle));
+                0.0,
+                radius * std::sin(angle),
+                radius * std::cos(angle));
 
             std::cout << "  k=" << k
                       << "  pos=" << p.transpose()

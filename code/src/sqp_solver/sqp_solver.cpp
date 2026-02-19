@@ -32,7 +32,7 @@ void SQPSolver::solve() {
         // Backtracking line search
         _ls_alpha = 1.;
         step();
-        for (int ls_iter = 1; (ls_iter < _opts.max_ls_iters) && _ls_function; ++ls_iter) {
+        for (int ls_iter = 1; (ls_iter <= _opts.max_ls_iters) && _ls_function; ++ls_iter) {
             _stats.update_linesearch_iterations(ls_iter);
             if ((this->*_ls_function)()) break;
             _ls_alpha *= _opts.ls_scale_factor;
@@ -398,6 +398,7 @@ void SQPSolver::linearize() {
 
 double SQPSolver::compute_kkt_residual() {
     double kkt = 0.0;
+
     for (int k = 0; k < _N; ++k) {
         // Stationarity w.r.t. state
         VectorXd grad_x = _q[k];
@@ -409,12 +410,12 @@ double SQPSolver::compute_kkt_residual() {
         // Stationarity w.r.t. control
         if (k < _Nu) {
             VectorXd grad_u = _r[k];
-            grad_u.noalias() += _S[k] * _dx[k];
             grad_u.noalias() += _D[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
             grad_u.noalias() += _B[k].transpose() * _pi[k];
             kkt = std::max(kkt, grad_u.lpNorm<Eigen::Infinity>());
         }
     }
+
     return kkt;
 }
 
