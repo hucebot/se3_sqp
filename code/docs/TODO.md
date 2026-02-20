@@ -6,8 +6,6 @@
 
 - Frame orientation cost
 
-- Contact scheduler (copy from openSoT)
-
 - **Python bindings**
 
 - **MPC loop**: build a receding-horizon wrapper around the SQP solver.

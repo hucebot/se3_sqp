@@ -5,7 +5,6 @@
 #include <Eigen/Dense>
 #include <string>
 
-// Forward declaration (don't include node.h - circular dependency)
 class Node;
 /**
  * AbstractFunction is the base class for all functions in trajectory
@@ -80,19 +79,16 @@ class AbstractFunction {
 
     /**
      * Get Jacobian block w.r.t. state x (∂f/∂x).
-     * Override in derived classes for specific block extraction.
      */
     virtual MatrixXdConstRef get_jac_x() const {
-        return _jacobian;  // Default: return full Jacobian
+        return _jacobian;
     }
 
-    //TODO fix this, jac_x and jac_u  return different things
     /**
      * Get Jacobian block w.r.t. control u (∂f/∂u).
-     * Override in derived classes that depend on control.
      */
     virtual MatrixXd get_jac_u() const {
-        return MatrixXd::Zero(_output_dim, 0);  // Default: no control dependency
+        return _jacobian;
     }
 
     // Getters

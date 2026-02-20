@@ -209,7 +209,7 @@ void SQPSolver::init() {
     // Set solver options for maximum performance
     _qp_solver.set_iter_max(200);                 // Reasonable default
     _qp_solver.set_tol(1e-3, 1e-3, 1e-3, 1e-3);  // Tolerances
-    _qp_solver.set_warm_start(true);              // CRITICAL: Enable warm-starting (huge speedup)
+    _qp_solver.set_warm_start(false);              // CRITICAL: Enable warm-starting (huge speedup)
 
     // std::cout<<"inited_sqp"<<std::endl;
 }
@@ -251,6 +251,7 @@ void SQPSolver::step() {
     auto& u_nom = _ocproblem.u_traj();
 
     for (int k = 0; k < _N; ++k) {
+        // DEBUG_PRINT(k<<" x");
         _qp_solver.get_x(k, _dx[k].data());
         _scaled_dx[k].noalias() = _ls_alpha * _dx[k];
         _step_norm = std::max(_step_norm, _scaled_dx[k].cwiseAbs().maxCoeff());
@@ -301,11 +302,9 @@ void SQPSolver::linearize() {
 
     for (int i = 0; i < _N; i++)
     {
-        // std::cout<<i<<std::endl;
         // Dynamics for N-1 transitions (nodes 0 to N-2)
         if (i < _Nu)
         {
-            // std::cout<<"Linearizing dynamics"<<std::endl;
             auto dyn = _ocproblem.get_node(i).get_dynamics();
             dyn->evaluate();
             dyn->jacobian();
@@ -339,10 +338,12 @@ void SQPSolver::linearize() {
             _Q[i].noalias() += Jx.transpose() * W * Jx;
             _q[i].noalias() += Jx.transpose() * W * cost_val;
 
-            if (Ju.cols() > 0 && i < _Nu) {
-                _R[i].noalias() += Ju.transpose() * W * Ju;
-                _r[i].noalias() += Ju.transpose() * W * cost_val;
-                _S[i].noalias() += Ju.transpose() * W * Jx;
+            if (i < _Nu) {
+                if (Ju.cols() > 0 && i < _Nu) {
+                    _R[i].noalias() += Ju.transpose() * W * Ju;
+                    _r[i].noalias() += Ju.transpose() * W * cost_val;
+                    _S[i].noalias() += Ju.transpose() * W * Jx;
+                }
             }
         }
 
@@ -359,6 +360,7 @@ void SQPSolver::linearize() {
         // std::cout<<"Linearizing constraints"<<std::endl;
         int row = 0;
         for (auto& con : _ocproblem.get_node(i).get_constraints()) {
+            // DEBUG_PRINT(con->get_name());
             int nc = con->get_output_dim();
             con->evaluate();
             con->jacobian();
@@ -368,11 +370,13 @@ void SQPSolver::linearize() {
             _lg[i].segment(row, nc) = con->get_lower_bound() - residual;
             _ug[i].segment(row, nc) = con->get_upper_bound() - residual;
 
-            MatrixXd Ju = con->get_jac_u();
-            if (Ju.cols() > 0 && i < _Nu)
-                _D[i].middleRows(row, nc) = Ju;
-            else
-                _D[i].middleRows(row, nc).setZero();
+            if (i < _Nu) {
+                MatrixXd Ju = con->get_jac_u();
+                if (Ju.cols() > 0)
+                    _D[i].middleRows(row, nc) = Ju;
+                else
+                    _D[i].middleRows(row, nc).setZero();
+            }
 
             row += nc;
         }
@@ -394,6 +398,8 @@ void SQPSolver::linearize() {
             node.calc_violation_gradient();
         }
     }
+
+    // DEBUG_PRINT("Linearized successfully");
 }
 
 double SQPSolver::compute_kkt_residual() {

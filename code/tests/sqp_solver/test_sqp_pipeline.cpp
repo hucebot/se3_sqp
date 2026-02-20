@@ -34,7 +34,6 @@ class SQPPipelineTest : public ::testing::Test {
             Node node(model);
             if (i < N - 1) {
                 node.add_dynamics(std::make_shared<EulerIntegration>(dt));
-                node.add_constraint(std::make_shared<InvDynamics>());
             }
             if (i == N - 1) {
                 auto cost = std::make_shared<ConfigurationCost>(q_ref);

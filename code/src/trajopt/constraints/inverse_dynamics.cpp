@@ -10,7 +10,7 @@ void InvDynamics::allocate_dims() {
     int nc = _node->n_contacts();
 
     _output_dim = nv;
-    _input_dim = 2*nv + nv + 3*nc;  // [q_k(nv), v_k(nv), a_k(nv), f_1(3), ..., f_nc(3)]
+    _input_dim = _node->ndx() + _node->ndu();  // [q_k, v_k, a_k, f_1, ..., f_nc]
 
     _dtau_dq.resize(nv, nv);
     _dtau_dv.resize(nv, nv);
@@ -24,8 +24,17 @@ void InvDynamics::allocate_dims() {
 
     // Set bounds from model effort limits
     const VectorXd& effort = _node->model().effortLimit;
+    DEBUG_PRINT("effort"<<effort);
     _lower_bound = -effort;
     _upper_bound =  effort;
+
+    // Floating base: unactuated DOFs → tau must be zero
+    if (_node->model().njoints > 1 &&
+        _node->model().joints[1].shortname() == "JointModelFreeFlyer") {
+        int fb_nv = _node->model().joints[1].nv();  // 6 for free-flyer
+        _lower_bound.head(fb_nv).setZero();
+        _upper_bound.head(fb_nv).setZero();
+    }
 
     _node->link_tau(&_value);
 
@@ -120,12 +129,9 @@ void InvDynamics::jacobian_impl() {
 
 
 MatrixXdConstRef InvDynamics::get_jac_x() const {
-    // Return ∂g/∂x_k = [∂g/∂q_k | ∂g/∂v_k]
-    return _jacobian.leftCols(2 * _node->nv());
+    return _jacobian.leftCols(_node->ndx());
 }
 
 MatrixXd InvDynamics::get_jac_u() const {
-    // Return ∂g/∂u_k = [∂g/∂a_k | ∂g/∂f_1 | ... | ∂g/∂f_nc]
-    // Columns from 2*nv onwards (acceleration + all contact forces)
-    return _jacobian.rightCols(_node->nv() + 3 * _node->n_contacts());
+    return _jacobian.rightCols(_node->ndu());
 }

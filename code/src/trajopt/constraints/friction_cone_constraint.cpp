@@ -79,11 +79,11 @@ void FrictionConeConstraint::evaluate_impl() {
     if (_node->contacts()[_contact_idx].active) {
         // Active contact: enforce friction cone
         _lower_bound.setZero();
-        _upper_bound.setConstant(std::numeric_limits<double>::infinity());
+        _upper_bound.setConstant(1e8);
     } else {
         // Inactive contact: relax constraints
-        _lower_bound.setConstant(-std::numeric_limits<double>::infinity());
-        _upper_bound.setConstant(std::numeric_limits<double>::infinity());
+        _lower_bound.setConstant(-1e8);
+        _upper_bound.setConstant(1e8);
     }
 }
 

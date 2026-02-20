@@ -1,16 +1,16 @@
 #include <trajopt/scheduler.h>
 #include <cmath>
 
-Scheduler::Scheduler()
+ContactScheduler::ContactScheduler()
 {
 }
 
-void Scheduler::addContact(str contact_name, std::vector<str> contact_frame_names)
+void ContactScheduler::addContact(str contact_name, std::vector<str> contact_frame_names)
 {
     _contacts[contact_name] = contact_frame_names;
 }
 
-void Scheduler::addPhase(std::vector<str> contacts_list, double duration, str sequence_name)
+void ContactScheduler::addPhase(std::vector<str> contacts_list, double duration, str sequence_name)
 {
     Phase phase;
     phase.duration = duration;
@@ -26,7 +26,7 @@ void Scheduler::addPhase(std::vector<str> contacts_list, double duration, str se
     _sequences[sequence_name].duration += phase.duration;
 }
 
-std::list<std::vector<std::string>> Scheduler::getSequence(double sampling_rate, str sequence_name, int nodes_number, double current_time)
+std::list<std::vector<std::string>> ContactScheduler::getSequence(double sampling_rate, str sequence_name, int nodes_number, double current_time)
 {
     double dt = sampling_rate;
     int n_nodes = 0;

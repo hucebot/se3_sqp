@@ -38,7 +38,7 @@ void ContactConstraint::allocate_dims() {
     // Fixed dimension: always 4 constraints
     // Constraint vector: g = [p_z - ground_height; v_x; v_y; v_z]
     _output_dim = 4;
-    _input_dim = 2 * nv;  // [q; v]
+    _input_dim = _node->ndx() + _node->ndu();  // [q; v; u]
 
     // Allocate scratch buffers
     _Jframe.resize(6, nv);
@@ -62,14 +62,14 @@ void ContactConstraint::evaluate_impl() {
     
     // Update bounds based on contact state
     if (_node->contacts()[_contact_idx].active) {
-        _lower_bound.setZero();
-        _upper_bound.setZero();
+        _lower_bound.setOnes()* 1e-2;
+        _upper_bound.setOnes()* 1e-2;
     } else {
         _lower_bound(0) = 0.0;
-        _upper_bound(0) = std::numeric_limits<double>::infinity();
+        _upper_bound(0) = 1e8;
 
-        _lower_bound.segment<3>(1).setConstant(-std::numeric_limits<double>::infinity());
-        _upper_bound.segment<3>(1).setConstant(std::numeric_limits<double>::infinity());
+        _lower_bound.segment<3>(1).setConstant(-1e8);
+        _upper_bound.segment<3>(1).setConstant(1e8);
     }
 }
 
@@ -96,10 +96,9 @@ void ContactConstraint::jacobian_impl() {
 }
 
 MatrixXdConstRef ContactConstraint::get_jac_x() const {
-    return _jacobian;
+    return _jacobian.leftCols(_node->ndx());
 }
 
 MatrixXd ContactConstraint::get_jac_u() const {
-    // No control dependency
-    return MatrixXd::Zero(_output_dim, _node->ndu());
+    return _jacobian.rightCols(_node->ndu());
 }

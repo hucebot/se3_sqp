@@ -40,14 +40,82 @@ def load_trajectory(path: Path) -> dict:
         return json.load(f)
 
 
+def is_floating_base(data: dict) -> bool:
+    """Floating base robots have nq = nv + 1 (quaternion orientation)."""
+    return data["nq"] == data["nv"] + 1
+
+
+FORCE_SCALE = 0.005  # m per N
+FORCE_COLOR = np.array([255, 50, 50], dtype=np.uint8)
+
+
+def get_link_scene_paths(viser_robot: ViserUrdf) -> dict[str, str]:
+    """Map link names to their viser scene paths by inspecting joint frames."""
+    paths = {}
+    for joint, frame_handle in zip(
+        viser_robot._joint_map_values, viser_robot._joint_frames
+    ):
+        paths[joint.child] = frame_handle.name
+    return paths
+
+
+def apply_q(viser_robot: ViserUrdf, base_frame, q: list, floating: bool) -> None:
+    """Set the robot configuration from a full q vector."""
+    if floating:
+        # q = [x, y, z, qx, qy, qz, qw, joint0, joint1, ...]
+        pos = np.array(q[:3])
+        quat_xyzw = q[3:7]
+        joints = np.array(q[7:])
+        # viser uses wxyz quaternion convention
+        base_frame.position = pos
+        base_frame.wxyz = np.array([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]])
+        viser_robot.update_cfg(joints)
+    else:
+        viser_robot.update_cfg(np.array(q))
+
+
+def update_forces(
+    server: viser.ViserServer,
+    link_paths: dict[str, str],
+    force_handles: dict,
+    contact_forces: dict,
+    scale: float = FORCE_SCALE,
+) -> None:
+    """Draw contact force arrows in the contact frames."""
+    for frame_name, force_local in contact_forces.items():
+        f_local = np.array(force_local, dtype=np.float32)
+        f_norm = float(np.linalg.norm(f_local))
+
+        path = f"{link_paths[frame_name]}/force"
+
+        if f_norm < 1e-3:
+            if path in force_handles:
+                force_handles[path].visible = False
+            continue
+
+        # Line segment from origin to scaled force, in the contact frame
+        tip = scale * f_local
+        points = np.array([[[0, 0, 0], tip]], dtype=np.float32)  # (1, 2, 3)
+
+        if path in force_handles:
+            force_handles[path].points = points
+            force_handles[path].visible = True
+        else:
+            force_handles[path] = server.scene.add_line_segments(
+                path, points, colors=FORCE_COLOR, line_width=3.0,
+            )
+
+
 def main(traj_path: Path) -> None:
     data = load_trajectory(traj_path)
 
+    floating = is_floating_base(data)
     state = {
-        "N":    data["N"],
-        "dt":   data["dt"],
-        "traj": data["trajectory"],
-        "k":    0,
+        "N":        data["N"],
+        "dt":       data["dt"],
+        "traj":     data["trajectory"],
+        "k":        0,
+        "floating": floating,
     }
     urdf_path = Path(data["urdf_path"])
 
@@ -65,7 +133,11 @@ def main(traj_path: Path) -> None:
         section_size=1.0,
     )
 
-    viser_robot = [ViserUrdf(server, urdf_or_path=urdf_path)]
+    # Create a parent frame for the robot base (used for floating base transforms)
+    base_frame = [server.scene.add_frame("/robot_base", show_axes=False)]
+    viser_robot = [ViserUrdf(server, urdf_or_path=urdf_path, root_node_name="/robot_base")]
+    link_paths = [get_link_scene_paths(viser_robot[0])]
+    force_handles: dict = {}
 
     # Playback controls
     with server.gui.add_folder("Playback"):
@@ -75,6 +147,14 @@ def main(traj_path: Path) -> None:
         )
         frame_slider = server.gui.add_slider(
             "Frame", min=0, max=state["N"] - 1, step=1, initial_value=0
+        )
+
+    # Force visualization
+    has_forces = "contact_forces" in state["traj"][0]
+    with server.gui.add_folder("Forces"):
+        show_forces = server.gui.add_checkbox("Show forces", initial_value=has_forces)
+        force_scale_slider = server.gui.add_slider(
+            "Scale", min=0.001, max=0.02, step=0.001, initial_value=FORCE_SCALE
         )
 
     # File selection
@@ -95,11 +175,12 @@ def main(traj_path: Path) -> None:
     @traj_dropdown.on_update
     def _(_) -> None:
         try:
-            new_data      = load_trajectory(traj_files[traj_dropdown.value])
-            state["N"]    = new_data["N"]
-            state["dt"]   = new_data["dt"]
-            state["traj"] = new_data["trajectory"]
-            state["k"]    = 0
+            new_data          = load_trajectory(traj_files[traj_dropdown.value])
+            state["N"]        = new_data["N"]
+            state["dt"]       = new_data["dt"]
+            state["traj"]     = new_data["trajectory"]
+            state["floating"] = is_floating_base(new_data)
+            state["k"]        = 0
             frame_slider.value = 0
         except Exception as e:
             print(f"[error] failed to load trajectory: {e}")
@@ -108,7 +189,12 @@ def main(traj_path: Path) -> None:
     def _(_) -> None:
         try:
             viser_robot[0].remove()
-            viser_robot[0] = ViserUrdf(server, urdf_or_path=urdf_files[urdf_dropdown.value])
+            viser_robot[0] = ViserUrdf(
+                server, urdf_or_path=urdf_files[urdf_dropdown.value],
+                root_node_name="/robot_base",
+            )
+            link_paths[0] = get_link_scene_paths(viser_robot[0])
+            force_handles.clear()
         except Exception as e:
             print(f"[error] failed to load URDF: {e}")
 
@@ -117,7 +203,16 @@ def main(traj_path: Path) -> None:
         idx = min(frame_slider.value, state["N"] - 1)
         try:
             state["k"] = idx
-            viser_robot[0].update_cfg(np.array(state["traj"][idx]["q"]))
+            node = state["traj"][idx]
+            apply_q(viser_robot[0], base_frame[0], node["q"], state["floating"])
+            if show_forces.value and "contact_forces" in node:
+                update_forces(
+                    server, link_paths[0], force_handles,
+                    node["contact_forces"], force_scale_slider.value,
+                )
+            elif not show_forces.value:
+                for h in force_handles.values():
+                    h.visible = False
         except ValueError as e:
             print(f"[error] update_cfg: {e}")
             playing.value = False

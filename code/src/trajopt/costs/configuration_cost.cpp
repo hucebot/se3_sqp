@@ -35,5 +35,5 @@ MatrixXdConstRef ConfigurationCost::get_jac_x() const {
 }
 
 MatrixXd ConfigurationCost::get_jac_u() const {
-    return MatrixXd::Zero(_output_dim, 0);
+    return _jacobian.rightCols(_node->ndu());
 }

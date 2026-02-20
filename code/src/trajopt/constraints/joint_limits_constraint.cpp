@@ -29,8 +29,18 @@ void JointLimitsConstraint::allocate_dims() {
             "Expected " + std::to_string(nv) + " limits.");
     }
 
-    // Check for invalid position limits (lower > upper)
-    for (int i = 0; i < nq; ++i) {
+    // Detect floating base
+    bool has_floating_base = false;
+    int fb_nq = 0, fb_nv = 0;
+    if (_node->model().njoints > 1 &&
+        _node->model().joints[1].shortname() == "JointModelFreeFlyer") {
+        has_floating_base = true;
+        fb_nq = _node->model().joints[1].nq();  // 7
+        fb_nv = _node->model().joints[1].nv();  // 6
+    }
+
+    // Check for invalid position limits (lower > upper), skip floating base
+    for (int i = (has_floating_base ? fb_nq : 0); i < nq; ++i) {
         if (_node->model().lowerPositionLimit(i) > _node->model().upperPositionLimit(i)) {
             throw std::runtime_error(
                 "JointLimitsConstraint: invalid position limits at index " +
@@ -40,8 +50,8 @@ void JointLimitsConstraint::allocate_dims() {
         }
     }
 
-    // Check for non-positive velocity limits
-    for (int i = 0; i < nv; ++i) {
+    // Check for non-positive velocity limits, skip floating base
+    for (int i = (has_floating_base ? fb_nv : 0); i < nv; ++i) {
         if (_node->model().velocityLimit(i) <= 0.0) {
             throw std::runtime_error(
                 "JointLimitsConstraint: velocity limit at index " +
@@ -56,19 +66,43 @@ void JointLimitsConstraint::allocate_dims() {
     _upper_bound.resize(_output_dim);
 
     // Position bounds: project configuration limits onto tangent space
-    // We compute the tangent vector from neutral config to the limits
+    // For floating base, clamp config-space limits to finite values first
+    VectorXd q_lower = _node->model().lowerPositionLimit;
+    VectorXd q_upper = _node->model().upperPositionLimit;
+    if (has_floating_base) {
+        // Set finite translation limits and valid quaternion for projection
+        q_lower.head(3).setConstant(-1e6);
+        q_upper.head(3).setConstant(1e6);
+        // Use neutral quaternion for both limits (projection will be overridden below)
+        q_lower.segment(3, 4) = pinocchio::neutral(_node->model()).segment(3, 4);
+        q_upper.segment(3, 4) = pinocchio::neutral(_node->model()).segment(3, 4);
+    }
+
     VectorXd q_lower_tangent(nv), q_upper_tangent(nv);
     pinocchio::difference(_node->model(), pinocchio::neutral(_node->model()),
-                          _node->model().lowerPositionLimit, q_lower_tangent);
+                          q_lower, q_lower_tangent);
     pinocchio::difference(_node->model(), pinocchio::neutral(_node->model()),
-                          _node->model().upperPositionLimit, q_upper_tangent);
+                          q_upper, q_upper_tangent);
 
     _lower_bound.head(nv) = q_lower_tangent;
     _upper_bound.head(nv) = q_upper_tangent;
 
+    // Override floating base tangent bounds with large finite values
+    // (translation and rotation in tangent space are effectively unbounded)
+    if (has_floating_base) {
+        _lower_bound.head(fb_nv).setConstant(-1e6);
+        _upper_bound.head(fb_nv).setConstant(1e6);
+    }
+
     // Velocity limits (symmetric: -v_max to +v_max)
     _lower_bound.tail(nv) = -_node->model().velocityLimit;
     _upper_bound.tail(nv) = _node->model().velocityLimit;
+
+    // Replace inf velocity limits for floating base with large finite values
+    if (has_floating_base) {
+        _lower_bound.segment(nv, fb_nv).setConstant(-1e6);
+        _upper_bound.segment(nv, fb_nv).setConstant(1e6);
+    }
 
 
 }

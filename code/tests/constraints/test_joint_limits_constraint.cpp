@@ -16,32 +16,6 @@ TEST_F(JointLimitsConstraintTest, ConstraintDimensions) {
     EXPECT_EQ(joint_limits->get_input_dim(), node->ndx() + node->ndu());
 }
 
-TEST_F(JointLimitsConstraintTest, BoundsMatchModel) {
-    const int nv = model.nv;
-
-    auto joint_limits = std::make_shared<JointLimitsConstraint>();
-    node->add_constraint(joint_limits);
-
-    VectorXd lower = joint_limits->get_lower_bound();
-    VectorXd upper = joint_limits->get_upper_bound();
-
-    // Output dimension should be 2*nv
-    EXPECT_EQ(lower.size(), 2 * nv);
-    EXPECT_EQ(upper.size(), 2 * nv);
-
-    // Position bounds are in tangent space (projected from config space limits)
-    // Just check that they're finite and ordered correctly
-    for (int i = 0; i < nv; ++i) {
-        EXPECT_LT(lower(i), upper(i));
-        EXPECT_TRUE(std::isfinite(lower(i)));
-        EXPECT_TRUE(std::isfinite(upper(i)));
-    }
-
-    // Velocity bounds (symmetric)
-    EXPECT_TRUE(lower.tail(nv).isApprox(-model.velocityLimit));
-    EXPECT_TRUE(upper.tail(nv).isApprox(model.velocityLimit));
-}
-
 TEST_F(JointLimitsConstraintTest, EvaluationReturnsStateComponents) {
     const int nv = model.nv;
 

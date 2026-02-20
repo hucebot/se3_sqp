@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-class Scheduler {
+class ContactScheduler {
    private:
     std::unordered_map<str, std::vector<str>> _contacts;
 
@@ -18,13 +18,13 @@ class Scheduler {
 
     struct Sequence {
         std::list<Phase> phases;
-        double duration;
+        double duration = 0.0;
     };
 
     std::unordered_map<str, Sequence> _sequences;  // phase sequence
 
    public:
-    Scheduler();
+    ContactScheduler();
 
     void addContact(std::string contact_name,
                     std::vector<std::string> contact_frame_names);

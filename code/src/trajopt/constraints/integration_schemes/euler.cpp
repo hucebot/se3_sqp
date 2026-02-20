@@ -16,7 +16,7 @@ void EulerIntegration::allocate_dims() {
     _J_diff_qnext.resize(nv, nv);
 
     _output_dim = 2 * nv;
-    _input_dim = 3 * nv;  // [x_k, u_k, x_{k+1}] = [2*nv, nv, 2*nv]
+    _input_dim = _node->ndx() + _node->ndu();  // [x_k, u_k] where u_k = [a; forces]
 
     // Set bounds to zero (equality constraint)
     set_equality_to_zero();
@@ -28,7 +28,7 @@ void EulerIntegration::evaluate_impl() {
     _q_next  = _node->next_node->q();
     _vq      = _node->v();
     _vq_next = _node->next_node->v();
-    _aq      = _node->u();
+    _aq      = _node->a();
 
     pinocchio::integrate(_node->model(), _q, _vq * _dt, _q_integrated);
     pinocchio::difference(_node->model(), _q_next, _q_integrated, _value.head(_node->nv()));
@@ -40,7 +40,7 @@ void EulerIntegration::jacobian_impl() {
     _q_next  = _node->next_node->q();
     _vq      = _node->v();
     _vq_next = _node->next_node->v();
-    _aq      = _node->u();
+    _aq      = _node->a();
 
     auto nv = _node->nv();
 
@@ -70,6 +70,6 @@ MatrixXdConstRef EulerIntegration::get_jac_x() const {
 }
 
 MatrixXd EulerIntegration::get_jac_u() const {
-    // Return ∂g/∂u_k (columns 2*nv to 3*nv-1)
-    return _jacobian.rightCols(_node->nv());
+    // Return ∂g/∂u_k — acceleration + force columns (forces are zero)
+    return _jacobian.rightCols(_node->ndu());
 }
