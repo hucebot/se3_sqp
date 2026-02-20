@@ -397,20 +397,21 @@ void SQPSolver::linearize() {
 }
 
 double SQPSolver::compute_kkt_residual() {
-    double kkt = 0.0;
+    double kkt = -1e12;
 
     for (int k = 0; k < _N; ++k) {
-        // Stationarity w.r.t. state
-        VectorXd grad_x = _q[k];
-        grad_x.noalias() += _C[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
-        if (k > 0)   grad_x.noalias() += _A[k-1].transpose() * _pi[k-1];
-        if (k < _Nu) grad_x.noalias() -= _pi[k];
-        kkt = std::max(kkt, grad_x.lpNorm<Eigen::Infinity>());
-
+        // Stationarity w.r.t. state: gradient of Lagrangian at nominal point
+        if (k>0){
+            VectorXd grad_x = _q[k];
+            grad_x.noalias() -= _C[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
+            if (k < _Nu && k > 0) grad_x.noalias() += _A[k].transpose() * _pi[k];
+            if (k > 1) grad_x.noalias() -= _pi[k-1];
+            kkt = std::max(kkt, grad_x.lpNorm<Eigen::Infinity>());
+        }
         // Stationarity w.r.t. control
         if (k < _Nu) {
             VectorXd grad_u = _r[k];
-            grad_u.noalias() += _D[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
+            grad_u.noalias() -= _D[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
             grad_u.noalias() += _B[k].transpose() * _pi[k];
             kkt = std::max(kkt, grad_u.lpNorm<Eigen::Infinity>());
         }

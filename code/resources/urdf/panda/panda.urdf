@@ -261,20 +261,16 @@
         </inertial>
     </link>
     <!-- Joint from hand to left finger -->
-    <joint name="panda_finger_joint1" type="prismatic">
+    <joint name="panda_finger_joint1" type="fixed">
         <parent link="panda_hand" />
         <child link="panda_leftfinger" />
         <origin rpy="0 0 0" xyz="0 0 0.0584" />
-        <axis xyz="0 1 0" />
-        <limit effort="20" lower="0.0" upper="0.04" velocity="0.2" />
     </joint>
     <!-- Joint from hand to right finger -->
-    <joint name="panda_finger_joint2" type="prismatic">
+    <joint name="panda_finger_joint2" type="fixed">
         <parent link="panda_hand" />
         <child link="panda_rightfinger" />
         <origin rpy="0 0 0" xyz="0 0 0.0584" />
-        <axis xyz="0 -1 0" />
-        <limit effort="20" lower="0.0" upper="0.04" velocity="0.2" />
     </joint>
     <!-- Panda link left finger -->
     <link name="panda_leftfinger">

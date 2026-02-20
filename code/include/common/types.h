@@ -4,7 +4,7 @@
 #include <iostream>
 
 #ifndef NDEBUG
-    #define DEBUG_PRINT(x) std::cout << x << std::endl
+    #define DEBUG_PRINT(x) std::cout <<std::scientific << std::setprecision(2) << x << std::endl
 #else
     #define DEBUG_PRINT(x)
 #endif

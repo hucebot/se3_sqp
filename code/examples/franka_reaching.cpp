@@ -38,7 +38,7 @@ int main() {
     // Classic Panda "ready" pose: EE at ~(0.307, 0.0, 0.487)
     // Circle starts at angle=0: center + (0, radius, 0) = (0.307, 0.1, 0.487)
     VectorXd q0(model.nq);
-    q0 << 0.0, -M_PI/4, 0.0, -3*M_PI/4, 0.0, M_PI/2, M_PI/4, 0.0, 0.0;
+    q0 << 0.0, -M_PI/4, 0.0, -3*M_PI/4, 0.0, M_PI/2, M_PI/4;
 
     // Print info
     {
@@ -66,7 +66,7 @@ int main() {
         // Smoothness: penalize velocity and acceleration
         node.add_cost(std::make_shared<VelocityCost>(1e-6));
         if (k < N - 1) {
-            node.add_cost(std::make_shared<AccelerationCost>(1e-9));
+            node.add_cost(std::make_shared<AccelerationCost>(1e-6));
         }
 
         // Task-space waypoint: track circle at every node
@@ -102,7 +102,7 @@ int main() {
     opts.max_sqp_iters = 100;
     opts.ls_type = LSType::MERIT;
     opts.max_ls_iters = 5;
-    opts.tolerance = 1e-9;
+    opts.tolerance = 1e-2;
     solver.set_options(opts);
 
     std::cout << "Solving...\n";
