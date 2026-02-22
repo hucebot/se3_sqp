@@ -69,7 +69,7 @@ MatrixXdConstRef EulerIntegration::get_jac_x() const {
     return _jacobian.leftCols(2 * _node->nv());
 }
 
-MatrixXd EulerIntegration::get_jac_u() const {
+MatrixXdConstRef EulerIntegration::get_jac_u() const {
     // Return ∂g/∂u_k — acceleration + force columns (forces are zero)
     return _jacobian.rightCols(_node->ndu());
 }

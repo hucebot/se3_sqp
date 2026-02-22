@@ -22,7 +22,7 @@ class VelocityCost : public AbstractCost {
     void jacobian_impl() override;
 
     MatrixXdConstRef get_jac_x() const override;
-    MatrixXd get_jac_u() const override;
+    MatrixXdConstRef get_jac_u() const override;
 
     void set_ref(const VectorXd& v_ref) { _v_ref = v_ref; }
     const VectorXd& get_ref() const { return _v_ref; }

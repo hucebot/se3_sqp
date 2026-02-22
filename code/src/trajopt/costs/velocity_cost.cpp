@@ -36,6 +36,6 @@ MatrixXdConstRef VelocityCost::get_jac_x() const {
     return _jacobian.leftCols(_node->ndx());
 }
 
-MatrixXd VelocityCost::get_jac_u() const {
+MatrixXdConstRef VelocityCost::get_jac_u() const {
     return _jacobian.rightCols(_node->ndu());
 }

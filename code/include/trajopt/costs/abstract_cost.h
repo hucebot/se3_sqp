@@ -40,7 +40,7 @@ class AbstractCost : public AbstractFunction {
 
     virtual ~AbstractCost() {}
 
-    MatrixXd get_weight() const { return _weight; }
+    const MatrixXd& get_weight() const { return _weight; }  // Return by ref - no copy!
 
     void set_weight(double w) {
         _scalar_weight = w;

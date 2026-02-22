@@ -1,4 +1,5 @@
 #include <sqp_solver/sqp_solver.h>
+#include <common/profiling.h>
 
 #include <cmath>
 #include <iostream>
@@ -23,20 +24,26 @@ void SQPSolver::solve() {
     _stats.start_timer();
     _current_reg = _opts.regularization;
     for (int i = 0; i < _opts.max_sqp_iters; i++) {
-        linearize();
+        PROFILE_DECLARE(iter_linearize_ms);
+        PROFILE_DECLARE(iter_linesearch_ms);
+
+        { PROFILE_SCOPE(iter_linearize_ms); linearize(); }
         populate_qp();
         _qp_solver.solve();
         _stats.update_qp_info(_qp_solver.get_status(), _qp_solver.get_iter());
 
 
         // Backtracking line search
-        _ls_alpha = 1.;
-        step();
-        for (int ls_iter = 1; (ls_iter <= _opts.max_ls_iters) && _ls_function; ++ls_iter) {
-            _stats.update_linesearch_iterations(ls_iter);
-            if ((this->*_ls_function)()) break;
-            _ls_alpha *= _opts.ls_scale_factor;
+        {
+            PROFILE_SCOPE(iter_linesearch_ms);
+            _ls_alpha = 1.;
             step();
+            for (int ls_iter = 1; (ls_iter <= _opts.max_ls_iters) && _ls_function; ++ls_iter) {
+                _stats.update_linesearch_iterations(ls_iter);
+                if ((this->*_ls_function)()) break;
+                _ls_alpha *= _opts.ls_scale_factor;
+                step();
+            }
         }
 
         // Adaptive regularization: scale up when line search took minimum step, reset otherwise
@@ -62,6 +69,10 @@ void SQPSolver::solve() {
         _stats.update_constraint_violation( _candidate_viol);
         _stats.update_dynamics_defect( _candidate_defect);
         _stats.print();
+
+        PROFILE_PRINT("  Lin", iter_linearize_ms);
+        PROFILE_PRINT("  LS", iter_linesearch_ms);
+
         if (break_criteria()) break;
     }
     _stats.print(1);
@@ -332,7 +343,7 @@ void SQPSolver::linearize() {
 
             const VectorXd& cost_val = cost->get_value();
             MatrixXdConstRef Jx = cost->get_jac_x();
-            MatrixXd Ju = cost->get_jac_u();
+            MatrixXdConstRef Ju = cost->get_jac_u();  // No copy!
             const MatrixXd& W = cost->get_weight();
 
             _Q[i].noalias() += Jx.transpose() * W * Jx;
@@ -371,7 +382,7 @@ void SQPSolver::linearize() {
             _ug[i].segment(row, nc) = con->get_upper_bound() - residual;
 
             if (i < _Nu) {
-                MatrixXd Ju = con->get_jac_u();
+                MatrixXdConstRef Ju = con->get_jac_u();  // No copy!
                 if (Ju.cols() > 0)
                     _D[i].middleRows(row, nc) = Ju;
                 else

@@ -38,7 +38,7 @@ MatrixXdConstRef AccelerationCost::get_jac_x() const {
     return _jacobian.leftCols(_node->ndx());
 }
 
-MatrixXd AccelerationCost::get_jac_u() const {
+MatrixXdConstRef AccelerationCost::get_jac_u() const {
     // Return all control columns (acceleration + forces)
     return _jacobian.rightCols(_node->ndu());
 }

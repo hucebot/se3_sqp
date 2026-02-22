@@ -50,6 +50,16 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 )
 
 # ========================================
+# PROFILING CONFIGURATION
+# ========================================
+option(ENABLE_PROFILING "Enable built-in performance profiling (timing output)" OFF)
+
+if(ENABLE_PROFILING)
+    add_compile_definitions(SQP_PROFILING)
+    message(STATUS "Performance profiling enabled (SQP_PROFILING)")
+endif()
+
+# ========================================
 # EXAMPLES CONFIGURATION
 # ========================================
 option(BUILD_EXAMPLES "Build example executables" ON)

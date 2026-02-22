@@ -43,5 +43,5 @@ class JointLimitsConstraint : public AbstractConstraint {
     void jacobian_impl() override;
 
     MatrixXdConstRef get_jac_x() const override;
-    MatrixXd get_jac_u() const override;
+    MatrixXdConstRef get_jac_u() const override;
 };

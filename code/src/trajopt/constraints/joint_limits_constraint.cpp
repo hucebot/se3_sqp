@@ -146,6 +146,6 @@ MatrixXdConstRef JointLimitsConstraint::get_jac_x() const {
     return _jacobian.leftCols(_node->ndx());
 }
 
-MatrixXd JointLimitsConstraint::get_jac_u() const {
+MatrixXdConstRef JointLimitsConstraint::get_jac_u() const {
     return _jacobian.rightCols(_node->ndu());
 }

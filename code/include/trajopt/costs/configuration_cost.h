@@ -35,7 +35,7 @@ class ConfigurationCost : public AbstractCost {
     void jacobian_impl() override;
 
     MatrixXdConstRef get_jac_x() const override;
-    MatrixXd get_jac_u() const override;
+    MatrixXdConstRef get_jac_u() const override;
 
     void set_q_ref(const VectorXd& q_ref) { _q_ref = q_ref; }
     const VectorXd& get_q_ref() const { return _q_ref; }

@@ -34,6 +34,6 @@ MatrixXdConstRef FrameTranslationCost::get_jac_x() const {
     return _jacobian.leftCols(_node->ndx());
 }
 
-MatrixXd FrameTranslationCost::get_jac_u() const {
+MatrixXdConstRef FrameTranslationCost::get_jac_u() const {
     return MatrixXd::Zero(_output_dim, _node->ndu());
 }

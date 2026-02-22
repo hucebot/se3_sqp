@@ -131,8 +131,9 @@ int main() {
 
         // Costs
         // node.add_cost(std::make_shared<ConfigurationCost>(q0, 1e-3));
-        node.add_cost(std::make_shared<VelocityCost>(1e-6));
+        if (k == N-1) node.add_cost(std::make_shared<VelocityCost>(1e3));
         if (k < N - 1) {
+            node.add_cost(std::make_shared<VelocityCost>(1e-6));
             node.add_cost(std::make_shared<AccelerationCost>(1e-9));
         }
 

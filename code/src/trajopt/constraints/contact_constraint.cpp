@@ -99,6 +99,6 @@ MatrixXdConstRef ContactConstraint::get_jac_x() const {
     return _jacobian.leftCols(_node->ndx());
 }
 
-MatrixXd ContactConstraint::get_jac_u() const {
+MatrixXdConstRef ContactConstraint::get_jac_u() const {
     return _jacobian.rightCols(_node->ndu());
 }

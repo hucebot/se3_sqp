@@ -45,5 +45,5 @@ class SemiEulerIntegration : public AbstractConstraint {
 
     // Accessors for SQP solver
     MatrixXdConstRef get_jac_x() const override;
-    MatrixXd get_jac_u() const override;
+    MatrixXdConstRef get_jac_u() const override;
 };

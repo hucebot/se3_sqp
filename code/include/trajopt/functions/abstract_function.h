@@ -87,7 +87,7 @@ class AbstractFunction {
     /**
      * Get Jacobian block w.r.t. control u (∂f/∂u).
      */
-    virtual MatrixXd get_jac_u() const {
+    virtual MatrixXdConstRef get_jac_u() const {
         return _jacobian;
     }
 

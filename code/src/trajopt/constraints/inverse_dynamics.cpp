@@ -132,6 +132,6 @@ MatrixXdConstRef InvDynamics::get_jac_x() const {
     return _jacobian.leftCols(_node->ndx());
 }
 
-MatrixXd InvDynamics::get_jac_u() const {
+MatrixXdConstRef InvDynamics::get_jac_u() const {
     return _jacobian.rightCols(_node->ndu());
 }
