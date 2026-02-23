@@ -26,7 +26,7 @@ class ContactScheduler {
    public:
     ContactScheduler();
 
-    void addContact(std::string contact_name,
+    void define_contact(std::string contact_name,
                     std::vector<std::string> contact_frame_names);
 
     void addPhase(std::vector<std::string> contacts_list, double duration,

@@ -39,20 +39,20 @@ int main() {
     // ── Contact scheduler: trotting gait ──
     // Trot: diagonal pairs alternate (FL+RR) and (FR+RL)
     ContactScheduler scheduler;
-    scheduler.addContact("all", {"FL_foot", "RR_foot", "FR_foot", "RL_foot"});
-    scheduler.addContact("FL_RR", {"FL_foot", "RR_foot"});
-    scheduler.addContact("FR_RL", {"FR_foot", "RL_foot"});
-
-    // double stance_duration = 0.15;  // 150ms per diagonal stance
-    // double cycle_duration  = 2 * stance_duration;
+    scheduler.define_contact("all", {"FL_foot", "RR_foot", "FR_foot", "RL_foot"});
+    scheduler.define_contact("FL_RR", {"FL_foot", "RR_foot"});
+    scheduler.define_contact("FR_RL", {"FR_foot", "RL_foot"});
 
     scheduler.addPhase({"all"}, 1.);         // FL+RR stance
-    // scheduler.addPhase({"FR_RL"}, stance_duration);         // FR+RL stance
+
+    double stance_duration = 0.15;  // 150ms per diagonal stance
+    scheduler.addPhase({"FR_RL"}, stance_duration, "trot");         // FR+RL stance
+    scheduler.addPhase({"FL_RR"}, stance_duration, "trot");         // FR+RL stance
 
     // Generate contact sequence for 2 full gait cycles
-    // int N = static_cast<int>(2 * cycle_duration / dt);
+    // int N = 2 * static_cast<int>(2 * stance_duration / dt);
     // int N = 50;
-    auto contact_sequence = scheduler.getSequence(dt);
+    auto contact_sequence = scheduler.getSequence(dt, "trot");
     int N = contact_sequence.size();
 
     // std::cout << "Horizon: N=" << N << " nodes, T=" << N * dt << "s\n";
@@ -108,12 +108,12 @@ int main() {
     for (int k = 0; k < N; k++) {
         Node node(model);
 
-        // // Register all four feet as contacts
+        // Register all four feet as contacts
         node.add_contacts(feet);
 
-        // // // Set active contacts from scheduler
-        // node.set_active_contacts(*seq_it);
-        // ++seq_it;
+        // Set active contacts from scheduler
+        node.set_active_contacts(*seq_it);
+        std::advance(seq_it, 1);
 
         if (k < N - 1) {
             node.add_dynamics(std::make_shared<SemiEulerIntegration>(dt));

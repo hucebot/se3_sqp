@@ -5,7 +5,7 @@ ContactScheduler::ContactScheduler()
 {
 }
 
-void ContactScheduler::addContact(str contact_name, std::vector<str> contact_frame_names)
+void ContactScheduler::define_contact(str contact_name, std::vector<str> contact_frame_names)
 {
     _contacts[contact_name] = contact_frame_names;
 }
