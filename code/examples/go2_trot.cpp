@@ -3,6 +3,7 @@
 #include <trajopt/node.h>
 #include <trajopt/scheduler.h>
 #include <trajopt/constraints/integration_schemes/semi-euler.h>
+#include <trajopt/constraints/integration_schemes/euler.h>
 #include <trajopt/constraints/inverse_dynamics.h>
 #include <trajopt/constraints/joint_limits_constraint.h>
 #include <trajopt/constraints/contact_constraint.h>
@@ -30,7 +31,7 @@ int main() {
 
     // ── Trot parameters ──
     const double dt = 0.01;
-    const double mu = 0.5;  // friction coefficient
+    const double mu = 0.8;  // friction coefficient
 
     // Foot frame names
     const std::vector<std::string> feet = {"FL_foot", "FR_foot", "RL_foot", "RR_foot"};
@@ -50,9 +51,9 @@ int main() {
 
     // Generate contact sequence for 2 full gait cycles
     // int N = static_cast<int>(2 * cycle_duration / dt);
-    int N = 50;
-    auto contact_sequence = scheduler.getSequence(dt, "_", N);
-    
+    // int N = 50;
+    auto contact_sequence = scheduler.getSequence(dt);
+    int N = contact_sequence.size();
 
     // std::cout << "Horizon: N=" << N << " nodes, T=" << N * dt << "s\n";
     // std::cout << "Gait: trot (" << stance_duration << "s per diagonal stance)\n\n";
@@ -110,14 +111,14 @@ int main() {
         // // Register all four feet as contacts
         node.add_contacts(feet);
 
-        // // Set active contacts from scheduler
-        node.set_active_contacts(*seq_it);
-        ++seq_it;
+        // // // Set active contacts from scheduler
+        // node.set_active_contacts(*seq_it);
+        // ++seq_it;
 
         if (k < N - 1) {
             node.add_dynamics(std::make_shared<SemiEulerIntegration>(dt));
             node.add_constraint(std::make_shared<InvDynamics>());
-            node.add_constraint(std::make_shared<JointLimitsConstraint>());
+            // node.add_constraint(std::make_shared<JointLimitsConstraint>());
         }
 
         // Contact and friction constraints for each foot
@@ -130,10 +131,10 @@ int main() {
         }
 
         // Costs
-        // node.add_cost(std::make_shared<ConfigurationCost>(q0, 1e-3));
+        node.add_cost(std::make_shared<ConfigurationCost>(q0, 1e-3));
         if (k == N-1) node.add_cost(std::make_shared<VelocityCost>(1e3));
         if (k < N - 1) {
-            node.add_cost(std::make_shared<VelocityCost>(1e-6));
+            node.add_cost(std::make_shared<VelocityCost>(1e-3));
             node.add_cost(std::make_shared<AccelerationCost>(1e-9));
         }
 

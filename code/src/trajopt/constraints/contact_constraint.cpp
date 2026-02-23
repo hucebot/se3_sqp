@@ -62,8 +62,8 @@ void ContactConstraint::evaluate_impl() {
     
     // Update bounds based on contact state
     if (_node->contacts()[_contact_idx].active) {
-        _lower_bound.setOnes()* 1e-2;
-        _upper_bound.setOnes()* 1e-2;
+        _lower_bound.setZero();//* (-1e-2);
+        _upper_bound.setZero();// = VectorXd::setOnes(_output_dim)* 1e-2;
     } else {
         _lower_bound(0) = 0.0;
         _upper_bound(0) = 1e8;

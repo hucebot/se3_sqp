@@ -49,6 +49,7 @@ void SQPSolver::solve() {
         // Adaptive regularization: scale up when line search took minimum step, reset otherwise
         if (_ls_function && _ls_alpha < std::pow(_opts.ls_scale_factor, _opts.max_ls_iters - 1) + 1e-12) {
             _current_reg *= _opts.regularization_scale;
+            DEBUG_PRINT("reg: "<< _current_reg);
         } else {
             accept_step();
             _current_reg = _opts.regularization;
@@ -68,12 +69,12 @@ void SQPSolver::solve() {
         _stats.update_cost( _candidate_cost);
         _stats.update_constraint_violation( _candidate_viol);
         _stats.update_dynamics_defect( _candidate_defect);
-        _stats.print();
+        
 
         PROFILE_PRINT("  Lin", iter_linearize_ms);
         PROFILE_PRINT("  LS", iter_linesearch_ms);
-
         if (break_criteria()) break;
+        _stats.print();
     }
     _stats.print(1);
 }
@@ -218,8 +219,8 @@ void SQPSolver::init() {
 
 
     // Set solver options for maximum performance
-    _qp_solver.set_iter_max(200);                 // Reasonable default
-    _qp_solver.set_tol(1e-3, 1e-3, 1e-3, 1e-3);  // Tolerances
+    _qp_solver.set_iter_max(1000);                 // Reasonable default
+    _qp_solver.set_tol(1e-2, 1e-2, 1e-2, 1e-2);  // Tolerances
     _qp_solver.set_warm_start(false);              // CRITICAL: Enable warm-starting (huge speedup)
 
     // std::cout<<"inited_sqp"<<std::endl;
