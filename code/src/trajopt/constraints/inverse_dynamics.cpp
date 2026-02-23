@@ -24,7 +24,6 @@ void InvDynamics::allocate_dims() {
 
     // Set bounds from model effort limits
     const VectorXd& effort = _node->model().effortLimit;
-    DEBUG_PRINT("effort"<<effort);
     _lower_bound = -effort;
     _upper_bound =  effort;
 

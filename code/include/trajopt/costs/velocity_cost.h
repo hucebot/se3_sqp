@@ -5,10 +5,14 @@
 
 /**
  * VelocityCost penalizes deviation from a desired velocity v_ref.
+ * Excludes the floating base if present.
  */
 class VelocityCost : public AbstractCost {
    private:
     VectorXd _v_ref;
+
+    // Floating base detection (computed once in allocate_dims)
+    int _fb_nv = 0;  // Number of floating base DOFs in tangent space
 
    public:
     explicit VelocityCost(const VectorXd& v_ref, double weight = 1.0);

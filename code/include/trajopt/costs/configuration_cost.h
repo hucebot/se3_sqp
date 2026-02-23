@@ -7,13 +7,14 @@
 
 /**
  * ConfigurationCost penalizes deviation from a desired configuration q_ref.
+ * Excludes the floating base if present.
  *
- * Residual (in tangent space, dimension nv):
- *   r = q ⊖ q_ref  =  difference(q_ref, q)
+ * Residual (dimension nv or nv-fb_nv):
+ *   r = q_joints - q_ref_joints  (simple vector difference, no SE3)
  *
  * Jacobian w.r.t. state x = [q; v]:
- *   ∂r/∂q  =  dDifference(q_ref, q, ARG1)   (nv × nv)
- *   ∂r/∂v  =  0                              (nv × nv)
+ *   ∂r/∂q_joints  =  I   (identity)
+ *   ∂r/∂v         =  0
  *
  * No control dependency.
  */
@@ -21,8 +22,8 @@ class ConfigurationCost : public AbstractCost {
    private:
     VectorXd _q_ref;
 
-    // Pre-allocated Jacobian block
-    MatrixXd _J_dq;
+    // Floating base detection (computed once in allocate_dims)
+    int _fb_nv = 0;  // Number of floating base DOFs in tangent space
 
    public:
     explicit ConfigurationCost(const VectorXd& q_ref, double weight = 1.0);

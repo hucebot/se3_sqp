@@ -15,7 +15,15 @@ VelocityCost::VelocityCost(double weight)
 
 void VelocityCost::allocate_dims() {
     int nv = _node->nv();
-    _output_dim = nv;
+
+    // Detect floating base (check once and cache)
+    _fb_nv = 0;
+    if (_node->model().njoints > 1 &&
+        _node->model().joints[1].shortname() == "JointModelFreeFlyer") {
+        _fb_nv = _node->model().joints[1].nv();  // 6
+    }
+
+    _output_dim = nv - _fb_nv;
     _input_dim = _node->ndx() + _node->ndu();
 
     if (_v_ref.size() == 0) {
@@ -25,11 +33,14 @@ void VelocityCost::allocate_dims() {
 }
 
 void VelocityCost::evaluate_impl() {
-    _value = _node->v() - _v_ref;
+    // Exclude floating base velocities
+    _value = _node->v().tail(_output_dim) - _v_ref;
 }
 
 void VelocityCost::jacobian_impl() {
-    _jacobian.middleCols(_node->nv(), _node->nv()).setIdentity();
+    _jacobian.setZero();
+    // Jacobian w.r.t. joint velocities (exclude floating base): ∂(v_joints - v_ref)/∂v_joints = I
+    _jacobian.block(0, _node->nv() + _fb_nv, _output_dim, _output_dim).setIdentity();
 }
 
 MatrixXdConstRef VelocityCost::get_jac_x() const {

@@ -9,7 +9,7 @@ class VelocityCostTest : public DoubleIntegratorFixture {};
 
 TEST_F(VelocityCostTest, ZeroResidualAtReference) {
     VectorXd v_ref = node->v();  // reference = current velocity (zero)
-    auto cost = std::make_shared<VelocityCost>(v_ref);
+    auto cost = std::make_shared<VelocityCost>(v_ref.tail(node->nv()-6));
     node->add_cost(cost);
 
     cost->evaluate();
@@ -21,7 +21,7 @@ TEST_F(VelocityCostTest, NonZeroResidualAwayFromReference) {
     VectorXd v_ref = node->v();  // reference at zero
     node->v() = VectorXd::Random(model.nv);
 
-    auto cost = std::make_shared<VelocityCost>(v_ref);
+    auto cost = std::make_shared<VelocityCost>(v_ref.tail(node->nv()-6));
     node->add_cost(cost);
 
     cost->evaluate();
@@ -36,7 +36,7 @@ TEST_F(VelocityCostTest, JacobianMatchesFiniteDifferences) {
     node->q() = pinocchio::randomConfiguration(model);
     node->v() = VectorXd::Random(nv);
 
-    VectorXd v_ref = VectorXd::Random(nv);
+    VectorXd v_ref = VectorXd::Random(nv-6);
 
     auto cost = std::make_shared<VelocityCost>(v_ref);
     node->add_cost(cost);
@@ -51,18 +51,21 @@ TEST_F(VelocityCostTest, JacobianMatchesFiniteDifferences) {
     };
 
     MatrixXd numerical_jac = numerical_jacobian_node(
-        eval_func, *node, nv, /*perturb_x=*/true, /*perturb_u=*/false);
+        eval_func, *node, nv-6, /*perturb_x=*/true, /*perturb_u=*/false);
 
     EXPECT_TRUE(jacobians_match(analytical_jac, numerical_jac, 1e-5, 1e-8));
 }
 
 TEST_F(VelocityCostTest, NoControlDependency) {
-    VectorXd v_ref = VectorXd::Random(model.nv);
+    VectorXd v_ref = VectorXd::Random(model.nv-6);
     auto cost = std::make_shared<VelocityCost>(v_ref);
     node->add_cost(cost);
 
     cost->jacobian();
     MatrixXd Ju = cost->get_jac_u();
 
-    EXPECT_EQ(Ju.cols(), 0);
+    // Ju should have columns (ndu) but all values should be zero (no control dependency)
+    EXPECT_EQ(Ju.rows(), model.nv - 6);
+    EXPECT_EQ(Ju.cols(), node->ndu());
+    EXPECT_LT(Ju.norm(), 1e-12);
 }

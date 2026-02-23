@@ -53,7 +53,7 @@ TEST_F(ConfigurationCostTest, JacobianMatchesFiniteDifferences) {
     };
 
     MatrixXd numerical_jac = numerical_jacobian_node(
-        eval_func, *node, nv, /*perturb_x=*/true, /*perturb_u=*/false);
+        eval_func, *node, nv-6, /*perturb_x=*/true, /*perturb_u=*/false);
 
     EXPECT_TRUE(jacobians_match(analytical_jac, numerical_jac, 1e-5, 1e-8));
 }
@@ -66,5 +66,8 @@ TEST_F(ConfigurationCostTest, NoControlDependency) {
     cost->jacobian();
     MatrixXd Ju = cost->get_jac_u();
 
-    EXPECT_EQ(Ju.cols(), 0);
+    // Ju should have columns (ndu) but all values should be zero (no control dependency)
+    EXPECT_EQ(Ju.rows(), model.nv - 6);
+    EXPECT_EQ(Ju.cols(), node->ndu());
+    EXPECT_LT(Ju.norm(), 1e-12);
 }

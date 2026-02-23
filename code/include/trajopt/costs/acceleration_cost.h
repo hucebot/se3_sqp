@@ -7,10 +7,14 @@
 
 /**
  * AccelerationCost penalizes deviation from a desired acceleration a_ref.
+ * Excludes the floating base if present.
  */
 class AccelerationCost : public AbstractCost {
    private:
     VectorXd _a_ref;
+
+    // Floating base detection (computed once in allocate_dims)
+    int _fb_nv = 0;  // Number of floating base DOFs in tangent space
 
    public:
     explicit AccelerationCost(const VectorXd& a_ref, double weight = 1.0);
