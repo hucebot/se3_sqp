@@ -39,24 +39,21 @@ int main() {
     // ── Contact scheduler: trotting gait ──
     // Trot: diagonal pairs alternate (FL+RR) and (FR+RL)
     ContactScheduler scheduler;
-    scheduler.define_contact("all", {"FL_foot", "RR_foot", "FR_foot", "RL_foot"});
     scheduler.define_contact("FL_RR", {"FL_foot", "RR_foot"});
     scheduler.define_contact("FR_RL", {"FR_foot", "RL_foot"});
 
-    scheduler.addPhase({"all"}, 1.);         // FL+RR stance
 
     double stance_duration = 0.15;  // 150ms per diagonal stance
     scheduler.addPhase({"FR_RL"}, stance_duration, "trot");         // FR+RL stance
     scheduler.addPhase({"FL_RR"}, stance_duration, "trot");         // FR+RL stance
 
     // Generate contact sequence for 2 full gait cycles
-    // int N = 2 * static_cast<int>(2 * stance_duration / dt);
-    // int N = 50;
-    auto contact_sequence = scheduler.getSequence(dt);
-    int N = contact_sequence.size();
+    int N = 4 * static_cast<int>(2 * stance_duration / dt);
+    auto contact_sequence = scheduler.getSequence(dt, "trot", N);
 
-    // std::cout << "Horizon: N=" << N << " nodes, T=" << N * dt << "s\n";
-    // std::cout << "Gait: trot (" << stance_duration << "s per diagonal stance)\n\n";
+
+    std::cout << "Horizon: N=" << N << " nodes, T=" << N * dt << "s\n";
+    std::cout << "Gait: trot (" << stance_duration << "s per diagonal stance)\n\n";
 
     // ── Nominal standing configuration ──
     // Floating base: [x, y, z, qx, qy, qz, qw] + 12 joint angles
@@ -93,12 +90,9 @@ int main() {
             int fid = model.getFrameId(foot);
             double fz = data.oMf[fid].translation()[2];
             min_foot_z = std::min(min_foot_z, fz);
-            std::cout << foot << " position: "
-                      << data.oMf[fid].translation().transpose() << "\n";
         }
         // Adjust base height so feet are at ground level (z=0)
         q0[2] -= min_foot_z;
-        std::cout << "Adjusted base height: " << q0[2] << "\n\n";
     }
 
     // ── Build OCP ──
@@ -162,37 +156,10 @@ int main() {
     std::cout << "Solving trotting trajectory...\n";
     solver.solve();
 
-    // ── Print results ──
-    {
-        pinocchio::Data data(model);
-        std::cout << "\nBase trajectory (sampled every " << N / 10 << " nodes):\n";
-        for (int k = 0; k < N; k += std::max(1, N / 10)) {
-            VectorXd qk = ocp.get_node(k).q();
-            pinocchio::forwardKinematics(model, data, qk);
-            pinocchio::updateFramePlacements(model, data);
-
-            std::cout << "  k=" << k
-                      << "  base_pos=" << qk.head<3>().transpose()
-                      << "  base_quat=" << qk.segment<4>(3).transpose()
-                      << "\n";
-        }
-
-        // Print final foot positions
-        std::cout << "\nFinal foot positions:\n";
-        VectorXd qf = ocp.get_node(N - 1).q();
-        pinocchio::forwardKinematics(model, data, qf);
-        pinocchio::updateFramePlacements(model, data);
-        for (const auto& foot : feet) {
-            int fid = model.getFrameId(foot);
-            std::cout << "  " << foot << ": "
-                      << data.oMf[fid].translation().transpose() << "\n";
-        }
-    }
-
     // ── Save trajectory ──
     ocp.save_trajectory("/workspace/code/resources/trajectories/go2_trot.json",
                         dt, urdf_path);
-    std::cout << "\nTrajectory saved to go2_trot.json\n";
+
 
     return 0;
 }
