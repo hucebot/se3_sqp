@@ -74,6 +74,7 @@ class Node {
     enum CacheFlag : uint8_t {
         CACHE_FK               = 1 << 0,  // forwardKinematics(q,v)
         CACHE_FRAME_PLACEMENTS = 1 << 1,  // updateFramePlacements
+        CACHE_FK_DERIVATIVES   = 1 << 2,  // computeForwardKinematicsDerivatives (includes FK + joint Jacobians)
     };
     uint8_t _cache_flags = 0;
 
@@ -145,6 +146,7 @@ class Node {
     void invalidate_cache();
     void require_forward_kinematics();
     void require_frame_placements();
+    void require_fk_derivatives();
 
     void add_cost(std::shared_ptr<AbstractCost> cost);
     void add_dynamics(std::shared_ptr<AbstractConstraint> dynamics);

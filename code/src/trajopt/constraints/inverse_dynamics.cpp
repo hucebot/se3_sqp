@@ -102,6 +102,9 @@ void InvDynamics::jacobian_impl() {
     _jacobian.block(0, _node->nv(),   _node->nv(), _node->nv()) = _dtau_dv;
     _jacobian.block(0, 2*_node->nv(), _node->nv(), _node->nv()) = _dtau_da;
 
+    // Ensure FK derivatives computed (includes FK + joint Jacobians)
+    _node->require_fk_derivatives();
+
     // Compute ∂τ/∂f for each active contact
     // Forces are expressed in frame local coordinates, so we need Jacobian in LOCAL frame
     const auto& contacts = _node->contacts();
@@ -111,10 +114,10 @@ void InvDynamics::jacobian_impl() {
             continue;
         }
 
-        // Compute frame Jacobian in LOCAL frame (frame's local coordinates)
+        // Use fast GET API (joint Jacobians already computed)
         _Jframe.setZero();
-        pinocchio::computeFrameJacobian(
-            _node->model(), _node->data(), _q,
+        pinocchio::getFrameJacobian(
+            _node->model(), _node->data(),
             contacts[i].frame_id,
             pinocchio::LOCAL,  // LOCAL frame because forces are in frame coordinates
             _Jframe

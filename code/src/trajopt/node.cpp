@@ -48,6 +48,20 @@ void Node::require_frame_placements(){
     }
 }
 
+void Node::require_fk_derivatives(){
+    if (!(_cache_flags & CACHE_FK_DERIVATIVES)) {
+        // Computes FK + joint Jacobians + derivatives all at once
+        pinocchio::computeForwardKinematicsDerivatives(*_model_ptr, *_data_ptr, q(), v(), a());
+        _cache_flags |= CACHE_FK_DERIVATIVES | CACHE_FK;
+
+        // Update frame placements (oMf) - required by constraints that access data.oMf[]
+        if (!(_cache_flags & CACHE_FRAME_PLACEMENTS)) {
+            pinocchio::updateFramePlacements(*_model_ptr, *_data_ptr);
+            _cache_flags |= CACHE_FRAME_PLACEMENTS;
+        }
+    }
+}
+
 void Node::x_oplus(VectorXdRef x0, VectorXdRef dx, VectorXdRef x1){
     // x = [q; v],  dx = [dq; dv]  (both tangent vectors have size nv)
     auto q0 = x0.head(_nq);

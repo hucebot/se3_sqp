@@ -52,7 +52,7 @@ int main() {
     // Generate contact sequence for 2 full gait cycles
     // int N = 2 * static_cast<int>(2 * stance_duration / dt);
     // int N = 50;
-    auto contact_sequence = scheduler.getSequence(dt, "trot");
+    auto contact_sequence = scheduler.getSequence(dt);
     int N = contact_sequence.size();
 
     // std::cout << "Horizon: N=" << N << " nodes, T=" << N * dt << "s\n";

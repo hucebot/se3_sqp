@@ -27,10 +27,13 @@ void FrameTranslation::evaluate_impl() {
 }
 
 void FrameTranslation::jacobian_impl() {
+    // Ensure FK derivatives computed (includes FK + joint Jacobians)
+    _node->require_fk_derivatives();
+
+    // Now use Pinocchio's fast GET API (joint Jacobians already computed)
     _Jframe.setZero();
-    //TODO - getFrameJacobian for faster
-    pinocchio::computeFrameJacobian(
-        _node->model(), _node->data(), _node->q(),
+    pinocchio::getFrameJacobian(
+        _node->model(), _node->data(),
         _frame_id, pinocchio::LOCAL_WORLD_ALIGNED, _Jframe);
 
     _jacobian.setZero();

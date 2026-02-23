@@ -93,12 +93,14 @@ void FrictionConeConstraint::jacobian_impl() {
     const int ndu = _node->ndu();
     const int force_idx = _node->nv() + 3 * _contact_idx;
 
+    // Ensure FK derivatives computed (includes FK + joint Jacobians)
+    _node->require_fk_derivatives();
 
     _jacobian.setZero();
 
-    // Compute frame Jacobian in LOCAL frame
-    pinocchio::computeFrameJacobian(
-        _node->model(), _node->data(), _node->q(),
+    // Use fast GET API (joint Jacobians already computed)
+    pinocchio::getFrameJacobian(
+        _node->model(), _node->data(),
         _frame_id,
         pinocchio::LOCAL,
         _Jframe

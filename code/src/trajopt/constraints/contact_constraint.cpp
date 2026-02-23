@@ -74,21 +74,25 @@ void ContactConstraint::evaluate_impl() {
 }
 
 void ContactConstraint::jacobian_impl() {
-
-    pinocchio::computeForwardKinematicsDerivatives(_node->model(), _node->data(), _node->q(), _node->v(), _node->a());
+    // Ensure FK derivatives computed (includes FK + joint Jacobians)
+    _node->require_fk_derivatives();
 
     _jacobian.setZero();
     _Jvf_dq.setZero();
     _Jvf_dv.setZero();
 
-    pinocchio::computeFrameJacobian(
-        _node->model(), _node->data(), _node->q(),
+    // Use fast GET API (joint Jacobians already computed)
+    pinocchio::getFrameJacobian(
+        _node->model(), _node->data(),
         _frame_id,
         pinocchio::LOCAL_WORLD_ALIGNED,
         _Jframe
     );
 
-    pinocchio::getFrameVelocityDerivatives(_node->model(), _node->data(), _frame_id, pinocchio::ReferenceFrame::LOCAL, _Jvf_dq, _Jvf_dv);
+    // Get velocity derivatives (FK derivatives already computed)
+    pinocchio::getFrameVelocityDerivatives(
+        _node->model(), _node->data(), _frame_id,
+        pinocchio::ReferenceFrame::LOCAL, _Jvf_dq, _Jvf_dv);
 
     _jacobian.block(0, 0, 1, _node->nv()) = _Jframe.row(2);
     _jacobian.block(1, 0, 3, _node->nv()) = _Jvf_dq.topRows(3);
