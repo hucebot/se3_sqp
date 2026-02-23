@@ -61,9 +61,6 @@ class FrictionConeConstraint : public AbstractConstraint {
     void evaluate_impl() override;
     void jacobian_impl() override;
 
-    MatrixXdConstRef get_jac_x() const override;
-    MatrixXdConstRef get_jac_u() const override;
-
     /**
      * Set friction coefficient.
      */

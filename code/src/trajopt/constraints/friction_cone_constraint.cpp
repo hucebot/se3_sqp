@@ -127,11 +127,3 @@ void FrictionConeConstraint::jacobian_impl() {
     _jacobian.block(4, 0, 1, nv) = _mu * dwf_dq.row(2) + dwf_dq.row(1);
     _jacobian.block(4, ndx + force_idx, 1, 3) = _mu * _R_world.row(2) + _R_world.row(1);
 }
-
-MatrixXdConstRef FrictionConeConstraint::get_jac_x() const {
-    return _jacobian.leftCols(_node->ndx());
-}
-
-MatrixXdConstRef FrictionConeConstraint::get_jac_u() const {
-    return _jacobian.rightCols(_node->ndu());
-}

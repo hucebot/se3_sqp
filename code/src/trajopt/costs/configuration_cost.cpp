@@ -37,11 +37,3 @@ void ConfigurationCost::jacobian_impl() {
     // Jacobian is identity for joint positions: ∂(q_joints - q_ref_joints)/∂q_joints = I
     _jacobian.block(0, _fb_nv, _output_dim, _output_dim).setIdentity();
 }
-
-MatrixXdConstRef ConfigurationCost::get_jac_x() const {
-    return _jacobian.leftCols(_node->ndx());
-}
-
-MatrixXdConstRef ConfigurationCost::get_jac_u() const {
-    return _jacobian.rightCols(_node->ndu());
-}

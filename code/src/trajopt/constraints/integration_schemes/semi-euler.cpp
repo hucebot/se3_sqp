@@ -65,14 +65,3 @@ void SemiEulerIntegration::jacobian_impl() {
     _jacobian.block(nv, 2*nv, nv, nv) = _dt * MatrixXd::Identity(nv, nv);
 }
 
-
-
-MatrixXdConstRef SemiEulerIntegration::get_jac_x() const {
-    // Return ∂g/∂x_k = [∂g/∂q_k | ∂g/∂v_k]
-    return _jacobian.leftCols(_node->ndx());
-}
-
-MatrixXdConstRef SemiEulerIntegration::get_jac_u() const {
-    // Return ∂g/∂u_k — acceleration + force columns (forces are zero)
-    return _jacobian.rightCols(_node->ndu());
-}

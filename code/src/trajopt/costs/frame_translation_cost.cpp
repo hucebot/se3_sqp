@@ -29,11 +29,3 @@ void FrameTranslationCost::jacobian_impl() {
     // Copy x-block into our jacobian (u-block stays zero from allocate_slices)
     _jacobian.leftCols(_node->ndx()) = _ft.get_jac_x();
 }
-
-MatrixXdConstRef FrameTranslationCost::get_jac_x() const {
-    return _jacobian.leftCols(_node->ndx());
-}
-
-MatrixXdConstRef FrameTranslationCost::get_jac_u() const {
-    return MatrixXd::Zero(_output_dim, _node->ndu());
-}

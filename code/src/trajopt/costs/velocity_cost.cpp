@@ -42,11 +42,3 @@ void VelocityCost::jacobian_impl() {
     // Jacobian w.r.t. joint velocities (exclude floating base): ∂(v_joints - v_ref)/∂v_joints = I
     _jacobian.block(0, _node->nv() + _fb_nv, _output_dim, _output_dim).setIdentity();
 }
-
-MatrixXdConstRef VelocityCost::get_jac_x() const {
-    return _jacobian.leftCols(_node->ndx());
-}
-
-MatrixXdConstRef VelocityCost::get_jac_u() const {
-    return _jacobian.rightCols(_node->ndu());
-}

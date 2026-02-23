@@ -62,14 +62,3 @@ void EulerIntegration::jacobian_impl() {
     _jacobian.block(nv, 2*nv, nv, nv) = _dt * MatrixXd::Identity(nv, nv);
 }
 
-
-
-MatrixXdConstRef EulerIntegration::get_jac_x() const {
-    // Return ∂g/∂x_k = [∂g/∂q_k | ∂g/∂v_k]
-    return _jacobian.leftCols(2 * _node->nv());
-}
-
-MatrixXdConstRef EulerIntegration::get_jac_u() const {
-    // Return ∂g/∂u_k — acceleration + force columns (forces are zero)
-    return _jacobian.rightCols(_node->ndu());
-}

@@ -37,9 +37,6 @@ class FrameTranslation : public AbstractFunction {
     void evaluate_impl() override;
     void jacobian_impl() override;
 
-    MatrixXdConstRef get_jac_x() const override;
-    MatrixXdConstRef get_jac_u() const override;
-
     void set_ref(const Eigen::Vector3d& p_ref) { _p_ref = p_ref; }
     const Eigen::Vector3d& get_ref() const { return _p_ref; }
     int get_frame_id() const { return _frame_id; }

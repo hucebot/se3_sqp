@@ -80,16 +80,12 @@ class AbstractFunction {
     /**
      * Get Jacobian block w.r.t. state x (∂f/∂x).
      */
-    virtual MatrixXdConstRef get_jac_x() const {
-        return _jacobian;
-    }
+    virtual MatrixXdConstRef get_jac_x() const;
 
     /**
      * Get Jacobian block w.r.t. control u (∂f/∂u).
      */
-    virtual MatrixXdConstRef get_jac_u() const {
-        return _jacobian;
-    }
+    virtual MatrixXdConstRef get_jac_u() const;
 
     // Getters
     int get_input_dim() const { return _input_dim; }
@@ -97,7 +93,7 @@ class AbstractFunction {
     virtual std::string get_name() const { return _name; }
 
    protected:
-    /** Set _output_dim, _input_dim, and allocate custom members. */
+    /** Set _output_dim, _input_dim, _ndx, and allocate custom members. */
     virtual void allocate_dims() = 0;
 
     /** Hook called after _value/_jacobian are resized. Default: no-op. */

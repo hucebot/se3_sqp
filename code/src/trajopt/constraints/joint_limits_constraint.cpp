@@ -141,11 +141,3 @@ void JointLimitsConstraint::jacobian_impl() {
 
     // ∂g/∂u = 0 (already set by setZero)
 }
-
-MatrixXdConstRef JointLimitsConstraint::get_jac_x() const {
-    return _jacobian.leftCols(_node->ndx());
-}
-
-MatrixXdConstRef JointLimitsConstraint::get_jac_u() const {
-    return _jacobian.rightCols(_node->ndu());
-}

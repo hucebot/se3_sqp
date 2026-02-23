@@ -43,12 +43,3 @@ void AccelerationCost::jacobian_impl() {
     // Acceleration starts at column offset 2*nv in the input [q, v, a, f]
     _jacobian.block(0, 2 * _node->nv() + _fb_nv, _output_dim, _output_dim).setIdentity();
 }
-
-MatrixXdConstRef AccelerationCost::get_jac_x() const {
-    return _jacobian.leftCols(_node->ndx());
-}
-
-MatrixXdConstRef AccelerationCost::get_jac_u() const {
-    // Return all control columns (acceleration + forces)
-    return _jacobian.rightCols(_node->ndu());
-}

@@ -1,8 +1,6 @@
 # TODO
 
-- remove example robot data & Docker file optimization 
-
-- remove get_jac_x and get_jac_u from implementations
+- remove example robot data & Docker file optimization
 
 - Frame orientation cost
 

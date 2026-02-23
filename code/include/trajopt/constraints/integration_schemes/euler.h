@@ -42,8 +42,4 @@ class EulerIntegration : public AbstractConstraint {
     void evaluate_impl() override;
 
     void jacobian_impl() override;
-
-    // Accessors for SQP solver
-    MatrixXdConstRef get_jac_x() const override;
-    MatrixXdConstRef get_jac_u() const override;
 };

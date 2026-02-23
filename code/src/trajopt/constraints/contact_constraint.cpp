@@ -98,11 +98,3 @@ void ContactConstraint::jacobian_impl() {
     _jacobian.block(1, 0, 3, _node->nv()) = _Jvf_dq.topRows(3);
     _jacobian.block(1, _node->nv(), 3, _node->nv()) = _Jvf_dv.topRows(3);
 }
-
-MatrixXdConstRef ContactConstraint::get_jac_x() const {
-    return _jacobian.leftCols(_node->ndx());
-}
-
-MatrixXdConstRef ContactConstraint::get_jac_u() const {
-    return _jacobian.rightCols(_node->ndu());
-}

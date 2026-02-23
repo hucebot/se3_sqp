@@ -24,11 +24,3 @@ void FrameTranslationConstraint::jacobian_impl() {
     _ft.jacobian();
     _jacobian.leftCols(_node->ndx()) = _ft.get_jac_x();
 }
-
-MatrixXdConstRef FrameTranslationConstraint::get_jac_x() const {
-    return _jacobian.leftCols(_node->ndx());
-}
-
-MatrixXdConstRef FrameTranslationConstraint::get_jac_u() const {
-    return MatrixXd::Zero(_output_dim, _node->ndu());
-}

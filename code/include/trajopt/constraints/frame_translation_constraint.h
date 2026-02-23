@@ -23,9 +23,6 @@ class FrameTranslationConstraint : public AbstractConstraint {
     void evaluate_impl() override;
     void jacobian_impl() override;
 
-    MatrixXdConstRef get_jac_x() const override;
-    MatrixXdConstRef get_jac_u() const override;
-
     void set_ref(const Eigen::Vector3d& p_ref) { _ft.set_ref(p_ref); }
     const Eigen::Vector3d& get_ref() const { return _ft.get_ref(); }
 };

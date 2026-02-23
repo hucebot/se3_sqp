@@ -128,12 +128,3 @@ void InvDynamics::jacobian_impl() {
         _jacobian.block(0, 2*_node->nv() + _node->nv() + 3*i, _node->nv(), 3) = -_Jframe.topRows(3).transpose();
     }
 }
-
-
-MatrixXdConstRef InvDynamics::get_jac_x() const {
-    return _jacobian.leftCols(_node->ndx());
-}
-
-MatrixXdConstRef InvDynamics::get_jac_u() const {
-    return _jacobian.rightCols(_node->ndu());
-}
