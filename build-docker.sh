@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
 
-IMAGE_NAME="sqp-solver"
+# Enable BuildKit for parallel stage builds and better caching
+export DOCKER_BUILDKIT=1
+
+IMAGE_NAME="sqp-solver:latest"
 CONTAINER_NAME="sqp-dev"
 
 # Stop and remove existing container if it exists
@@ -11,8 +14,12 @@ if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     docker rm "${CONTAINER_NAME}"
 fi
 
-# Build the new image
+# Build the optimized image
 echo "Building Docker image: ${IMAGE_NAME}"
-docker build -t "${IMAGE_NAME}" .
+docker build -f Dockerfile -t "${IMAGE_NAME}" .
 
-echo "Done! Image '${IMAGE_NAME}' is ready."
+echo ""
+echo "Done! Image tagged as: ${IMAGE_NAME}"
+echo ""
+echo "Image size:"
+docker images "sqp-solver" --format "  {{.Repository}}:{{.Tag}} - {{.Size}}"

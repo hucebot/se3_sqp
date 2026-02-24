@@ -2,7 +2,7 @@
 # Script to run/attach to the SQP solver development container
 
 CONTAINER_NAME="sqp-dev"
-IMAGE_NAME="sqp-solver"
+IMAGE_NAME="sqp-solver:latest"
 WORKSPACE_DIR="$(pwd)"
 
 # Check if container exists and is running

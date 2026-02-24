@@ -51,7 +51,13 @@ void Node::require_frame_placements(){
 void Node::require_fk_derivatives(){
     if (!(_cache_flags & CACHE_FK_DERIVATIVES)) {
         // Computes FK + joint Jacobians + derivatives all at once
-        pinocchio::computeForwardKinematicsDerivatives(*_model_ptr, *_data_ptr, q(), v(), a());
+        // Terminal node has no control, so use zero acceleration
+        if (_u_ptr) {
+            pinocchio::computeForwardKinematicsDerivatives(*_model_ptr, *_data_ptr, q(), v(), a());
+        } else {
+            VectorXd a_zero = VectorXd::Zero(_nv);
+            pinocchio::computeForwardKinematicsDerivatives(*_model_ptr, *_data_ptr, q(), v(), a_zero);
+        }
         _cache_flags |= CACHE_FK_DERIVATIVES | CACHE_FK;
 
         // Update frame placements (oMf) - required by constraints that access data.oMf[]

@@ -1,0 +1,23 @@
+# Build artifacts
+code/build/
+code/CMakeFiles/
+build/
+*.o
+*.a
+
+# Git metadata
+.git/
+.gitignore
+
+# IDE and editor files
+.vscode/
+.claude/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/

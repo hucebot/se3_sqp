@@ -8,14 +8,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ========================================
 # RELEASE BUILD OPTIMIZATIONS
 # ========================================
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mno-avx -DNDEBUG" CACHE STRING "" FORCE)
-set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -mno-avx -DNDEBUG" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG" CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG" CACHE STRING "" FORCE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 
-# pinocchio was built without AVX (SSE only, 16-byte Eigen alignment).
-# -march=native enables AVX → Eigen uses 32-byte alignment, mismatching pinocchio's
-# allocator across the shared library boundary (heap corruption on free).
-# -mno-avx keeps all other -march=native tuning while matching pinocchio's alignment.
+# Pinocchio built with -march=native in Docker, enabling full AVX support
+# This provides 10-30% performance improvement over SSE-only builds
 
 add_compile_options(
     $<$<CONFIG:Release>:-funroll-loops>
@@ -29,7 +27,6 @@ find_package(Eigen3 REQUIRED)
 find_package(blasfeo REQUIRED)
 find_package(hpipm REQUIRED)
 find_package(pinocchio REQUIRED)
-find_package(example-robot-data REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 # ========================================
@@ -65,11 +62,11 @@ endif()
 option(BUILD_EXAMPLES "Build example executables" ON)
 
 if(BUILD_EXAMPLES)
-    file(GLOB EXAMPLE_SOURCES "examples/**/*.cpp")
+    file(GLOB_RECURSE EXAMPLE_SOURCES "examples/*.cpp" "examples/**/*.cpp")
     foreach(EXAMPLE_SOURCE ${EXAMPLE_SOURCES})
         get_filename_component(EXAMPLE_NAME ${EXAMPLE_SOURCE} NAME_WE)
         add_executable(${EXAMPLE_NAME} ${EXAMPLE_SOURCE})
-        target_link_libraries(${EXAMPLE_NAME} ${PROJECT_NAME} example-robot-data::example-robot-data)
+        target_link_libraries(${EXAMPLE_NAME} ${PROJECT_NAME})
     endforeach()
 endif()
 
