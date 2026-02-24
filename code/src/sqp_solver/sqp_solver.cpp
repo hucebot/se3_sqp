@@ -219,8 +219,8 @@ void SQPSolver::init() {
 
 
     // Set solver options for maximum performance
-    _qp_solver.set_iter_max(1000);                 // Reasonable default
-    _qp_solver.set_tol(1e-6, 1e-6, 1e-6, 1e-6);  // Tolerances
+    _qp_solver.set_iter_max(100);                 // Reasonable default
+    _qp_solver.set_tol(1e-4, 1e-8, 1e-8, 1e-4);    // Tolerances
     _qp_solver.set_warm_start(false);              // CRITICAL: Enable warm-starting (huge speedup)
 
     // std::cout<<"inited_sqp"<<std::endl;
@@ -423,8 +423,8 @@ double SQPSolver::compute_kkt_residual() {
         if (k > 0) {
             VectorXd grad_x = _q[k];
             grad_x.noalias() += _C[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
-            grad_x.noalias() += _A[k-1].transpose() * _pi[k-1];
-            if (k < _Nu) grad_x.noalias() -= _pi[k];
+            if (k < _Nu) grad_x.noalias() += _A[k].transpose() * _pi[k];
+            if (k < _Nu) grad_x.noalias() -= _pi[k-1];
             kkt = std::max(kkt, grad_x.lpNorm<Eigen::Infinity>());
         }
         // Stationarity w.r.t. control: ∇_{u_k} L = r_k + D_k^T(λ_ug - λ_lg) + B_k^T π_k

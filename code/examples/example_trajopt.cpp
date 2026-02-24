@@ -19,7 +19,7 @@
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    int N = 100;
+    int N = 300;
     double dt = 0.01;
 
     OCP ocp(N);
@@ -43,22 +43,19 @@ int main() {
         node.add_dynamics(std::make_shared<SemiEulerIntegration>(dt));
         node.add_constraint(std::make_shared<InvDynamics>());        
 
-        node.add_cost(std::make_shared<ConfigurationCost>(q_ref, 0.));
-        node.add_cost(std::make_shared<VelocityCost>(1e-6));
+        // node.add_cost(std::make_shared<ConfigurationCost>(q_ref, 0.));
+        node.add_cost(std::make_shared<VelocityCost>(1e-9));
         node.add_cost(std::make_shared<AccelerationCost>(1e-9));
 
         ocp.addNode(std::move(node));
     }
 
     // Terminal node
-    {
-        Node node(robot_mdl);
-
-        node.add_cost(std::make_shared<ConfigurationCost>(q_ref, 1e0));
-        node.add_cost(std::make_shared<VelocityCost>(1e0));
-
-        ocp.addNode(std::move(node));
-    }
+    Node node(robot_mdl);
+    node.add_cost(std::make_shared<ConfigurationCost>(q_ref, 1e3));
+    node.add_cost(std::make_shared<VelocityCost>(1e3));
+    ocp.addNode(std::move(node));
+    
 
     // Finalize: allocate trajectories and bind nodes
     ocp.finalize();
