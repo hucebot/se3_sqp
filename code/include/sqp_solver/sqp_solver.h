@@ -128,4 +128,7 @@ class SQPSolver {
 
     /// @brief solve the defined problem
     void solve();
+
+    /// @brief access solver statistics after calling solve()
+    const SQPstatistics& get_stats() const { return _stats; }
 };

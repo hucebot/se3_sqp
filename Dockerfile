@@ -30,7 +30,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libboost-all-dev \
     liburdfdom-dev \
     nlohmann-json3-dev \
-    pybind11-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================
@@ -122,7 +121,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libboost-all-dev \
     liburdfdom-dev \
     nlohmann-json3-dev \
-    pybind11-dev \
     # Build tools
     build-essential \
     cmake \
@@ -148,7 +146,8 @@ RUN pip3 install --no-cache-dir \
     pin \
     viser \
     yourdfpy \
-    numpy
+    numpy \
+    "pybind11[global]>=2.13"
 
 # Set environment variables for library discovery
 ENV LD_LIBRARY_PATH=/opt/blasfeo/lib:/opt/hpipm/lib:/usr/local/lib

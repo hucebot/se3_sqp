@@ -1,3 +1,5 @@
+#pragma once
+
 enum class LSType { NONE, MERIT, FILTER };
 
 struct SQPoptions {

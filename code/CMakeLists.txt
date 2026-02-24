@@ -90,3 +90,17 @@ if(BUILD_TESTING)
     include(GoogleTest)
     add_subdirectory(tests)
 endif()
+
+# ========================================
+# PYTHON BINDINGS
+# ========================================
+option(BUILD_PYTHON_BINDINGS "Build Python bindings" OFF)
+
+if(BUILD_PYTHON_BINDINGS)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    find_package(pybind11 REQUIRED)
+
+    pybind11_add_module(sqp_solver_py bindings/bindings.cpp)
+    target_link_libraries(sqp_solver_py PRIVATE ${PROJECT_NAME})
+    set_target_properties(sqp_solver_py PROPERTIES OUTPUT_NAME "sqp_solver")
+endif()
