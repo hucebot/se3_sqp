@@ -1,7 +1,5 @@
 # TODO
 
-- Frame orientation cost
-
 - **MPC loop**: build a receding-horizon wrapper around the SQP solver.
   Needs fast contact activate/deactivate (designed into the external forces plan).
 

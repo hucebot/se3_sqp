@@ -13,6 +13,7 @@
 #include <trajopt/costs/velocity_cost.h>
 #include <trajopt/costs/acceleration_cost.h>
 #include <trajopt/costs/frame_translation_cost.h>
+#include <trajopt/costs/frame_orientation_cost.h>
 #include <trajopt/constraints/abstract_constraint.h>
 #include <trajopt/constraints/inverse_dynamics.h>
 #include <trajopt/constraints/joint_limits_constraint.h>
@@ -94,6 +95,16 @@ PYBIND11_MODULE(sqp_solver, m) {
              py::arg("frame_name"), py::arg("p_ref"), py::arg("weight"))
         .def("set_ref", &FrameTranslationCost::set_ref)
         .def("get_ref", &FrameTranslationCost::get_ref);
+
+    py::class_<FrameOrientationCost, AbstractCost, std::shared_ptr<FrameOrientationCost>>(m, "FrameOrientationCost")
+        .def(py::init<const std::string&, const Eigen::Matrix3d&, double>(),
+             py::arg("frame_name"),
+             py::arg("R_ref")   = Eigen::Matrix3d::Identity(),
+             py::arg("weight")  = 1.0)
+        .def(py::init<const std::string&, const Eigen::Matrix3d&, const MatrixXd&>(),
+             py::arg("frame_name"), py::arg("R_ref"), py::arg("weight"))
+        .def("set_ref", &FrameOrientationCost::set_ref)
+        .def("get_ref", &FrameOrientationCost::get_ref);
 
     // ── Constraints ──────────────────────────────────────────────────────────
     py::class_<EulerIntegration, AbstractConstraint, std::shared_ptr<EulerIntegration>>(m, "EulerIntegration")
