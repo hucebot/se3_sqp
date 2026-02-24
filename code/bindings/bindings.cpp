@@ -7,6 +7,7 @@
 #include <sqp_solver/sqp_solver.h>
 #include <trajopt/ocp.h>
 #include <trajopt/node.h>
+#include <trajopt/scheduler.h>
 #include <trajopt/costs/abstract_cost.h>
 #include <trajopt/costs/configuration_cost.h>
 #include <trajopt/costs/velocity_cost.h>
@@ -123,6 +124,21 @@ PYBIND11_MODULE(sqp_solver, m) {
              py::arg("p_ref") = Eigen::Vector3d::Zero())
         .def("set_ref", &FrameTranslationConstraint::set_ref)
         .def("get_ref", &FrameTranslationConstraint::get_ref);
+
+    // ── ContactScheduler ─────────────────────────────────────────────────────
+    py::class_<ContactScheduler>(m, "ContactScheduler")
+        .def(py::init<>())
+        .def("define_contact", &ContactScheduler::define_contact,
+             py::arg("contact_name"), py::arg("contact_frame_names"))
+        .def("addPhase", &ContactScheduler::addPhase,
+             py::arg("contacts_list"), py::arg("duration"),
+             py::arg("sequence_name") = "_")
+        .def("getNodesNumber", &ContactScheduler::getNodesNumber)
+        .def("getSequence", &ContactScheduler::getSequence,
+             py::arg("sampling_rate"),
+             py::arg("sequence_name") = "_",
+             py::arg("nodes_number")  = -1,
+             py::arg("current_time")  = 0.0);
 
     // ── Node ─────────────────────────────────────────────────────────────────
     // Node takes a URDF path and builds the pinocchio model internally using
