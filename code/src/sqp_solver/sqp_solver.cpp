@@ -220,7 +220,7 @@ void SQPSolver::init() {
 
     // Set solver options for maximum performance
     _qp_solver.set_iter_max(1000);                 // Reasonable default
-    _qp_solver.set_tol(1e-2, 1e-2, 1e-2, 1e-2);  // Tolerances
+    _qp_solver.set_tol(1e-6, 1e-6, 1e-6, 1e-6);  // Tolerances
     _qp_solver.set_warm_start(false);              // CRITICAL: Enable warm-starting (huge speedup)
 
     // std::cout<<"inited_sqp"<<std::endl;
@@ -344,7 +344,7 @@ void SQPSolver::linearize() {
 
             const VectorXd& cost_val = cost->get_value();
             MatrixXdConstRef Jx = cost->get_jac_x();
-            MatrixXdConstRef Ju = cost->get_jac_u();  // No copy!
+            MatrixXdConstRef Ju = cost->get_jac_u();
             const MatrixXd& W = cost->get_weight();
 
             _Q[i].noalias() += Jx.transpose() * W * Jx;
@@ -418,18 +418,19 @@ double SQPSolver::compute_kkt_residual() {
     double kkt = -1e12;
 
     for (int k = 0; k < _N; ++k) {
-        // Stationarity w.r.t. state: gradient of Lagrangian at nominal point
-        if (k>0){
+        // Stationarity w.r.t. state: ∇_{x_k} L = q_k + C_k^T(λ_ug - λ_lg) + A_{k-1}^T π_{k-1} - π_k
+        // See Problem.md for derivation and HPIPM sign convention
+        if (k > 0) {
             VectorXd grad_x = _q[k];
-            grad_x.noalias() -= _C[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
-            if (k < _Nu && k > 0) grad_x.noalias() += _A[k].transpose() * _pi[k];
-            if (k > 1) grad_x.noalias() -= _pi[k-1];
+            grad_x.noalias() += _C[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
+            grad_x.noalias() += _A[k-1].transpose() * _pi[k-1];
+            if (k < _Nu) grad_x.noalias() -= _pi[k];
             kkt = std::max(kkt, grad_x.lpNorm<Eigen::Infinity>());
         }
-        // Stationarity w.r.t. control
+        // Stationarity w.r.t. control: ∇_{u_k} L = r_k + D_k^T(λ_ug - λ_lg) + B_k^T π_k
         if (k < _Nu) {
             VectorXd grad_u = _r[k];
-            grad_u.noalias() -= _D[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
+            grad_u.noalias() += _D[k].transpose() * (_lam_ug[k] - _lam_lg[k]);
             grad_u.noalias() += _B[k].transpose() * _pi[k];
             kkt = std::max(kkt, grad_u.lpNorm<Eigen::Infinity>());
         }
