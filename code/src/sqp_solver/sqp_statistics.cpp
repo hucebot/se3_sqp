@@ -72,6 +72,20 @@ void SQPstatistics::print_internal(std::ostream& os, int verbosity) const
     }
     else if (verbosity == 1)
     {
+        // MPC mode: one summary line per solve() call
+        static int mpc_step = 0;
+        if (mpc_step % 10 == 0)
+        {
+            os << std::setw(5) << "SQPi"
+               << std::setw(10) << "t(ms)" << std::endl;
+        }
+        os << std::fixed << std::setprecision(3)
+           << std::setw(5)  << number_of_iterations
+           << std::setw(10) << total_time_ms << std::endl;
+        ++mpc_step;
+    }
+    else if (verbosity == 2)
+    {
         // Normal output
         os << "=== SQP Solver Statistics ===" << std::endl;
         os << "  Iterations:             " << number_of_iterations << std::endl;

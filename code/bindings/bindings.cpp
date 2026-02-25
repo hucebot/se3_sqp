@@ -42,9 +42,17 @@ PYBIND11_MODULE(sqp_solver, m) {
         .def_readwrite("max_ls_iters",         &SQPoptions::max_ls_iters)
         .def_readwrite("ls_scale_factor",      &SQPoptions::ls_scale_factor)
         .def_readwrite("ls_merit_eta",         &SQPoptions::ls_merit_eta)
+        .def_readwrite("ls_merit_mu",          &SQPoptions::ls_merit_mu)
         .def_readwrite("tolerance",            &SQPoptions::tolerance)
         .def_readwrite("regularization",       &SQPoptions::regularization)
         .def_readwrite("regularization_scale", &SQPoptions::regularization_scale)
+        .def_readwrite("verbose",              &SQPoptions::verbose)
+        .def_readwrite("hpipm_iter_max",       &SQPoptions::hpipm_iter_max)
+        .def_readwrite("hpipm_tol_stat",       &SQPoptions::hpipm_tol_stat)
+        .def_readwrite("hpipm_tol_eq",         &SQPoptions::hpipm_tol_eq)
+        .def_readwrite("hpipm_tol_ineq",       &SQPoptions::hpipm_tol_ineq)
+        .def_readwrite("hpipm_tol_comp",       &SQPoptions::hpipm_tol_comp)
+        .def_readwrite("hpipm_warm_start",     &SQPoptions::hpipm_warm_start)
         .def("print", &SQPoptions::print);
 
     // ── SQPstatistics ────────────────────────────────────────────────────────

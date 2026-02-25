@@ -6,17 +6,13 @@
 
 bool SQPSolver::ls_merit() {
 
-    // TODO: promote mu / eta to SQPoptions when tuning needs arise.
-    constexpr double mu  = 1.0;   // L1 penalty weight
-
-
     // Candidate values (nodes already bound to x_candidate by step())
     _candidate_cost   = _ocproblem.cost();
     _candidate_defect = _ocproblem.dynamics_defect();
     _candidate_viol   = _ocproblem.constraint_violation();
 
-    const double phi_alpha =  _candidate_cost + mu * ( _candidate_defect +  _candidate_viol);
-    const double phi_0     =  _nominal_cost + mu * ( _nominal_defect +  _nominal_viol);
+    const double phi_alpha = _candidate_cost + _opts.ls_merit_mu * (_candidate_defect + _candidate_viol);
+    const double phi_0     = _nominal_cost   + _opts.ls_merit_mu * (_nominal_defect   + _nominal_viol);
 
     // Directional derivative φ'(0) = ∇φ · (dx, du)
     // Gradients were computed at the nominal in linearize() via calc_*_gradient().
@@ -25,13 +21,13 @@ bool SQPSolver::ls_merit() {
         const Node& node = _ocproblem.get_node(k);
 
         dphi += node.get_cost_grad_x().dot(_dx[k]);
-        dphi += mu * node.get_defect_grad_x().dot(_dx[k]);
-        dphi += mu * node.get_violation_grad_x().dot(_dx[k]);
+        dphi += _opts.ls_merit_mu * node.get_defect_grad_x().dot(_dx[k]);
+        dphi += _opts.ls_merit_mu * node.get_violation_grad_x().dot(_dx[k]);
 
         if (k < _Nu) {
             dphi += node.get_cost_grad_u().dot(_du[k]);
-            dphi += mu * node.get_defect_grad_u().dot(_du[k]);
-            dphi += mu * node.get_violation_grad_u().dot(_du[k]);
+            dphi += _opts.ls_merit_mu * node.get_defect_grad_u().dot(_du[k]);
+            dphi += _opts.ls_merit_mu * node.get_violation_grad_u().dot(_du[k]);
         }
     }
 

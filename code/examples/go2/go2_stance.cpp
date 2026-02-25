@@ -131,6 +131,7 @@ int main() {
     opts.ls_type = LSType::MERIT;
     opts.max_ls_iters = 5;
     opts.tolerance = 1e-3;
+    // opts.verbose = 2;
     solver.set_options(opts);
 
     std::cout << "Solving trotting trajectory...\n";

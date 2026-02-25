@@ -17,10 +17,15 @@ void SQPSolver::set_options(const SQPoptions& opts) {
         case LSType::FILTER: _ls_function = &SQPSolver::ls_filter; break;
         case LSType::NONE:   _ls_function = nullptr;               break;
     }
+    _qp_solver.set_iter_max(_opts.hpipm_iter_max);
+    _qp_solver.set_tol(_opts.hpipm_tol_stat, _opts.hpipm_tol_eq,
+                       _opts.hpipm_tol_ineq, _opts.hpipm_tol_comp);
+    _qp_solver.set_warm_start(_opts.hpipm_warm_start);
     _opts.print();
 }
 
 void SQPSolver::solve() {
+    _stats.reset();
     _stats.start_timer();
     _current_reg = _opts.regularization;
     for (int i = 0; i < _opts.max_sqp_iters; i++) {
@@ -74,9 +79,10 @@ void SQPSolver::solve() {
         PROFILE_PRINT("  Lin", iter_linearize_ms);
         PROFILE_PRINT("  LS", iter_linesearch_ms);
         if (break_criteria()) break;
-        _stats.print();
+        if (_opts.verbose == 1) _stats.print(0);
     }
-    _stats.print(1);
+    if (_opts.verbose == 1) _stats.print(2);
+    else if (_opts.verbose == 2) _stats.print(1);
 }
 
 void SQPSolver::init() {
@@ -218,10 +224,10 @@ void SQPSolver::init() {
     _qp_solver.set_ubx(0, _ubx.data());
 
 
-    // Set solver options for maximum performance
-    _qp_solver.set_iter_max(100);                 // Reasonable default
-    _qp_solver.set_tol(1e-4, 1e-8, 1e-8, 1e-4);    // Tolerances
-    _qp_solver.set_warm_start(false);              // CRITICAL: Enable warm-starting (huge speedup)
+    _qp_solver.set_iter_max(_opts.hpipm_iter_max);
+    _qp_solver.set_tol(_opts.hpipm_tol_stat, _opts.hpipm_tol_eq,
+                       _opts.hpipm_tol_ineq, _opts.hpipm_tol_comp);
+    _qp_solver.set_warm_start(_opts.hpipm_warm_start);
 
     // std::cout<<"inited_sqp"<<std::endl;
 }
