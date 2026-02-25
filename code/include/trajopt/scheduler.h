@@ -32,8 +32,6 @@ class ContactScheduler {
     void addPhase(std::vector<std::string> contacts_list, double duration,
                   std::string sequence_name = "_");
 
-    int getNodesNumber();
-
     std::list<std::vector<str>> getSequence(double sampling_rate,
                                             str sequence_name = "_",
                                             int nodes_number = -1,

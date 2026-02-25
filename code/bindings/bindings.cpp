@@ -152,7 +152,6 @@ PYBIND11_MODULE(sqp_solver, m) {
         .def("addPhase", &ContactScheduler::addPhase,
              py::arg("contacts_list"), py::arg("duration"),
              py::arg("sequence_name") = "_")
-        .def("getNodesNumber", &ContactScheduler::getNodesNumber)
         .def("getSequence", &ContactScheduler::getSequence,
              py::arg("sampling_rate"),
              py::arg("sequence_name") = "_",

@@ -51,19 +51,12 @@ void InvDynamics::build_fext() {
     for (int i = 0; i < _node->n_contacts(); ++i) {
         if (!contacts[i].active) continue;
 
-        // Get 3D force in frame's local coordinates
-        Vector3d f_local = _node->fc(i);
-
         // Create spatial force (linear force only, zero torque)
-        pinocchio::Force f_contact(f_local, Vector3d::Zero());
-
-        // Get frame placement relative to parent joint
-        const auto& frame = _node->model().frames[contacts[i].frame_id];
-        const pinocchio::SE3& jMf = frame.placement;
+        pinocchio::Force f_contact(_node->fc(i), Vector3d::Zero());
 
         // Transform force from frame coordinates to parent joint coordinates using SE3 action
         // This properly accounts for both rotation and translation (lever arm)
-        _fext[contacts[i].parent_joint_id] += jMf.act(f_contact);
+        _fext[contacts[i].parent_joint_id] += _node->model().frames[contacts[i].frame_id].placement.act(f_contact);
     }
 }
 
