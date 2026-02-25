@@ -1,6 +1,6 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
+#include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <eigenpy/eigenpy.hpp>
 
 #include <pinocchio/parsers/urdf.hpp>
 
@@ -23,20 +23,75 @@
 #include <trajopt/constraints/integration_schemes/euler.h>
 #include <trajopt/constraints/integration_schemes/semi-euler.h>
 
-namespace py = pybind11;
+namespace bp = boost::python;
 
-PYBIND11_MODULE(sqp_solver, m) {
-    m.doc() = "Python bindings for the SQP trajectory optimization solver";
+// ============================================================================
+// Free functions for Node (factory and accessors)
+// ============================================================================
 
-    // ── LSType enum ──────────────────────────────────────────────────────────
-    py::enum_<LSType>(m, "LSType")
+static Node* make_node(const std::string& urdf_path, bool floating_base) {
+    pinocchio::Model model;
+    if (floating_base)
+        pinocchio::urdf::buildModel(urdf_path, pinocchio::JointModelFreeFlyer(), model);
+    else
+        pinocchio::urdf::buildModel(urdf_path, model);
+    return new Node(model);
+}
+
+// Thin wrappers for Eigen::Ref returns (zero-copy numpy views)
+static Eigen::Ref<Eigen::VectorXd> node_q(Node& n)  { return n.q(); }
+static Eigen::Ref<Eigen::VectorXd> node_v(Node& n)  { return n.v(); }
+static Eigen::Ref<Eigen::VectorXd> node_a(Node& n)  { return n.a(); }
+static Eigen::Ref<Eigen::VectorXd> node_x(Node& n)  { return n.x(); }
+static Eigen::Ref<Eigen::VectorXd> node_u(Node& n)  { return n.u(); }
+static Eigen::Ref<Eigen::VectorXd> node_fc(Node& n, int i) { return n.fc(i); }
+static Eigen::VectorXd node_tau(const Node& n) { return Eigen::VectorXd(n.tau()); }
+
+// ============================================================================
+// Free functions for OCP
+// ============================================================================
+
+static void ocp_add_node(OCP& ocp, Node& node) {
+    ocp.addNode(std::move(node));
+}
+
+static bp::list ocp_x_traj(OCP& ocp) {
+    bp::list result;
+    for (auto& v : ocp.x_traj()) result.append(Eigen::VectorXd(v));
+    return result;
+}
+
+static bp::list ocp_u_traj(OCP& ocp) {
+    bp::list result;
+    for (auto& v : ocp.u_traj()) result.append(Eigen::VectorXd(v));
+    return result;
+}
+
+// ============================================================================
+// Free function for SQPstatistics print
+// ============================================================================
+
+static void stats_print(const SQPstatistics& s, int verbosity) {
+    s.print(verbosity);
+}
+
+// ============================================================================
+// Module definition
+// ============================================================================
+
+BOOST_PYTHON_MODULE(sqp_solver) {
+    // Enable eigenpy Eigen <-> numpy converters
+    eigenpy::enableEigenPy();
+
+    // ── LSType enum ────────────────────────────────────────────────────────
+    bp::enum_<LSType>("LSType")
         .value("NONE",   LSType::NONE)
         .value("MERIT",  LSType::MERIT)
         .value("FILTER", LSType::FILTER);
 
-    // ── SQPoptions ───────────────────────────────────────────────────────────
-    py::class_<SQPoptions>(m, "SQPoptions")
-        .def(py::init<>())
+    // ── SQPoptions ─────────────────────────────────────────────────────────
+    bp::class_<SQPoptions>("SQPoptions")
+        .def(bp::init<>())
         .def_readwrite("max_sqp_iters",        &SQPoptions::max_sqp_iters)
         .def_readwrite("ls_type",              &SQPoptions::ls_type)
         .def_readwrite("max_ls_iters",         &SQPoptions::max_ls_iters)
@@ -55,8 +110,8 @@ PYBIND11_MODULE(sqp_solver, m) {
         .def_readwrite("hpipm_warm_start",     &SQPoptions::hpipm_warm_start)
         .def("print", &SQPoptions::print);
 
-    // ── SQPstatistics ────────────────────────────────────────────────────────
-    py::class_<SQPstatistics>(m, "SQPstatistics")
+    // ── SQPstatistics ──────────────────────────────────────────────────────
+    bp::class_<SQPstatistics>("SQPstatistics", bp::no_init)
         .def_readonly("number_of_iterations",       &SQPstatistics::number_of_iterations)
         .def_readonly("total_cost",                 &SQPstatistics::total_cost)
         .def_readonly("total_constraint_violation", &SQPstatistics::total_constraint_violation)
@@ -68,112 +123,157 @@ PYBIND11_MODULE(sqp_solver, m) {
         .def_readonly("qp_iterations",              &SQPstatistics::qp_iterations)
         .def_readonly("total_time_ms",              &SQPstatistics::total_time_ms)
         .def_readonly("last_iteration_time_ms",     &SQPstatistics::last_iteration_time_ms)
-        .def("print", [](const SQPstatistics& s, int v) { s.print(v); },
-             py::arg("verbosity") = 1);
+        .def("print", &stats_print, (bp::arg("verbosity") = 1));
 
-    // ── Abstract base classes (needed for shared_ptr hierarchy) ──────────────
-    py::class_<AbstractCost, std::shared_ptr<AbstractCost>>(m, "AbstractCost");
-    py::class_<AbstractConstraint, std::shared_ptr<AbstractConstraint>>(m, "AbstractConstraint");
+    // ── Abstract base classes ──────────────────────────────────────────────
+    bp::class_<AbstractCost, std::shared_ptr<AbstractCost>,
+               boost::noncopyable>("AbstractCost", bp::no_init);
 
-    // ── Costs ────────────────────────────────────────────────────────────────
-    py::class_<ConfigurationCost, AbstractCost, std::shared_ptr<ConfigurationCost>>(m, "ConfigurationCost")
-        .def(py::init<const VectorXd&, double>(),
-             py::arg("q_ref"), py::arg("weight") = 1.0)
-        .def(py::init<const VectorXd&, const MatrixXd&>(),
-             py::arg("q_ref"), py::arg("weight"))
+    bp::class_<AbstractConstraint, std::shared_ptr<AbstractConstraint>,
+               boost::noncopyable>("AbstractConstraint", bp::no_init);
+
+    // ── Costs ──────────────────────────────────────────────────────────────
+
+    // ConfigurationCost
+    bp::class_<ConfigurationCost, bp::bases<AbstractCost>,
+               std::shared_ptr<ConfigurationCost>>("ConfigurationCost",
+        bp::init<const VectorXd&, double>(
+            (bp::arg("q_ref"), bp::arg("weight") = 1.0)))
+        .def(bp::init<const VectorXd&, const MatrixXd&>(
+            (bp::arg("q_ref"), bp::arg("weight"))))
         .def("set_q_ref", &ConfigurationCost::set_q_ref)
-        .def("get_q_ref", &ConfigurationCost::get_q_ref);
+        .def("get_q_ref", &ConfigurationCost::get_q_ref,
+             bp::return_value_policy<bp::copy_const_reference>());
+    bp::implicitly_convertible<std::shared_ptr<ConfigurationCost>,
+                               std::shared_ptr<AbstractCost>>();
 
-    py::class_<VelocityCost, AbstractCost, std::shared_ptr<VelocityCost>>(m, "VelocityCost")
-        .def(py::init<double>(), py::arg("weight") = 1.0)
-        .def(py::init<const VectorXd&, double>(),
-             py::arg("v_ref"), py::arg("weight") = 1.0);
+    // VelocityCost
+    bp::class_<VelocityCost, bp::bases<AbstractCost>,
+               std::shared_ptr<VelocityCost>>("VelocityCost",
+        bp::init<bp::optional<double>>((bp::arg("weight") = 1.0)))
+        .def(bp::init<const VectorXd&, double>(
+            (bp::arg("v_ref"), bp::arg("weight") = 1.0)));
+    bp::implicitly_convertible<std::shared_ptr<VelocityCost>,
+                               std::shared_ptr<AbstractCost>>();
 
-    py::class_<AccelerationCost, AbstractCost, std::shared_ptr<AccelerationCost>>(m, "AccelerationCost")
-        .def(py::init<double>(), py::arg("weight") = 1.0)
-        .def(py::init<const VectorXd&, double>(),
-             py::arg("a_ref"), py::arg("weight") = 1.0);
+    // AccelerationCost
+    bp::class_<AccelerationCost, bp::bases<AbstractCost>,
+               std::shared_ptr<AccelerationCost>>("AccelerationCost",
+        bp::init<bp::optional<double>>((bp::arg("weight") = 1.0)))
+        .def(bp::init<const VectorXd&, double>(
+            (bp::arg("v_ref"), bp::arg("weight") = 1.0)));
+    bp::implicitly_convertible<std::shared_ptr<AccelerationCost>,
+                               std::shared_ptr<AbstractCost>>();
 
-    py::class_<FrameTranslationCost, AbstractCost, std::shared_ptr<FrameTranslationCost>>(m, "FrameTranslationCost")
-        .def(py::init<const std::string&, const Eigen::Vector3d&, double>(),
-             py::arg("frame_name"),
-             py::arg("p_ref")  = Eigen::Vector3d::Zero(),
-             py::arg("weight") = 1.0)
-        .def(py::init<const std::string&, const Eigen::Vector3d&, const MatrixXd&>(),
-             py::arg("frame_name"), py::arg("p_ref"), py::arg("weight"))
+    // FrameTranslationCost
+    bp::class_<FrameTranslationCost, bp::bases<AbstractCost>,
+               std::shared_ptr<FrameTranslationCost>>("FrameTranslationCost",
+        bp::init<const std::string&, const Eigen::Vector3d&, double>(
+            (bp::arg("frame_name"),
+             bp::arg("p_ref") = Eigen::Vector3d(Eigen::Vector3d::Zero()),
+             bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, const Eigen::Vector3d&, const MatrixXd&>(
+            (bp::arg("frame_name"), bp::arg("p_ref"), bp::arg("weight"))))
         .def("set_ref", &FrameTranslationCost::set_ref)
-        .def("get_ref", &FrameTranslationCost::get_ref);
+        .def("get_ref", &FrameTranslationCost::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>());
+    bp::implicitly_convertible<std::shared_ptr<FrameTranslationCost>,
+                               std::shared_ptr<AbstractCost>>();
 
-    py::class_<FrameOrientationCost, AbstractCost, std::shared_ptr<FrameOrientationCost>>(m, "FrameOrientationCost")
-        .def(py::init<const std::string&, const Eigen::Matrix3d&, double>(),
-             py::arg("frame_name"),
-             py::arg("R_ref")   = Eigen::Matrix3d::Identity(),
-             py::arg("weight")  = 1.0)
-        .def(py::init<const std::string&, const Eigen::Matrix3d&, const MatrixXd&>(),
-             py::arg("frame_name"), py::arg("R_ref"), py::arg("weight"))
+    // FrameOrientationCost
+    bp::class_<FrameOrientationCost, bp::bases<AbstractCost>,
+               std::shared_ptr<FrameOrientationCost>>("FrameOrientationCost",
+        bp::init<const std::string&, const Eigen::Matrix3d&, double>(
+            (bp::arg("frame_name"),
+             bp::arg("R_ref") = Eigen::Matrix3d(Eigen::Matrix3d::Identity()),
+             bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, const Eigen::Matrix3d&, const MatrixXd&>(
+            (bp::arg("frame_name"), bp::arg("R_ref"), bp::arg("weight"))))
         .def("set_ref", &FrameOrientationCost::set_ref)
-        .def("get_ref", &FrameOrientationCost::get_ref);
+        .def("get_ref", &FrameOrientationCost::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>());
+    bp::implicitly_convertible<std::shared_ptr<FrameOrientationCost>,
+                               std::shared_ptr<AbstractCost>>();
 
-    // ── Constraints ──────────────────────────────────────────────────────────
-    py::class_<EulerIntegration, AbstractConstraint, std::shared_ptr<EulerIntegration>>(m, "EulerIntegration")
-        .def(py::init<double>(), py::arg("dt"));
+    // ── Constraints ────────────────────────────────────────────────────────
 
-    py::class_<SemiEulerIntegration, AbstractConstraint, std::shared_ptr<SemiEulerIntegration>>(m, "SemiEulerIntegration")
-        .def(py::init<double>(), py::arg("dt"));
+    // EulerIntegration
+    bp::class_<EulerIntegration, bp::bases<AbstractConstraint>,
+               std::shared_ptr<EulerIntegration>>("EulerIntegration",
+        bp::init<double>((bp::arg("dt"))));
+    bp::implicitly_convertible<std::shared_ptr<EulerIntegration>,
+                               std::shared_ptr<AbstractConstraint>>();
 
-    py::class_<InvDynamics, AbstractConstraint, std::shared_ptr<InvDynamics>>(m, "InvDynamics")
-        .def(py::init<>());
+    // SemiEulerIntegration
+    bp::class_<SemiEulerIntegration, bp::bases<AbstractConstraint>,
+               std::shared_ptr<SemiEulerIntegration>>("SemiEulerIntegration",
+        bp::init<double>((bp::arg("dt"))));
+    bp::implicitly_convertible<std::shared_ptr<SemiEulerIntegration>,
+                               std::shared_ptr<AbstractConstraint>>();
 
-    py::class_<JointLimitsConstraint, AbstractConstraint, std::shared_ptr<JointLimitsConstraint>>(m, "JointLimitsConstraint")
-        .def(py::init<>());
+    // InvDynamics
+    bp::class_<InvDynamics, bp::bases<AbstractConstraint>,
+               std::shared_ptr<InvDynamics>>("InvDynamics",
+        bp::init<>());
+    bp::implicitly_convertible<std::shared_ptr<InvDynamics>,
+                               std::shared_ptr<AbstractConstraint>>();
 
-    py::class_<ContactConstraint, AbstractConstraint, std::shared_ptr<ContactConstraint>>(m, "ContactConstraint")
-        .def(py::init<const std::string&, double>(),
-             py::arg("frame_name"), py::arg("ground_height") = 0.0)
+    // JointLimitsConstraint
+    bp::class_<JointLimitsConstraint, bp::bases<AbstractConstraint>,
+               std::shared_ptr<JointLimitsConstraint>>("JointLimitsConstraint",
+        bp::init<>());
+    bp::implicitly_convertible<std::shared_ptr<JointLimitsConstraint>,
+                               std::shared_ptr<AbstractConstraint>>();
+
+    // ContactConstraint
+    bp::class_<ContactConstraint, bp::bases<AbstractConstraint>,
+               std::shared_ptr<ContactConstraint>>("ContactConstraint",
+        bp::init<const std::string&, double>(
+            (bp::arg("frame_name"), bp::arg("ground_height") = 0.0)))
         .def("set_ground_height", &ContactConstraint::set_ground_height);
+    bp::implicitly_convertible<std::shared_ptr<ContactConstraint>,
+                               std::shared_ptr<AbstractConstraint>>();
 
-    py::class_<FrictionConeConstraint, AbstractConstraint, std::shared_ptr<FrictionConeConstraint>>(m, "FrictionConeConstraint")
-        .def(py::init<const std::string&, double>(),
-             py::arg("frame_name"), py::arg("mu") = 0.5)
+    // FrictionConeConstraint
+    bp::class_<FrictionConeConstraint, bp::bases<AbstractConstraint>,
+               std::shared_ptr<FrictionConeConstraint>>("FrictionConeConstraint",
+        bp::init<const std::string&, double>(
+            (bp::arg("frame_name"), bp::arg("mu") = 0.5)))
         .def("set_friction_coefficient", &FrictionConeConstraint::set_friction_coefficient);
+    bp::implicitly_convertible<std::shared_ptr<FrictionConeConstraint>,
+                               std::shared_ptr<AbstractConstraint>>();
 
-    py::class_<FrameTranslationConstraint, AbstractConstraint, std::shared_ptr<FrameTranslationConstraint>>(m, "FrameTranslationConstraint")
-        .def(py::init<const std::string&, const Eigen::Vector3d&>(),
-             py::arg("frame_name"),
-             py::arg("p_ref") = Eigen::Vector3d::Zero())
+    // FrameTranslationConstraint
+    bp::class_<FrameTranslationConstraint, bp::bases<AbstractConstraint>,
+               std::shared_ptr<FrameTranslationConstraint>>("FrameTranslationConstraint",
+        bp::init<const std::string&, const Eigen::Vector3d&>(
+            (bp::arg("frame_name"), bp::arg("p_ref") = Eigen::Vector3d(Eigen::Vector3d::Zero()))))
         .def("set_ref", &FrameTranslationConstraint::set_ref)
-        .def("get_ref", &FrameTranslationConstraint::get_ref);
+        .def("get_ref", &FrameTranslationConstraint::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>());
+    bp::implicitly_convertible<std::shared_ptr<FrameTranslationConstraint>,
+                               std::shared_ptr<AbstractConstraint>>();
 
-    // ── ContactScheduler ─────────────────────────────────────────────────────
-    py::class_<ContactScheduler>(m, "ContactScheduler")
-        .def(py::init<>())
+    // ── ContactScheduler ───────────────────────────────────────────────────
+    bp::class_<ContactScheduler>("ContactScheduler")
+        .def(bp::init<>())
         .def("define_contact", &ContactScheduler::define_contact,
-             py::arg("contact_name"), py::arg("contact_frame_names"))
+             (bp::arg("contact_name"), bp::arg("contact_frame_names")))
         .def("addPhase", &ContactScheduler::addPhase,
-             py::arg("contacts_list"), py::arg("duration"),
-             py::arg("sequence_name") = "_")
+             (bp::arg("contacts_list"), bp::arg("duration"),
+              bp::arg("sequence_name") = "_"))
         .def("getSequence", &ContactScheduler::getSequence,
-             py::arg("sampling_rate"),
-             py::arg("sequence_name") = "_",
-             py::arg("nodes_number")  = -1,
-             py::arg("current_time")  = 0.0);
+             (bp::arg("sampling_rate"),
+              bp::arg("sequence_name") = "_",
+              bp::arg("nodes_number") = -1,
+              bp::arg("current_time") = 0.0));
 
-    // ── Node ─────────────────────────────────────────────────────────────────
-    // Node takes a URDF path and builds the pinocchio model internally using
-    // the system C++ pinocchio. This avoids any type mismatch between the
-    // pip-installed pinocchio Python package (separate .so) and the system
-    // pinocchio our library links against.
-    // floating_base=True adds a JointModelFreeFlyer root joint (e.g. for Go2).
-    py::class_<Node>(m, "Node")
-        .def(py::init([](const std::string& urdf_path, bool floating_base) {
-            pinocchio::Model model;
-            if (floating_base)
-                pinocchio::urdf::buildModel(
-                    urdf_path, pinocchio::JointModelFreeFlyer(), model);
-            else
-                pinocchio::urdf::buildModel(urdf_path, model);
-            return Node(model);
-        }), py::arg("urdf_path"), py::arg("floating_base") = false)
+    // ── Node ───────────────────────────────────────────────────────────────
+    bp::class_<Node, boost::noncopyable>("Node", bp::no_init)
+        .def("__init__", bp::make_constructor(
+            &make_node,
+            bp::default_call_policies(),
+            (bp::arg("urdf_path"), bp::arg("floating_base") = false)))
         .def("add_cost",            &Node::add_cost)
         .def("add_dynamics",        &Node::add_dynamics)
         .def("add_constraint",      &Node::add_constraint)
@@ -185,45 +285,34 @@ PYBIND11_MODULE(sqp_solver, m) {
         .def("nv", &Node::nv)
         .def("nx", &Node::nx)
         .def("nu", &Node::nu)
-        // Zero-copy numpy views into trajectory memory (valid after ocp.finalize())
-        .def("q",  [](Node& n) -> Eigen::Ref<Eigen::VectorXd> { return n.q(); })
-        .def("v",  [](Node& n) -> Eigen::Ref<Eigen::VectorXd> { return n.v(); })
-        .def("a",  [](Node& n) -> Eigen::Ref<Eigen::VectorXd> { return n.a(); })
-        .def("x",  [](Node& n) -> Eigen::Ref<Eigen::VectorXd> { return n.x(); })
-        .def("u",  [](Node& n) -> Eigen::Ref<Eigen::VectorXd> { return n.u(); })
-        .def("fc", [](Node& n, int i) -> Eigen::Ref<Eigen::VectorXd> { return n.fc(i); })
-        .def("tau", [](const Node& n) { return Eigen::VectorXd(n.tau()); });
+        // Zero-copy numpy views via thin wrappers
+        .def("q",   &node_q)
+        .def("v",   &node_v)
+        .def("a",   &node_a)
+        .def("x",   &node_x)
+        .def("u",   &node_u)
+        .def("fc",  &node_fc)
+        .def("tau", &node_tau);
 
-    // ── OCP ──────────────────────────────────────────────────────────────────
-    // addNode takes Node&& — we accept by reference and std::move into the OCP.
-    py::class_<OCP>(m, "OCP")
-        .def(py::init<int>())
-        .def("addNode", [](OCP& ocp, Node& node) { ocp.addNode(std::move(node)); })
-        .def("finalize",    &OCP::finalize)
-        .def("num_nodes",   &OCP::num_nodes)
-        .def("get_node",    (Node& (OCP::*)(int)) &OCP::get_node,
-             py::return_value_policy::reference_internal)
+    // ── OCP ────────────────────────────────────────────────────────────────
+    bp::class_<OCP, boost::noncopyable>("OCP", bp::init<int>())
+        .def("addNode",              &ocp_add_node)
+        .def("finalize",             &OCP::finalize)
+        .def("num_nodes",            &OCP::num_nodes)
+        .def("get_node",             (Node& (OCP::*)(int)) &OCP::get_node,
+             bp::return_internal_reference<>())
         .def("cost",                 &OCP::cost)
         .def("dynamics_defect",      &OCP::dynamics_defect)
         .def("constraint_violation", &OCP::constraint_violation)
-        .def("x_traj", [](OCP& ocp) {
-            py::list result;
-            for (auto& v : ocp.x_traj()) result.append(Eigen::VectorXd(v));
-            return result;
-        })
-        .def("u_traj", [](OCP& ocp) {
-            py::list result;
-            for (auto& v : ocp.u_traj()) result.append(Eigen::VectorXd(v));
-            return result;
-        })
-        .def("save_trajectory", &OCP::save_trajectory,
-             py::arg("filepath"), py::arg("dt") = 0.0, py::arg("urdf_path") = "");
+        .def("x_traj",               &ocp_x_traj)
+        .def("u_traj",               &ocp_u_traj)
+        .def("save_trajectory",      &OCP::save_trajectory,
+             (bp::arg("filepath"), bp::arg("dt") = 0.0, bp::arg("urdf_path") = ""));
 
-    // ── SQPSolver ────────────────────────────────────────────────────────────
-    py::class_<SQPSolver>(m, "SQPSolver")
-        .def(py::init<OCP&>())
+    // ── SQPSolver ──────────────────────────────────────────────────────────
+    bp::class_<SQPSolver, boost::noncopyable>("SQPSolver", bp::init<OCP&>())
         .def("set_options", &SQPSolver::set_options)
         .def("solve",       &SQPSolver::solve)
         .def("get_stats",   &SQPSolver::get_stats,
-             py::return_value_policy::reference_internal);
+             bp::return_internal_reference<>());
 }

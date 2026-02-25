@@ -8,12 +8,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ========================================
 # RELEASE BUILD OPTIMIZATIONS
 # ========================================
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG" CACHE STRING "" FORCE)
-set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING "" FORCE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 
-# Pinocchio built with -march=native in Docker, enabling full AVX support
-# This provides 10-30% performance improvement over SSE-only builds
+# Note: -march=native removed for ABI compatibility with Docker-built pinocchio
 
 add_compile_options(
     $<$<CONFIG:Release>:-funroll-loops>
@@ -34,6 +33,9 @@ find_package(nlohmann_json REQUIRED)
 # ========================================
 file(GLOB_RECURSE LIB_SOURCES "src/**.cpp")
 add_library(${PROJECT_NAME} ${LIB_SOURCES})
+
+# Enable position-independent code for shared library linking (Python bindings)
+set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/include
@@ -92,15 +94,24 @@ if(BUILD_TESTING)
 endif()
 
 # ========================================
-# PYTHON BINDINGS
+# PYTHON BINDINGS (Boost.Python + eigenpy)
 # ========================================
 option(BUILD_PYTHON_BINDINGS "Build Python bindings" OFF)
 
 if(BUILD_PYTHON_BINDINGS)
     find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-    find_package(pybind11 REQUIRED)
+    find_package(Boost REQUIRED COMPONENTS python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR})
+    find_package(eigenpy REQUIRED)
 
-    pybind11_add_module(sqp_solver_py bindings/bindings.cpp)
-    target_link_libraries(sqp_solver_py PRIVATE ${PROJECT_NAME})
-    set_target_properties(sqp_solver_py PROPERTIES OUTPUT_NAME "sqp_solver")
+    add_library(sqp_solver_py SHARED bindings/bindings.cpp)
+    target_link_libraries(sqp_solver_py PRIVATE
+        ${PROJECT_NAME}
+        Boost::python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}
+        eigenpy::eigenpy
+    )
+    set_target_properties(sqp_solver_py PROPERTIES
+        PREFIX ""
+        OUTPUT_NAME "sqp_solver"
+        SUFFIX ".so"
+    )
 endif()

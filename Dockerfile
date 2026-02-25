@@ -3,22 +3,22 @@
 #
 # Architecture:
 #   Stage 1: base-builder - Common build dependencies
-#   Stage 2: pinocchio-builder - Build Pinocchio with AVX optimizations
-#   Stage 3: blasfeo-hpipm-builder - Build optimized linear algebra libraries
-#   Stage 4: dev - Full development environment (default target)
+#   Stage 2: eigenpy-builder - Build eigenpy (needed by pinocchio Python bindings)
+#   Stage 3: pinocchio-builder - Build Pinocchio with AVX + Python interface
+#   Stage 4: blasfeo-hpipm-builder - Build optimized linear algebra libraries
+#   Stage 5: dev - Full development environment (default target)
 #
-# Build: docker build -f Dockerfile.optimized --target dev -t sqp-solver:dev .
+# Build: docker build --target dev -t sqp-solver:dev .
 # Run:   docker run -it -v $(pwd):/workspace sqp-solver:dev
 
 # ============================================
 # STAGE 1: Base Builder - Common Dependencies
 # ============================================
-FROM ubuntu:22.04 AS base-builder
+FROM ubuntu:24.04 AS base-builder
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Consolidate all apt-get calls for better layer caching
 # Install build tools and common dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -30,38 +30,61 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libboost-all-dev \
     liburdfdom-dev \
     nlohmann-json3-dev \
+    python3-dev \
+    python3-numpy \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================
-# STAGE 2: Pinocchio Builder - Rigid Body Dynamics Library
+# STAGE 2: eigenpy Builder - Eigen/Python Bridge
+# (Must be built BEFORE pinocchio for Python bindings)
 # ============================================
-FROM base-builder AS pinocchio-builder
+FROM base-builder AS eigenpy-builder
 
-# Build Pinocchio with AVX optimizations
-# -march=native enables AVX (256-bit SIMD) vs SSE (128-bit SIMD)
-# This provides 10-30% performance improvement in Pinocchio's math kernels
-RUN git clone --depth 1 --recursive https://github.com/stack-of-tasks/pinocchio.git /tmp/pinocchio && \
-    cd /tmp/pinocchio && \
+RUN git clone --depth 1 --branch v3.10.0 https://github.com/stack-of-tasks/eigenpy.git /tmp/eigenpy && \
+    cd /tmp/eigenpy && \
+    sed -i 's/cmake_minimum_required.*/cmake_minimum_required(VERSION 3.22)/' CMakeLists.txt && \
+    sed -i '/add_subdirectory(unittest)/d' CMakeLists.txt && \
     mkdir build && cd build && \
     cmake .. \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -DCMAKE_CXX_FLAGS="-march=native" \
-        -DBUILD_PYTHON_INTERFACE=OFF \
         -DBUILD_TESTING=OFF \
-        -DBUILD_EXAMPLES=OFF && \
-    make -j2 && \
+        -DPYTHON_EXECUTABLE=$(which python3) && \
+    make -j8 && \
+    make install DESTDIR=/opt/eigenpy-install && \
+    rm -rf /tmp/eigenpy
+
+# ============================================
+# STAGE 3: Pinocchio Builder - Rigid Body Dynamics Library
+# Built WITH Python interface using eigenpy
+# ============================================
+FROM base-builder AS pinocchio-builder
+
+# Copy eigenpy from previous stage
+COPY --from=eigenpy-builder /opt/eigenpy-install/usr/local /usr/local
+
+# Build Pinocchio with AVX optimizations AND Python bindings
+RUN git clone --depth 1 --recursive https://github.com/stack-of-tasks/pinocchio.git /tmp/pinocchio && \
+    cd /tmp/pinocchio && \
+    sed -i 's/cmake_minimum_required.*/cmake_minimum_required(VERSION 3.22)/' CMakeLists.txt && \
+    mkdir build && cd build && \
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DBUILD_PYTHON_INTERFACE=ON \
+        -DBUILD_TESTING=OFF \
+        -DBUILD_EXAMPLES=OFF \
+        -DPYTHON_EXECUTABLE=$(which python3) && \
+    make -j8 && \
     make install DESTDIR=/opt/pinocchio-install && \
     rm -rf /tmp/pinocchio
 
 # ============================================
-# STAGE 3: BLASFEO/HPIPM Builder - Optimized Linear Algebra
+# STAGE 4: BLASFEO/HPIPM Builder - Optimized Linear Algebra
 # ============================================
 FROM base-builder AS blasfeo-hpipm-builder
 
 # Detect architecture and set appropriate TARGET
-# x86-64 -> X64_AUTOMATIC (auto-detects AVX2/FMA)
-# arm64 -> ARMV8A_APPLE_M1
 ARG TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         echo "ARMV8A_APPLE_M1" > /tmp/blasfeo_target; \
@@ -69,7 +92,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
         echo "X64_AUTOMATIC" > /tmp/blasfeo_target; \
     fi
 
-# Build BLASFEO with optimized target (30-50% faster than GENERIC)
+# Build BLASFEO with optimized target
 RUN BLASFEO_TARGET=$(cat /tmp/blasfeo_target) && \
     git clone --depth 1 https://github.com/giaf/blasfeo.git /tmp/blasfeo && \
     cd /tmp/blasfeo && \
@@ -81,11 +104,11 @@ RUN BLASFEO_TARGET=$(cat /tmp/blasfeo_target) && \
         -DBUILD_SHARED_LIBS=ON \
         -DBLASFEO_EXAMPLES=OFF \
         -DBLAS_API=OFF && \
-    make -j$(nproc) && \
+    make -j8 && \
     make install DESTDIR=/opt/blasfeo-install && \
     rm -rf /tmp/blasfeo
 
-# Build HPIPM with optimized target (depends on BLASFEO)
+# Build HPIPM with optimized target
 RUN BLASFEO_TARGET=$(cat /tmp/blasfeo_target) && \
     git clone --depth 1 https://github.com/giaf/hpipm.git /tmp/hpipm && \
     cd /tmp/hpipm && \
@@ -97,25 +120,25 @@ RUN BLASFEO_TARGET=$(cat /tmp/blasfeo_target) && \
         -DBUILD_SHARED_LIBS=ON \
         -DHPIPM_TESTING=OFF \
         -DBLASFEO_PATH=/opt/blasfeo-install/opt/blasfeo && \
-    make -j$(nproc) && \
+    make -j8 && \
     make install DESTDIR=/opt/hpipm-install && \
     rm -rf /tmp/hpipm
 
 # ============================================
-# STAGE 4: Development Environment
+# STAGE 5: Development Environment
 # ============================================
-FROM ubuntu:22.04 AS dev
+FROM ubuntu:24.04 AS dev
 
-# Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install runtime + development packages in a single layer
+# Install runtime + development packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Runtime libraries
     libgomp1 \
-    libboost-filesystem1.74.0 \
-    libboost-serialization1.74.0 \
-    libboost-system1.74.0 \
+    libboost-filesystem1.83.0 \
+    libboost-serialization1.83.0 \
+    libboost-system1.83.0 \
+    libboost-python1.83.0 \
     # Development headers and libraries
     libeigen3-dev \
     libboost-all-dev \
@@ -134,31 +157,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python3-dev \
+    python3-numpy \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy compiled libraries from builder stages
+# Copy eigenpy (includes Python module)
+COPY --from=eigenpy-builder /opt/eigenpy-install/usr/local /usr/local
+
+# Copy pinocchio (includes C++ lib AND Python module)
 COPY --from=pinocchio-builder /opt/pinocchio-install/usr/local /usr/local
+
+# Copy BLASFEO/HPIPM
 COPY --from=blasfeo-hpipm-builder /opt/blasfeo-install/opt/blasfeo /opt/blasfeo
 COPY --from=blasfeo-hpipm-builder /opt/hpipm-install/opt/hpipm /opt/hpipm
 
-# Install Python packages for visualization and robot modeling
-RUN pip3 install --no-cache-dir \
-    pin \
+# Install Python packages for visualization (NO pin - we use source-built pinocchio)
+RUN pip3 install --no-cache-dir --break-system-packages \
     viser \
-    yourdfpy \
-    numpy \
-    "pybind11[global]>=2.13"
+    yourdfpy
 
-# Set environment variables for library discovery
+# Set environment variables
 ENV LD_LIBRARY_PATH=/opt/blasfeo/lib:/opt/hpipm/lib:/usr/local/lib
 ENV CMAKE_PREFIX_PATH=/opt/blasfeo:/opt/hpipm:/usr/local
 ENV PKG_CONFIG_PATH=/opt/blasfeo/lib/pkgconfig:/opt/hpipm/lib/pkgconfig:/usr/local/lib/pkgconfig
+ENV PYTHONPATH=/usr/local/lib/python3.12/site-packages
 
 # Update shared library cache
 RUN ldconfig
 
-# Create workspace
 WORKDIR /workspace
 
-# Default command
 CMD ["/bin/bash"]
