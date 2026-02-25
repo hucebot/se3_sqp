@@ -12,7 +12,7 @@ void FrameTranslationConstraint::allocate_dims() {
     _output_dim = _ft.get_output_dim();
     _input_dim = _ft.get_input_dim();
 
-    set_equality_to_zero();
+    // set_equality_to_zero();
 }
 
 void FrameTranslationConstraint::evaluate_impl() {

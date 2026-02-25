@@ -7,6 +7,8 @@
 #include <trajopt/costs/velocity_cost.h>
 #include <trajopt/costs/acceleration_cost.h>
 #include <trajopt/costs/frame_translation_cost.h>
+#include <trajopt/constraints/frame_translation_constraint.h>
+#include <trajopt/costs/frame_orientation_cost.h>
 
 #include <pinocchio/parsers/urdf.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
@@ -31,7 +33,7 @@ int main() {
     const std::string ee_frame = "panda_ee";
 
     // Circle in the YZ plane, centered at the EE's ready-pose position
-    const double radius = 0.1;
+    const double radius = 0.2;
     const Eigen::Vector3d center(0.307, 0.0, 0.487-radius);
     
 
@@ -41,16 +43,22 @@ int main() {
     q0 << 0.0, -M_PI/4, 0.0, -3*M_PI/4, 0.0, M_PI/2, M_PI/4;
 
     // Print info
-    {
-        pinocchio::Data data(model);
-        pinocchio::forwardKinematics(model, data, q0);
-        pinocchio::updateFramePlacements(model, data);
-        int fid = model.getFrameId(ee_frame);
-        std::cout << "Initial EE position: "
-                  << data.oMf[fid].translation().transpose() << "\n";
-        std::cout << "Circle center:       " << center.transpose()
-                  << "  radius: " << radius << "\n\n";
-    }
+    
+    pinocchio::Data data(model);
+    pinocchio::forwardKinematics(model, data, q0);
+    pinocchio::updateFramePlacements(model, data);
+    int fid = model.getFrameId(ee_frame);
+    std::cout << "Initial EE position: "
+                << data.oMf[fid].translation().transpose() << "\n";
+    std::cout << "Circle center:       " << center.transpose()
+                << "  radius: " << radius << "\n\n";
+
+    Matrix3d R_target = data.oMf[fid].rotation();
+
+    Vector3d ub;
+    ub << 1e3, 0.1, 1e3;
+    Vector3d lb;
+    lb << -1e3, -0.1, -1e3;
 
     // ── Build OCP ──
     OCP ocp(N);
@@ -81,6 +89,13 @@ int main() {
         double weight = (k == 0 || k == N - 1) ? 1e0 : 1e0;
         auto ee_cost = std::make_shared<FrameTranslationCost>(ee_frame, p_target, weight);
         node.add_cost(ee_cost);
+        node.add_cost(std::make_shared<FrameOrientationCost>(ee_frame, R_target, 1e-3));
+
+        auto ee_const = std::make_shared<FrameTranslationConstraint>(ee_frame);
+
+        ee_const->set_bounds(lb, ub);
+
+        node.add_constraint(ee_const);
 
         ocp.addNode(std::move(node));
     }
