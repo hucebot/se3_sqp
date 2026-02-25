@@ -30,7 +30,7 @@ int main() {
               << " (nq=" << model.nq << ", nv=" << model.nv << ")\n";
 
     // ── Trot parameters ──
-    const double dt = 0.01;
+    const double dt = 0.02;
     const double mu = 0.8;  // friction coefficient
 
     // Foot frame names
@@ -48,7 +48,7 @@ int main() {
     scheduler.addPhase({"FL_RR"}, stance_duration, "trot");         // FR+RL stance
 
     // Generate contact sequence for 2 full gait cycles
-    int N = 6 * static_cast<int>(2 * stance_duration / dt);
+    int N = 30;
     auto contact_sequence = scheduler.getSequence(dt, "trot", N);
 
 
@@ -125,10 +125,10 @@ int main() {
         }
 
         // Costs
-        node.add_cost(std::make_shared<ConfigurationCost>(q0, 1e-6));
+        node.add_cost(std::make_shared<ConfigurationCost>(q0, 1e-3));
         if (k == N-1) node.add_cost(std::make_shared<VelocityCost>(1e3));
         if (k < N - 1) {
-            node.add_cost(std::make_shared<VelocityCost>(1e-6));
+            node.add_cost(std::make_shared<VelocityCost>(1e-3));
             node.add_cost(std::make_shared<AccelerationCost>(1e-9));
         }
 
@@ -147,18 +147,59 @@ int main() {
     SQPSolver solver(ocp);
 
     SQPoptions opts;
-    opts.max_sqp_iters = 200;
+    opts.max_sqp_iters = 1000;
     opts.ls_type = LSType::MERIT;
     opts.max_ls_iters = 5;
-    opts.tolerance = 1e-1;
+    opts.tolerance = 1e-3;
+    opts.hpipm_tol_stat = 1e-3;
+    opts.hpipm_tol_eq   = 1e-8;
+    opts.hpipm_tol_ineq = 1e-8;
+    opts.hpipm_tol_comp = 1e-3;
+    opts.hpipm_warm_start = false;
     solver.set_options(opts);
 
     std::cout << "Solving trotting trajectory...\n";
     solver.solve();
+    solver.solve();
 
-    // ── Save trajectory ──
-    ocp.save_trajectory("/workspace/code/resources/trajectories/go2_trot.json",
-                        dt, urdf_path);
+    // opts.verbose = 0;
+    // opts.max_sqp_iters = 1000;
+    // opts.ls_type = LSType::MERIT;
+    // opts.max_ls_iters = 5;
+    // opts.tolerance = 1e-1;
+    // opts.hpipm_tol_eq   = 1e-3;
+    // opts.hpipm_tol_ineq = 1e-3;
+    // opts.hpipm_tol_stat = 1e-3;
+    // opts.hpipm_tol_comp = 1e-3;
+    // opts.hpipm_warm_start = true;
+    // solver.set_options(opts);
+    // solver.solve();
+
+    double t = 0.;
+    while(true){
+        // Shift trajectory: node[k] <- node[k+1]
+        std::cout<<t<<"__"<< ocp.get_node(0).q().transpose().tail(12)<< std::endl;
+        for (int k = 0; k < N - 2; k++) {
+            ocp.get_node(k).x() = ocp.get_node(k+1).x();
+            ocp.get_node(k).u() = ocp.get_node(k+1).u();
+        }
+        // Last node: keep previous values (or extrapolate if needed)
+
+        // Update contact schedule
+        contact_sequence = scheduler.getSequence(dt, "trot", N, t);
+        seq_it = contact_sequence.begin();
+        for (int k = 0; k < N; k++) {
+            std::cout<<seq_it->at(0)<<std::endl;
+            ocp.get_node(k).set_active_contacts(*seq_it);
+            std::advance(seq_it, 1);
+        }
+
+        solver.solve();
+        t = t+dt;
+
+        std::cin.get();
+    }
+
 
 
     return 0;
