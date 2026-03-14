@@ -29,15 +29,6 @@ namespace bp = boost::python;
 // Free functions for Node (factory and accessors)
 // ============================================================================
 
-static Node* make_node(const std::string& urdf_path, bool floating_base) {
-    pinocchio::Model model;
-    if (floating_base)
-        pinocchio::urdf::buildModel(urdf_path, pinocchio::JointModelFreeFlyer(), model);
-    else
-        pinocchio::urdf::buildModel(urdf_path, model);
-    return new Node(model);
-}
-
 // Thin wrappers for Eigen::Ref returns (zero-copy numpy views)
 static Eigen::Ref<Eigen::VectorXd> node_q(Node& n)  { return n.q(); }
 static Eigen::Ref<Eigen::VectorXd> node_v(Node& n)  { return n.v(); }
@@ -269,11 +260,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
               bp::arg("current_time") = 0.0));
 
     // ── Node ───────────────────────────────────────────────────────────────
-    bp::class_<Node, boost::noncopyable>("Node", bp::no_init)
-        .def("__init__", bp::make_constructor(
-            &make_node,
-            bp::default_call_policies(),
-            (bp::arg("urdf_path"), bp::arg("floating_base") = false)))
+    bp::class_<Node, boost::noncopyable>("Node", bp::init<pinocchio::Model>())
         .def("add_cost",            &Node::add_cost)
         .def("add_dynamics",        &Node::add_dynamics)
         .def("add_constraint",      &Node::add_constraint)

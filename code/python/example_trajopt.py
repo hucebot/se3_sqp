@@ -24,6 +24,7 @@ BUILD_DIR = Path(__file__).resolve().parent.parent / "build"
 sys.path.insert(0, str(BUILD_DIR))
 
 import sqp_solver as sqp
+import pinocchio as pin
 
 RESOURCES = Path(__file__).resolve().parent.parent / "resources"
 
@@ -40,7 +41,8 @@ def main():
 
     # Running nodes
     for _ in range(N - 1):
-        node = sqp.Node(urdf_path)
+        model = pin.buildModelFromUrdf(urdf_path)
+        node = sqp.Node(model)
         node.add_dynamics(sqp.SemiEulerIntegration(dt))
         node.add_constraint(sqp.InvDynamics())
         node.add_cost(sqp.ConfigurationCost(q_ref, 0.0))
@@ -49,7 +51,8 @@ def main():
         ocp.addNode(node)
 
     # Terminal node — high weight on reaching the target
-    node = sqp.Node(urdf_path)
+    model, _, _ = pin.buildModelFromUrdf(urdf_path)
+    node = sqp.Node(model)
     node.add_cost(sqp.ConfigurationCost(q_ref, 1e0))
     node.add_cost(sqp.VelocityCost(1e0))
     ocp.addNode(node)

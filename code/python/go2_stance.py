@@ -8,11 +8,12 @@ BUILD_DIR = Path(__file__).resolve().parent.parent / "build"
 sys.path.insert(0, str(BUILD_DIR))
 
 import sqp_solver as sqp
+import pinocchio as pin
 
 RESOURCES = Path(__file__).resolve().parent.parent / "resources"
 
 def main():
-    N  = 5
+    N  = 100
     dt = 0.01
 
     urdf_path = str(RESOURCES / "urdf/go2/go2.urdf")
@@ -20,34 +21,21 @@ def main():
 
     ocp = sqp.OCP(N)
 
-    # q_ref = np.array([math.pi, 0.0])  # upright configuration
-    base_pos = np.array([0.0, 0.0, 0.3689])
-    base_config = np.array([0.0, np.pi / 6, -np.pi / 3] * 4)
-
     feet = ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
 
     # Initial configuration
-    q_init = [
-        0.,
-        0.72,
-        -1.4,
-        -0.,
-        0.72,
-        -1.4,
-        -0.,
-        0.72,
-        -1.4,
-        0.,
-        0.72,
-        -1.4,
-    ]
-
-    q_ref = np.concatenate((np.array([0.,0.,0.3258,0.,0.,0.,1.]),q_init))
-
+    model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path, root_joint=pin.JointModelFreeFlyer())
+    q_init = pin.neutral(model)
+    print("Neutral configuration:", q_init)
+    q_init[:7] = np.array([0., 0., 0.296797, 0., 0., 0., 1.])
+    q_init[7:] = np.array([0., 0.8, -1.6, 0., 0.8, -1.6, 0., 0.8, -1.6, 0., 0.8, -1.6])
+    print("qinit:", q_init)
+    q_ref = q_init.copy()  # target configuration is the same as initial
 
     # Running nodes
     for _ in range(N - 1):
-        node = sqp.Node(urdf_path,True)
+        model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path, root_joint=pin.JointModelFreeFlyer())
+        node = sqp.Node(model)
 
         for foot in feet:
             node.add_contact(foot)
@@ -57,7 +45,7 @@ def main():
 
         for foot in feet:
             node.add_constraint(sqp.ContactConstraint(foot))
-            # node.add_constraint(sqp.FrictionConeConstraint(foot, 0.8))
+            node.add_constraint(sqp.FrictionConeConstraint(foot, 0.8))
 
         node.add_cost(sqp.ConfigurationCost(q_ref, 1e-3))
         node.add_cost(sqp.VelocityCost(1e-6))
@@ -65,7 +53,8 @@ def main():
         ocp.addNode(node)
 
     # Terminal node — high weight on reaching the target
-    node = sqp.Node(urdf_path, True)
+    model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path, root_joint=pin.JointModelFreeFlyer())
+    node = sqp.Node(model)
     # node.add_cost(sqp.ConfigurationCost(q_ref, 1e0))
     node.add_cost(sqp.VelocityCost(1e0))
     ocp.addNode(node)

@@ -80,6 +80,7 @@ void ContactConstraint::jacobian_impl() {
     _jacobian.setZero();
     _Jvf_dq.setZero();
     _Jvf_dv.setZero();
+    _Jframe.setZero();
 
     // Use fast GET API (joint Jacobians already computed)
     pinocchio::getFrameJacobian(

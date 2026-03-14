@@ -97,6 +97,7 @@ void FrictionConeConstraint::jacobian_impl() {
     _node->require_fk_derivatives();
 
     _jacobian.setZero();
+    _Jframe.setZero();
 
     // Use fast GET API (joint Jacobians already computed)
     pinocchio::getFrameJacobian(
