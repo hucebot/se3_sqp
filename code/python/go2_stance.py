@@ -13,7 +13,7 @@ import pinocchio as pin
 RESOURCES = Path(__file__).resolve().parent.parent / "resources"
 
 def main():
-    N  = 5
+    N  = 100
     dt = 0.01
 
     urdf_path = str(RESOURCES / "urdf/go2/go2.urdf")

@@ -30,7 +30,7 @@ int main() {
               << " (nq=" << model.nq << ", nv=" << model.nv << ")\n";
 
     // ── Parameters ──
-    int N = 5;
+    int N = 100;
     const double dt = 0.01;
     const double mu = 0.8;  // friction coefficient
 
