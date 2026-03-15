@@ -6,6 +6,9 @@ CONTAINER_NAME="sqp-dev"
 IMAGE_NAME="sqp-solver:latest"
 WORKSPACE_DIR="$(pwd)"
 
+# Allow docker root to access X server
+xhost +SI:localuser:root
+
 # Check if container exists and is running
 if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "Container '${CONTAINER_NAME}' is running. Attaching..."
