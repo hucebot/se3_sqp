@@ -30,7 +30,7 @@ int main() {
               << " (nq=" << model.nq << ", nv=" << model.nv << ")\n";
 
     // ── Parameters ──
-    int N = 100;
+    int N = 5;
     const double dt = 0.01;
     const double mu = 0.8;  // friction coefficient
 
@@ -117,6 +117,7 @@ int main() {
     ocp.finalize();
 
     // ── Initial guess: standing pose with zero velocity ──
+    std::cout<<"q0: "<<q0.transpose()<<std::endl;
     for (int k = 0; k < N; k++) {
         ocp.get_node(k).q() = q0;
         ocp.get_node(k).v().setZero();
