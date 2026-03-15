@@ -57,6 +57,7 @@ class AbstractFunction {
         _value.resize(_output_dim);
         _jacobian.resize(_output_dim, _input_dim);
         _jacobian.setZero();
+        _value.setZero();
         post_allocate();
     }
 
