@@ -20,6 +20,7 @@
 #include <trajopt/constraints/contact_constraint.h>
 #include <trajopt/constraints/friction_cone_constraint.h>
 #include <trajopt/constraints/frame_translation_constraint.h>
+#include <trajopt/constraints/frame_velocity_constraint.h>
 #include <trajopt/constraints/integration_schemes/euler.h>
 #include <trajopt/constraints/integration_schemes/semi-euler.h>
 
@@ -73,6 +74,7 @@ static void stats_print(const SQPstatistics& s, int verbosity) {
 BOOST_PYTHON_MODULE(sqp_solver) {
     // Enable eigenpy Eigen <-> numpy converters
     eigenpy::enableEigenPy();
+    eigenpy::enableEigenPySpecific<Eigen::Matrix<double,6,1>>();
 
     // ── LSType enum ────────────────────────────────────────────────────────
     bp::enum_<LSType>("LSType")
@@ -243,6 +245,19 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def("get_ref", &FrameTranslationConstraint::get_ref,
              bp::return_value_policy<bp::copy_const_reference>());
     bp::implicitly_convertible<std::shared_ptr<FrameTranslationConstraint>,
+                               std::shared_ptr<AbstractConstraint>>();
+
+    // FrameVelocityConstraint
+    bp::class_<FrameVelocityConstraint, bp::bases<AbstractConstraint>,
+            std::shared_ptr<FrameVelocityConstraint>>("FrameVelocityConstraint",
+        bp::init<const std::string&, const Vector6d&>(
+            (bp::arg("frame_name"), bp::arg("v_ref") = Vector6d(Vector6d::Zero()))))
+        .def("set_ref", &FrameVelocityConstraint::set_ref)
+        .def("get_ref", &FrameVelocityConstraint::get_ref,
+            bp::return_value_policy<bp::copy_const_reference>())
+        .def("set_re_reference_frame", &FrameVelocityConstraint::set_re_reference_frame)
+        .def("set_base_frame_name", &FrameVelocityConstraint::set_base_frame_name);
+    bp::implicitly_convertible<std::shared_ptr<FrameVelocityConstraint>,
                                std::shared_ptr<AbstractConstraint>>();
 
     // ── ContactScheduler ───────────────────────────────────────────────────
