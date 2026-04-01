@@ -69,7 +69,8 @@ def apply_q(viser_robot: ViserUrdf, base_frame, q: list, floating: bool) -> None
         # viser uses wxyz quaternion convention
         base_frame.position = pos
         base_frame.wxyz = np.array([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]])
-        viser_robot.update_cfg(joints)
+        if joints.size > 0:
+            viser_robot.update_cfg(joints)
     else:
         viser_robot.update_cfg(np.array(q))
 
