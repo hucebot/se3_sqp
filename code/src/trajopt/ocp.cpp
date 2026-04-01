@@ -81,8 +81,11 @@ double OCP::constraint_violation(){
 
 
 void OCP::save_trajectory(const std::string& filepath, double dt,
-                           const std::string& urdf_path) const {
+                          const std::string& urdf_path) const
+{
+
     const Node& n0 = _horizon[0];
+
     nlohmann::json j;
     j["N"]         = _num_nodes;
     j["dt"]        = dt;
@@ -92,12 +95,20 @@ void OCP::save_trajectory(const std::string& filepath, double dt,
     j["urdf_path"] = urdf_path;
 
     nlohmann::json traj = nlohmann::json::array();
-    for (const Node& node : _horizon) {
+    for (const Node& node : _horizon)
         traj.push_back(node.to_json());
-    }
+
     j["trajectory"] = traj;
 
+    std::filesystem::create_directories(
+        std::filesystem::path(filepath).parent_path());
+
     std::ofstream out(filepath);
+    if (!out)
+        throw std::runtime_error("Cannot open file: " + filepath);
+
     out << j.dump(2);
+
     std::cout << "Trajectory saved to " << filepath << std::endl;
 }
+

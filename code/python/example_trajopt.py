@@ -51,7 +51,7 @@ def main():
         ocp.addNode(node)
 
     # Terminal node — high weight on reaching the target
-    model, _, _ = pin.buildModelFromUrdf(urdf_path)
+    model = pin.buildModelFromUrdf(urdf_path)
     node = sqp.Node(model)
     node.add_cost(sqp.ConfigurationCost(q_ref, 1e0))
     node.add_cost(sqp.VelocityCost(1e0))
