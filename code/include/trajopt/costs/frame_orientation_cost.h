@@ -1,6 +1,7 @@
 #pragma once
 
 #include <trajopt/costs/abstract_cost.h>
+#include <trajopt/functions/frame_orientation.h>
 #include <trajopt/node.h>
 
 #include "pinocchio/algorithm/frames.hpp"
@@ -23,13 +24,7 @@
  */
 class FrameOrientationCost : public AbstractCost {
    private:
-    std::string _frame_name;
-    int _frame_id;
-    Eigen::Matrix3d _R_ref;
-
-    // Pre-allocated scratch
-    MatrixXd _Jframe;   // 6 x nv
-    MatrixXd _Jlog;     // 3 x 3
+    FrameOrientation _fo;
 
    public:
     explicit FrameOrientationCost(const std::string& frame_name,
@@ -40,10 +35,12 @@ class FrameOrientationCost : public AbstractCost {
                          const Eigen::Matrix3d& R_ref,
                          const MatrixXd& weight);
 
+    void set_node(Node* node) override { AbstractCost::set_node(node); _fo.set_node(node); }
+
     void allocate_dims() override;
     void evaluate_impl() override;
     void jacobian_impl() override;
 
-    void set_ref(const Eigen::Matrix3d& R_ref) { _R_ref = R_ref; }
-    const Eigen::Matrix3d& get_ref() const { return _R_ref; }
+    void set_ref(const Eigen::Matrix3d& R_ref) { _fo.set_ref(R_ref); }
+    const Eigen::Matrix3d& get_ref() const { return _fo.get_ref(); }
 };

@@ -1,58 +1,32 @@
 #include <trajopt/costs/frame_orientation_cost.h>
-
 #include "pinocchio/spatial/explog.hpp"
 
 FrameOrientationCost::FrameOrientationCost(
     const std::string& frame_name, const Eigen::Matrix3d& R_ref, double weight)
-    : AbstractCost(weight), _frame_name(frame_name), _R_ref(R_ref) {
+    : AbstractCost(weight), _fo(frame_name, R_ref) {
     _name = "frame_orientation_cost(" + frame_name + ")";
-    _frame_id = -1;
 }
 
 FrameOrientationCost::FrameOrientationCost(
     const std::string& frame_name, const Eigen::Matrix3d& R_ref, const MatrixXd& weight)
-    : AbstractCost(weight), _frame_name(frame_name), _R_ref(R_ref) {
+    : AbstractCost(weight), _fo(frame_name, R_ref) {
     _name = "frame_orientation_cost(" + frame_name + ")";
-    _frame_id = -1;
 }
 
 void FrameOrientationCost::allocate_dims() {
-    if (!_node->model().existFrame(_frame_name)) {
-        throw std::invalid_argument(
-            _name + ": frame '" + _frame_name + "' not found in model");
-    }
-    _frame_id = _node->model().getFrameId(_frame_name);
+    _fo.allocate_slices();
 
-    _output_dim = 3;
-    _input_dim = _node->ndx() + _node->ndu();
-
-    _Jframe.resize(6, _node->nv());
-    _Jlog.resize(3, 3);
+    _output_dim = _fo.get_output_dim();
+    _input_dim = _fo.get_input_dim();
 }
 
 void FrameOrientationCost::evaluate_impl() {
-    _node->require_frame_placements();
-
-    const Eigen::Matrix3d& R_frame = _node->data().oMf[_frame_id].rotation();
-    Eigen::Matrix3d R_err = R_frame.transpose() * _R_ref;
-
-    _value = pinocchio::log3(R_err);
+    _fo.evaluate();
+    _value = _fo.get_value();
 }
 
 void FrameOrientationCost::jacobian_impl() {
-    _node->require_fk_derivatives();
-
-    const Eigen::Matrix3d& R_frame = _node->data().oMf[_frame_id].rotation();
-    Eigen::Matrix3d R_err = R_frame.transpose() * _R_ref;
-
-    pinocchio::Jlog3(R_err, _Jlog);
-
-    _Jframe.setZero();
-    pinocchio::getFrameJacobian(
-        _node->model(), _node->data(),
-        _frame_id, pinocchio::LOCAL, _Jframe);
-
-    _jacobian.setZero();
-    // LOCAL Jacobian angular part already expresses angular velocity in frame's body frame
-    _jacobian.leftCols(_node->nv()).noalias() = -_Jlog.transpose() * _Jframe.bottomRows(3);
+    _fo.jacobian();
+    // Copy x-block into our jacobian (u-block stays zero from allocate_slices)
+    _jacobian.leftCols(_node->ndx()) = _fo.get_jac_x();
 }
