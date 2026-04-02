@@ -24,6 +24,8 @@ void FrameVelocityConstraint::allocate_dims() {
     _lower_bound.setZero(_output_dim);
     _upper_bound.setZero(_output_dim);
 
+    _dv_dq.setZero(_output_dim, _node->nv());
+    _dv_dqdot.setZero(_output_dim, _node->nv());
 }
 
 void FrameVelocityConstraint::evaluate_impl() {
@@ -42,18 +44,13 @@ void FrameVelocityConstraint::evaluate_impl() {
 }
 
 void FrameVelocityConstraint::jacobian_impl() {
-    Eigen::MatrixXd dv_dq;
-    dv_dq.setZero(_output_dim, _node->nv());
-    Eigen::MatrixXd dv_dqdot;
-    dv_dqdot.setZero(_output_dim, _node->nv());
-
     if(_frame_name == _base_frame_name)
-        pinocchio::getFrameVelocityDerivatives(_node->model(), _node->data(), _frame_id, pinocchio::LOCAL, dv_dq, dv_dqdot);
+        pinocchio::getFrameVelocityDerivatives(_node->model(), _node->data(), _frame_id, pinocchio::LOCAL, _dv_dq, _dv_dqdot);
     else
-        pinocchio::getFrameVelocityDerivatives(_node->model(), _node->data(), _frame_id, _re_ref_frame, dv_dq, dv_dqdot);
+        pinocchio::getFrameVelocityDerivatives(_node->model(), _node->data(), _frame_id, _re_ref_frame, _dv_dq, _dv_dqdot);
 
     _jacobian.setZero();
-    _jacobian.block(0, 0,             6, _node->nv()) = dv_dq;
-    _jacobian.block(0, _node->nv(),   6, _node->nv()) = dv_dqdot;
+    _jacobian.block(0, 0,             6, _node->nv()) = _dv_dq;
+    _jacobian.block(0, _node->nv(),   6, _node->nv()) = _dv_dqdot;
 }
 

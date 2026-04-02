@@ -19,6 +19,9 @@ private:
     std::string _base_frame_name;
     pinocchio::FrameIndex _frame_id;
 
+    Eigen::MatrixXd _dv_dq;
+    Eigen::MatrixXd _dv_dqdot;
+
 public:
 
     explicit FrameVelocityConstraint(const std::string& frame_name,
