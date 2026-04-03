@@ -14,6 +14,7 @@ struct SQPoptions {
     double tolerance;
     double regularization;        // Hessian regularization: Q += reg*I, R += reg*I
     double regularization_scale;  // Scale-up factor on QP failure (adaptive)
+    double eps_inequality;  // eps_inequality is added on upper and lower bounds
 
     int verbose;  // 0=silent, 1=per-iteration + final summary, 2=final only (MPC)
 

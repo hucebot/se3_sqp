@@ -35,7 +35,12 @@ void Node::invalidate_cache(){
 
 void Node::require_forward_kinematics(){
     if (!(_cache_flags & CACHE_FK)) {
-        pinocchio::forwardKinematics(*_model_ptr, *_data_ptr, q(), v());
+        if (_u_ptr) {
+            pinocchio::forwardKinematics(*_model_ptr, *_data_ptr, q(), v(), a());
+        } else {
+            VectorXd a_zero = VectorXd::Zero(_nv);
+            pinocchio::forwardKinematics(*_model_ptr, *_data_ptr, q(), v(), a_zero);
+        }
         _cache_flags |= CACHE_FK;
     }
 }

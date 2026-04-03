@@ -1,5 +1,4 @@
 import sys
-import math
 from pathlib import Path
 from scipy.spatial.transform import Rotation as R
 import numpy as np
@@ -42,6 +41,8 @@ class rvizer:
         self.server.initial_camera.up = (0.0, 0.0, 1.0)
 
 
+
+
 BUILD_DIR = Path(__file__).resolve().parent.parent / "build"
 sys.path.insert(0, str(BUILD_DIR))
 
@@ -51,11 +52,14 @@ import pinocchio as pin
 RESOURCES = Path(__file__).resolve().parent.parent / "resources"
 
 def main():
-    N  = 20
-    dt = 0.001
+    T = 0.1
+    N  = 10
+    dt = T/N
+    print(f"dt: {dt}")
 
     urdf_path = str(RESOURCES / "urdf/floating_frame.urdf")
     print(f"URDF: {urdf_path}")
+    rviz = rvizer(urdf_path)
 
 
     ocp = sqp.OCP(N)
@@ -71,6 +75,7 @@ def main():
 
     # Running nodes
     p0 = sqp.FrameTranslationConstraint("base_link", q0[0:3])
+    R0 = sqp.FrameOrientationConstraint("base_link", R.from_quat(q0[3:]).as_matrix())
     v0 = sqp.FrameVelocityConstraint("base_link", np.array([0., 0., 0., 0., 0., 0.]))
     for k in range(N - 1):
         model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path)
@@ -80,10 +85,13 @@ def main():
 
         if k == 0:
             node.add_constraint(p0)
+            node.add_constraint(R0)
             node.add_constraint(v0)
 
-        node.add_cost(sqp.VelocityCost(1e-6))
-        node.add_cost(sqp.AccelerationCost(1e-9))
+        if k > 0:
+            node.add_cost(sqp.FrameVelocityCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e-3))
+
+        node.add_cost(sqp.FrameAccelerationCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e-6))
 
         ocp.addNode(node)
 
@@ -97,44 +105,54 @@ def main():
     qf[3] = 1.
     Rmat = R.from_quat(qf[3:]).as_matrix()
 
-    translation_task = sqp.FrameTranslationCost("base_link", qf[0:3], 1e3)
-    orientation_task = sqp.FrameOrientationCost("base_link", Rmat, 1e3)
+    translation_task = sqp.FrameTranslationCost("base_link", qf[0:3], 1e0)
+    orientation_task = sqp.FrameOrientationCost("base_link", Rmat, 1e0)
 
     node.add_cost(translation_task)
-    #node.add_cost(orientation_task)
-    node.add_cost(sqp.VelocityCost(1e3))
+    node.add_cost(orientation_task)
+    node.add_cost(sqp.FrameVelocityCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e0))
     ocp.addNode(node)
 
     ocp.finalize()
 
     # Initial guess: downward rest position, zero velocity and control
-    for k in range(N):
+    for k in range(N-1):
         ocp.get_node(k).q()[:] = q0
         ocp.get_node(k).v()[:] = 0.0
         ocp.get_node(k).u()[:] = 0.0
+    ocp.get_node(N-1).q()[:] = q0
 
         # Solve
     solver = sqp.SQPSolver(ocp)
     opts = sqp.SQPoptions()
-    opts.max_sqp_iters = 200
-    opts.tolerance     = 1e-3
-    opts.hpipm_tol_eq     = 1e-3
-    opts.hpipm_tol_ineq     = 1e-3
-    #opts.ls_merit_eta  = 1e-4
+    opts.max_sqp_iters = 100
+    opts.hpipm_iter_max = 20
+    opts.eps_inequality = 1e-4
     opts.ls_type       = sqp.LSType.MERIT
+    opts.ls_merit_mu = 10.
+    opts.ls_merit_eta = 1e-4
     solver.set_options(opts)
 
     solver.solve()
-    q1 = ocp.x_traj()[1][0:model.nq]
-    v1 = ocp.x_traj()[1][model.nq:]
-    p0.set_ref(q1[0:3])
-    v0.set_ref(v1)
+    ocp.save_trajectory("/workspace/code/resources/trajectories/frame.json", dt, urdf_path)
+    print(f"q[0] : {ocp.x_traj()[0][:]}")
+    print(f"q[N-1] : {ocp.x_traj()[N-1][:]}")
+    #exit()
+
+    pos = ocp.x_traj()[0][0:3]
+    quat_xyzw = ocp.x_traj()[0][3:7]
+    v = ocp.x_traj()[1][model.nq:]
+    p0.set_ref(pos)
+    R0.set_ref(R.from_quat(quat_xyzw).as_matrix())
+    v0.set_ref(v)
+
 
     opts = sqp.SQPoptions()
     opts.max_sqp_iters = 1
+    #opts.verbose = 0
+    opts.ls_type       = sqp.LSType.MERIT
     solver.set_options(opts)
 
-    rviz = rvizer(urdf_path)
     while True:
         solver.solve()
         q1 = ocp.x_traj()[1][0:model.nq]
@@ -144,18 +162,15 @@ def main():
         pos = np.array(q1[:3])
         quat_xyzw = q1[3:7]
 
-        print(f"q1: {q1.T}")
         p0.set_ref(pos)
+        R0.set_ref(R.from_quat(quat_xyzw).as_matrix())
         v0.set_ref(v1)
-
 
         rviz.base_frame.position = pos
         rviz.base_frame.wxyz = np.array([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]])
 
         time.sleep(dt)
 
-
-    #ocp.save_trajectory("/workspace/code/resources/trajectories/frame.json", dt, urdf_path)
 
 if __name__ == "__main__":
     main()

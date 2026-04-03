@@ -14,12 +14,15 @@
 #include <trajopt/costs/acceleration_cost.h>
 #include <trajopt/costs/frame_translation_cost.h>
 #include <trajopt/costs/frame_orientation_cost.h>
+#include <trajopt/costs/frame_velocity_cost.h>
+#include <trajopt/costs/frame_acceleration_cost.h>
 #include <trajopt/constraints/abstract_constraint.h>
 #include <trajopt/constraints/inverse_dynamics.h>
 #include <trajopt/constraints/joint_limits_constraint.h>
 #include <trajopt/constraints/contact_constraint.h>
 #include <trajopt/constraints/friction_cone_constraint.h>
 #include <trajopt/constraints/frame_translation_constraint.h>
+#include <trajopt/constraints/frame_orientation_constraint.h>
 #include <trajopt/constraints/frame_velocity_constraint.h>
 #include <trajopt/constraints/integration_schemes/euler.h>
 #include <trajopt/constraints/integration_schemes/semi-euler.h>
@@ -94,6 +97,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def_readwrite("tolerance",            &SQPoptions::tolerance)
         .def_readwrite("regularization",       &SQPoptions::regularization)
         .def_readwrite("regularization_scale", &SQPoptions::regularization_scale)
+        .def_readwrite("eps_inequality",       &SQPoptions::eps_inequality)
         .def_readwrite("verbose",              &SQPoptions::verbose)
         .def_readwrite("hpipm_iter_max",       &SQPoptions::hpipm_iter_max)
         .def_readwrite("hpipm_tol_stat",       &SQPoptions::hpipm_tol_stat)
@@ -188,6 +192,40 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     bp::implicitly_convertible<std::shared_ptr<FrameOrientationCost>,
                                std::shared_ptr<AbstractCost>>();
 
+    // FrameVelocityCost
+    bp::class_<FrameVelocityCost, bp::bases<AbstractCost>,
+               std::shared_ptr<FrameVelocityCost>>("FrameVelocityCost",
+        bp::init<const std::string&, const Vector6d&, double>(
+            (bp::arg("frame_name"),
+             bp::arg("v_ref") = Vector6d(Vector6d::Zero()),
+             bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, const Vector6d&, const MatrixXd&>(
+            (bp::arg("frame_name"), bp::arg("v_ref"), bp::arg("weight"))))
+        .def("set_ref", &FrameVelocityCost::set_ref)
+        .def("get_ref", &FrameVelocityCost::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>())
+        .def("set_re_reference_frame", &FrameVelocityCost::set_re_reference_frame)
+        .def("set_base_frame_name", &FrameVelocityCost::set_base_frame_name);
+    bp::implicitly_convertible<std::shared_ptr<FrameVelocityCost>,
+                               std::shared_ptr<AbstractCost>>();
+
+    // FrameAccelerationCost
+    bp::class_<FrameAccelerationCost, bp::bases<AbstractCost>,
+               std::shared_ptr<FrameAccelerationCost>>("FrameAccelerationCost",
+                                                   bp::init<const std::string&, const Vector6d&, double>(
+                                                       (bp::arg("frame_name"),
+                                                        bp::arg("a_ref") = Vector6d(Vector6d::Zero()),
+                                                        bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, const Vector6d&, const MatrixXd&>(
+            (bp::arg("frame_name"), bp::arg("a_ref"), bp::arg("weight"))))
+        .def("set_ref", &FrameAccelerationCost::set_ref)
+        .def("get_ref", &FrameAccelerationCost::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>())
+        .def("set_re_reference_frame", &FrameAccelerationCost::set_re_reference_frame)
+        .def("set_base_frame_name", &FrameAccelerationCost::set_base_frame_name);
+    bp::implicitly_convertible<std::shared_ptr<FrameAccelerationCost>,
+                               std::shared_ptr<AbstractCost>>();
+
     // ── Constraints ────────────────────────────────────────────────────────
 
     // EulerIntegration
@@ -245,6 +283,17 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def("get_ref", &FrameTranslationConstraint::get_ref,
              bp::return_value_policy<bp::copy_const_reference>());
     bp::implicitly_convertible<std::shared_ptr<FrameTranslationConstraint>,
+                               std::shared_ptr<AbstractConstraint>>();
+
+    // FrameOrientationConstraint
+    bp::class_<FrameOrientationConstraint, bp::bases<AbstractConstraint>,
+               std::shared_ptr<FrameOrientationConstraint>>("FrameOrientationConstraint",
+                                                            bp::init<const std::string&, const Eigen::Matrix3d&>(
+                                                                (bp::arg("frame_name"), bp::arg("R_ref") = Eigen::Matrix3d(Eigen::Matrix3d::Zero()))))
+        .def("set_ref", &FrameOrientationConstraint::set_ref)
+        .def("get_ref", &FrameOrientationConstraint::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>());
+    bp::implicitly_convertible<std::shared_ptr<FrameOrientationConstraint>,
                                std::shared_ptr<AbstractConstraint>>();
 
     // FrameVelocityConstraint

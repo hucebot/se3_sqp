@@ -37,6 +37,9 @@ void SQPSolver::solve() {
         _qp_solver.solve();
         _stats.update_qp_info(_qp_solver.get_status(), _qp_solver.get_iter());
 
+        std::cout<<"_qp_solver.get_status(): "<<_qp_solver.get_status()<<std::endl;
+        if(_qp_solver.get_status() == 3)
+            _stats.print(2);
 
         // Backtracking line search
         {
@@ -244,16 +247,29 @@ void SQPSolver::populate_qp() {
 
         _qp_solver.set_Q(k, _Q[k].data());
         _qp_solver.set_q(k, _q[k].data());
+       // std::cout<<"Q["<<k<<"]:\n"<<_Q[k]<<std::endl;
+       // std::cout<<"q["<<k<<"]:"<<_q[k].transpose()<<std::endl;
+
         if (k<_Nu){
             _qp_solver.set_R(k, _R[k].data());
             _qp_solver.set_r(k, _r[k].data());
             _qp_solver.set_S(k, _S[k].data());
+        //    std::cout<<"R["<<k<<"]:\n"<<_R[k]<<std::endl;
+        //    std::cout<<"r["<<k<<"]:"<<_r[k].transpose()<<std::endl;
+        //    std::cout<<"S["<<k<<"]:\n"<<_S[k]<<std::endl;
         }
 
         _qp_solver.set_C(k, _C[k].data());
-        if (k< _Nu) _qp_solver.set_D(k, _D[k].data());
+        //std::cout<<"C["<<k<<"]:\n"<<_C[k]<<std::endl;
+        if (k< _Nu){
+            _qp_solver.set_D(k, _D[k].data());
+        //    std::cout<<"D["<<k<<"]:\n"<<_D[k]<<std::endl;
+        }
+
         _qp_solver.set_lg(k, _lg[k].data());
         _qp_solver.set_ug(k, _ug[k].data());
+        //std::cout<<"lg["<<k<<"]:"<<_lg[k].transpose()<<std::endl;
+        //std::cout<<"ug["<<k<<"]:"<<_ug[k].transpose()<<std::endl;
 
     }
 
@@ -387,6 +403,9 @@ void SQPSolver::linearize() {
             _C[i].middleRows(row, nc) = con->get_jac_x();
             _lg[i].segment(row, nc) = con->get_lower_bound() - residual;
             _ug[i].segment(row, nc) = con->get_upper_bound() - residual;
+
+            _lg[i].array() -= _opts.eps_inequality;
+            _ug[i].array() += _opts.eps_inequality;
 
             if (i < _Nu) {
                 MatrixXdConstRef Ju = con->get_jac_u();  // No copy!
