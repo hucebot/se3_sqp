@@ -127,7 +127,7 @@ class SQPSolver {
     void set_options(const SQPoptions& opts);
 
     /// @brief solve the defined problem
-    void solve();
+    void solve(const Eigen::VectorXd& x0 = Eigen::VectorXd(0));
 
     /// @brief access solver statistics after calling solve()
     const SQPstatistics& get_stats() const { return _stats; }

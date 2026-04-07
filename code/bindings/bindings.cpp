@@ -363,7 +363,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     // ── SQPSolver ──────────────────────────────────────────────────────────
     bp::class_<SQPSolver, boost::noncopyable>("SQPSolver", bp::init<OCP&>())
         .def("set_options", &SQPSolver::set_options)
-        .def("solve",       &SQPSolver::solve)
+        .def("solve",       &SQPSolver::solve, bp::arg("x0") = Eigen::VectorXd(0))
         .def("get_stats",   &SQPSolver::get_stats,
              bp::return_internal_reference<>());
 }

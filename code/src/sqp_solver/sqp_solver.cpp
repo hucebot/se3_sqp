@@ -24,22 +24,38 @@ void SQPSolver::set_options(const SQPoptions& opts) {
     _opts.print();
 }
 
-void SQPSolver::solve() {
+void SQPSolver::solve(const Eigen::VectorXd& x0) {
     _stats.reset();
     _stats.start_timer();
     _current_reg = _opts.regularization;
+
+    Eigen::VectorXd dx(2*_ocproblem.get_node(0).model().nv);
+    dx.setZero();
+
     for (int i = 0; i < _opts.max_sqp_iters; i++) {
         PROFILE_DECLARE(iter_linearize_ms);
         PROFILE_DECLARE(iter_linesearch_ms);
 
-        { PROFILE_SCOPE(iter_linearize_ms); linearize(); }
+        { PROFILE_SCOPE(iter_linearize_ms);
+            linearize();
+
+            if(x0.size() > 0)
+            {
+                pinocchio::difference(_ocproblem.get_node(0).model(), _ocproblem.x_traj()[0].segment(0, _ocproblem.get_node(0).model().nq), x0.segment(0, _ocproblem.get_node(0).model().nq), dx.segment(0, _ocproblem.get_node(0).model().nv));
+                dx.segment(_ocproblem.get_node(0).model().nv, _ocproblem.get_node(0).model().nv) = x0.segment(_ocproblem.get_node(0).model().nq, _ocproblem.get_node(0).model().nv) - _ocproblem.x_traj()[0].segment(_ocproblem.get_node(0).model().nq, _ocproblem.get_node(0).model().nv);
+
+                _b[0] = _A[0] * dx + _b[0];
+                _r[0] = _S[0] * dx + _r[0];
+            }
+        }
         populate_qp();
         _qp_solver.solve();
         _stats.update_qp_info(_qp_solver.get_status(), _qp_solver.get_iter());
 
-        std::cout<<"_qp_solver.get_status(): "<<_qp_solver.get_status()<<std::endl;
-        if(_qp_solver.get_status() == 3)
-            _stats.print(2);
+        if(x0.size() > 0)
+        {
+            _dx[0] = dx;
+        }
 
         // Backtracking line search
         {
@@ -247,33 +263,22 @@ void SQPSolver::populate_qp() {
 
         _qp_solver.set_Q(k, _Q[k].data());
         _qp_solver.set_q(k, _q[k].data());
-       // std::cout<<"Q["<<k<<"]:\n"<<_Q[k]<<std::endl;
-       // std::cout<<"q["<<k<<"]:"<<_q[k].transpose()<<std::endl;
 
         if (k<_Nu){
             _qp_solver.set_R(k, _R[k].data());
             _qp_solver.set_r(k, _r[k].data());
             _qp_solver.set_S(k, _S[k].data());
-        //    std::cout<<"R["<<k<<"]:\n"<<_R[k]<<std::endl;
-        //    std::cout<<"r["<<k<<"]:"<<_r[k].transpose()<<std::endl;
-        //    std::cout<<"S["<<k<<"]:\n"<<_S[k]<<std::endl;
         }
 
         _qp_solver.set_C(k, _C[k].data());
-        //std::cout<<"C["<<k<<"]:\n"<<_C[k]<<std::endl;
         if (k< _Nu){
             _qp_solver.set_D(k, _D[k].data());
-        //    std::cout<<"D["<<k<<"]:\n"<<_D[k]<<std::endl;
         }
 
         _qp_solver.set_lg(k, _lg[k].data());
         _qp_solver.set_ug(k, _ug[k].data());
-        //std::cout<<"lg["<<k<<"]:"<<_lg[k].transpose()<<std::endl;
-        //std::cout<<"ug["<<k<<"]:"<<_ug[k].transpose()<<std::endl;
 
     }
-
-    // std::cout<<"populated_qp"<<std::endl;
 }
 
 void SQPSolver::step() {

@@ -31,8 +31,5 @@ bool SQPSolver::ls_merit() {
         }
     }
 
-    std::cout<<"phi_alpha: "<<phi_alpha<<std::endl;
-    std::cout<<"phi_0 + _opts.ls_merit_eta * _ls_alpha * dphi: "<<phi_0 + _opts.ls_merit_eta * _ls_alpha * dphi<<std::endl;
-
     return phi_alpha <= phi_0 + _opts.ls_merit_eta * _ls_alpha * dphi;
 }

@@ -74,24 +74,16 @@ def main():
     pin.updateFramePlacements(model, data)
 
     # Running nodes
-    p0 = sqp.FrameTranslationConstraint("base_link", q0[0:3])
-    R0 = sqp.FrameOrientationConstraint("base_link", R.from_quat(q0[3:]).as_matrix())
-    v0 = sqp.FrameVelocityConstraint("base_link", np.array([0., 0., 0., 0., 0., 0.]))
     for k in range(N - 1):
         model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path)
         node = sqp.Node(model)
 
         node.add_dynamics(sqp.SemiEulerIntegration(dt))
 
-        if k == 0:
-            node.add_constraint(p0)
-            node.add_constraint(R0)
-            node.add_constraint(v0)
-
         if k > 0:
-            node.add_cost(sqp.FrameVelocityCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e-3))
+            node.add_cost(sqp.FrameVelocityCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e-4))
 
-        node.add_cost(sqp.FrameAccelerationCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e-6))
+        node.add_cost(sqp.FrameAccelerationCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e-5))
 
         ocp.addNode(node)
 
@@ -105,8 +97,8 @@ def main():
     qf[3] = 1.
     Rmat = R.from_quat(qf[3:]).as_matrix()
 
-    translation_task = sqp.FrameTranslationCost("base_link", qf[0:3], 1e0)
-    orientation_task = sqp.FrameOrientationCost("base_link", Rmat, 1e0)
+    translation_task = sqp.FrameTranslationCost("base_link", qf[0:3], 4e-1)
+    orientation_task = sqp.FrameOrientationCost("base_link", Rmat, 5e-1)
 
     node.add_cost(translation_task)
     node.add_cost(orientation_task)
@@ -135,36 +127,28 @@ def main():
 
     solver.solve()
     ocp.save_trajectory("/workspace/code/resources/trajectories/frame.json", dt, urdf_path)
-    print(f"q[0] : {ocp.x_traj()[0][:]}")
-    print(f"q[N-1] : {ocp.x_traj()[N-1][:]}")
-    #exit()
 
     pos = ocp.x_traj()[0][0:3]
     quat_xyzw = ocp.x_traj()[0][3:7]
     v = ocp.x_traj()[1][model.nq:]
-    p0.set_ref(pos)
-    R0.set_ref(R.from_quat(quat_xyzw).as_matrix())
-    v0.set_ref(v)
 
 
     opts = sqp.SQPoptions()
     opts.max_sqp_iters = 1
-    #opts.verbose = 0
-    opts.ls_type       = sqp.LSType.MERIT
+    opts.verbose = 0
+    opts.ls_type       = sqp.LSType.NONE
     solver.set_options(opts)
 
     while True:
-        solver.solve()
+        #ocp.x_traj()[0][:] = ocp.x_traj()[1][:]
+        solver.solve(ocp.x_traj()[1][:])
+
         q1 = ocp.x_traj()[1][0:model.nq]
         v1 = ocp.x_traj()[1][model.nq:]
 
         #q1 = ocp.x_traj()[k][0:model.nq]
         pos = np.array(q1[:3])
         quat_xyzw = q1[3:7]
-
-        p0.set_ref(pos)
-        R0.set_ref(R.from_quat(quat_xyzw).as_matrix())
-        v0.set_ref(v1)
 
         rviz.base_frame.position = pos
         rviz.base_frame.wxyz = np.array([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]])
