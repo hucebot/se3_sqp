@@ -4,9 +4,9 @@
 #include <trajopt/functions/frame_velocity.h>
 
 /**
- * FrameTranslationCost penalizes deviation of a frame's position from a target.
+ * FrameVelocityCost penalizes deviation of a frame's velocity/twist from a target.
  *
- * Thin wrapper around FrameTranslation computation.
+ * Thin wrapper around FrameVelocity computation.
  */
 class FrameVelocityCost : public AbstractCost {
 private:
