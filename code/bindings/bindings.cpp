@@ -303,7 +303,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     bp::class_<FrameOrientationConstraint, bp::bases<AbstractConstraint>,
                std::shared_ptr<FrameOrientationConstraint>>("FrameOrientationConstraint",
                                                             bp::init<const std::string&, const Eigen::Matrix3d&>(
-                                                                (bp::arg("frame_name"), bp::arg("R_ref") = Eigen::Matrix3d(Eigen::Matrix3d::Zero()))))
+                                                                (bp::arg("frame_name"), bp::arg("R_ref") = Eigen::Matrix3d(Eigen::Matrix3d::Identity()))))
         .def("set_ref", &FrameOrientationConstraint::set_ref)
         .def("get_ref", &FrameOrientationConstraint::get_ref,
              bp::return_value_policy<bp::copy_const_reference>());
