@@ -46,6 +46,7 @@ class SQPSolver {
     std::vector<VectorXd> _du;         // Control steps: _du[k] is VectorXd of size _ndu
     std::vector<VectorXd> _scaled_dx;  // Scratch: alpha * _dx[k], reused across step() calls
     std::vector<VectorXd> _scaled_du;  // Scratch: alpha * _du[k], reused across step() calls
+    VectorXd _dx0;
 
     // Lagrange multipliers (dual variables from QP)
     std::vector<VectorXd> _pi;         // Dynamics multipliers: _pi[k], k=0..N-2, each ndx

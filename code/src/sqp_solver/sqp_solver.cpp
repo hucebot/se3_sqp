@@ -29,9 +29,6 @@ void SQPSolver::solve(const Eigen::VectorXd& x0) {
     _stats.start_timer();
     _current_reg = _opts.regularization;
 
-    Eigen::VectorXd dx(2*_ocproblem.get_node(0).model().nv);
-    dx.setZero();
-
     for (int i = 0; i < _opts.max_sqp_iters; i++) {
         PROFILE_DECLARE(iter_linearize_ms);
         PROFILE_DECLARE(iter_linesearch_ms);
@@ -41,11 +38,11 @@ void SQPSolver::solve(const Eigen::VectorXd& x0) {
 
             if(x0.size() > 0)
             {
-                pinocchio::difference(_ocproblem.get_node(0).model(), _ocproblem.x_traj()[0].segment(0, _ocproblem.get_node(0).model().nq), x0.segment(0, _ocproblem.get_node(0).model().nq), dx.segment(0, _ocproblem.get_node(0).model().nv));
-                dx.segment(_ocproblem.get_node(0).model().nv, _ocproblem.get_node(0).model().nv) = x0.segment(_ocproblem.get_node(0).model().nq, _ocproblem.get_node(0).model().nv) - _ocproblem.x_traj()[0].segment(_ocproblem.get_node(0).model().nq, _ocproblem.get_node(0).model().nv);
+                pinocchio::difference(_ocproblem.get_node(0).model(), _ocproblem.x_traj()[0].segment(0, _ocproblem.get_node(0).model().nq), x0.segment(0, _ocproblem.get_node(0).model().nq), _dx0.segment(0, _ocproblem.get_node(0).model().nv));
+                _dx0.segment(_ocproblem.get_node(0).model().nv, _ocproblem.get_node(0).model().nv) = x0.segment(_ocproblem.get_node(0).model().nq, _ocproblem.get_node(0).model().nv) - _ocproblem.x_traj()[0].segment(_ocproblem.get_node(0).model().nq, _ocproblem.get_node(0).model().nv);
 
-                _b[0] = _A[0] * dx + _b[0];
-                _r[0] = _S[0] * dx + _r[0];
+                _b[0] = _A[0] * _dx0 + _b[0];
+                _r[0] = _S[0] * _dx0 + _r[0];
             }
         }
         populate_qp();
@@ -54,7 +51,7 @@ void SQPSolver::solve(const Eigen::VectorXd& x0) {
 
         if(x0.size() > 0)
         {
-            _dx[0] = dx;
+            _dx[0] = _dx0;
         }
 
         // Backtracking line search
@@ -172,6 +169,9 @@ void SQPSolver::init() {
         _nu = _ocproblem.get_node(k).nu();
         _ndx = _ocproblem.get_node(k).ndx();
         _ndu = _ocproblem.get_node(k).ndu();
+
+        if(k == 0)
+            _dx0.setZero(_ndx);
 
         _ng = 0;
         for (auto& con : _ocproblem.get_node(k).get_constraints())
