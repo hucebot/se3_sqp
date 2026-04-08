@@ -6,7 +6,7 @@
 
 
 /**
- * FrameVelocityConstraint constrains a frame's twist.
+ * FrameVelocityConstraint constrains a frame's twist between -v_ref and v_ref.
  *
  */
 
@@ -31,7 +31,7 @@ public:
     void set_ref(const Vector6d& v_ref) {
         _v_ref = v_ref;
     }
-    const Vector6d& get_ref() const { return _fv.get_ref(); }
+    const Vector6d& get_ref() const { return _v_ref; }
     void set_re_reference_frame(const pinocchio::ReferenceFrame& re_ref_rame) { _fv.set_re_reference_frame(re_ref_rame); }
     void set_base_frame_name(const std::string& base_frame_name) { _fv.set_base_frame_name(base_frame_name); }
 };
