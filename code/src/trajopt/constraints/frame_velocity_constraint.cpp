@@ -4,7 +4,8 @@
 
 FrameVelocityConstraint::FrameVelocityConstraint(const std::string& frame_name, const Vector6d& v_ref):
     AbstractConstraint(),
-    _fv(frame_name, v_ref)
+    _fv(frame_name, Vector6d::Zero()),
+    _v_ref(v_ref)
 {
     _name = "frame_velocity_constraint(" + frame_name + ")";
 }
@@ -24,6 +25,8 @@ void FrameVelocityConstraint::allocate_dims() {
 void FrameVelocityConstraint::evaluate_impl() {
     _fv.evaluate();
     _value = _fv.get_value();
+    _lower_bound = -_v_ref;
+    _upper_bound = _v_ref;
 }
 
 void FrameVelocityConstraint::jacobian_impl() {

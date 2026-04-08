@@ -8,8 +8,6 @@ from viser.extras import ViserUrdf
 import time
 import threading
 
-
-
 class rvizer:
     def __init__(self, URDF_PATH):
         self.server = viser.ViserServer(verbose=True)
@@ -74,6 +72,56 @@ class interactive_marker():
                 self.orientation_task.set_ref(new_orientation.as_matrix())
         return _
 
+class plot:
+    def __init__(self, title, size, legend_label, server, dt, max_len=1000):
+        self.size = size
+        self.max_len = max_len
+        self.dt = dt
+
+        # One shared time axis
+        self.x = self.dt * np.arange(max_len, dtype=np.float64)
+
+        # Y series: one array per joint
+        self.ys = [np.zeros(max_len, dtype=float) for _ in range(size)]
+
+        # uPlot data format: (x, y0, y1, ..., yN)
+        self.data = (self.x, *self.ys)
+
+        # Series definition: one series per array in data
+
+        self.series = (
+            viser.uplot.Series(label="t"),
+            *[viser.uplot.Series(label=f"{legend_label}{i}", stroke=self.make_color(i, size), width=2) for i in range(size)])
+
+        self.plot_handle = server.gui.add_uplot(
+            data=self.data,
+            series=self.series,
+            title=title,
+            scales={"x": viser.uplot.Scale(time=False, auto=True), "y": viser.uplot.Scale(auto=True)},
+            legend=viser.uplot.Legend(show=True),
+            aspect=2.0,
+        )
+
+    def make_color(self, i, n):
+        # HSV equally spaced around the hue circle
+        h = i / n
+        s = 0.65
+        v = 0.85
+        import colorsys
+        r, g, b = colorsys.hsv_to_rgb(h, s, v)
+        return f"rgb({int(r * 255)}, {int(g * 255)}, {int(b * 255)})"
+
+    def update(self, new_data):
+        # Append new data
+        self.x = np.roll(self.x, -1)
+        self.x[-1] = self.x[-2] + self.dt
+
+        for i in range(self.size):
+            self.ys[i] = np.roll(self.ys[i], -1)
+            self.ys[i][-1] = new_data[i]
+
+        self.plot_handle.data = (self.x.tolist(), *[y.tolist() for y in self.ys])
+
 
 
 BUILD_DIR = Path(__file__).resolve().parent.parent / "build"
@@ -107,6 +155,7 @@ def main():
     pin.updateFramePlacements(model, data)
 
     # Running nodes
+    v_lims = np.array([10., 10., 10., 10., 10., 10.])
     for k in range(N - 1):
         model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path)
         node = sqp.Node(model)
@@ -114,9 +163,10 @@ def main():
         node.add_dynamics(sqp.SemiEulerIntegration(dt))
 
         if k > 0:
-            node.add_cost(sqp.FrameVelocityCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e-4))
+            node.add_cost(sqp.FrameVelocityCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e-3))
+            node.add_constraint(sqp.FrameVelocityConstraint("base_link", v_lims))
 
-        node.add_cost(sqp.FrameAccelerationCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e-5))
+        node.add_cost(sqp.FrameAccelerationCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e-3))
 
         ocp.addNode(node)
 
@@ -129,7 +179,8 @@ def main():
 
     node.add_cost(translation_task)
     node.add_cost(orientation_task)
-    node.add_cost(sqp.FrameVelocityCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e0))
+    node.add_cost(sqp.FrameVelocityCost("base_link", np.array([0., 0., 0., 0., 0., 0.]), 1e6))
+    node.add_constraint(sqp.FrameVelocityConstraint("base_link", v_lims))
     ocp.addNode(node)
 
     ocp.finalize()
@@ -169,6 +220,9 @@ def main():
     lock = threading.Lock()
     interactive_marker(rviz.server, translation_task, orientation_task, lock)
 
+    # Plot
+    v_plot = plot(title="Velocities", size=model.nv, legend_label="v", server=rviz.server, dt=dt)
+
     while True:
         #ocp.x_traj()[0][:] = ocp.x_traj()[1][:]
         solver.solve(ocp.x_traj()[1][:])
@@ -182,6 +236,8 @@ def main():
 
         rviz.base_frame.position = pos
         rviz.base_frame.wxyz = np.array([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]])
+
+        v_plot.update(v1)
 
         time.sleep(dt)
 
