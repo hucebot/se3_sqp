@@ -13,6 +13,11 @@ FrameVelocity::FrameVelocity(const std::string& frame_name, const Vector6d& v_re
 
 
 void FrameVelocity::allocate_dims() {
+    if (!_node->model().existFrame(_frame_name)) {
+        throw std::invalid_argument(
+            _name + ": frame '" + _frame_name + "' not found in model");
+    }
+
     _frame_id = _node->model().getFrameId(_frame_name);
 
     _output_dim = 6;
