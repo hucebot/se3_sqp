@@ -31,7 +31,7 @@ void VelocityCost::allocate_dims() {
         _v_ref.setZero();
     }
 
-    _jacobian.setZero(_input_dim, _output_dim);
+    _jacobian.setZero(_output_dim, _input_dim);
 }
 
 void VelocityCost::evaluate_impl() {
