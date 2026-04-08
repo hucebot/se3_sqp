@@ -6,7 +6,8 @@
 /**
  * FrameAccelerationCost penalizes deviation of a frame's acceleration from a target.
  *
- * Thin wrapper around FrameTranslation computation.
+ * Thin wrapper around FrameAcceleration computation, which evaluates the frame's
+ * spatial acceleration relative to a reference target.
  */
 class FrameAccelerationCost : public AbstractCost {
 private:
