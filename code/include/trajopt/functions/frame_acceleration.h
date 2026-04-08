@@ -9,7 +9,7 @@
 #include <trajopt/functions/frame_velocity.h>
 
 /**
- * FrameAcceleration computes the deviation of a frame's velocity.
+ * FrameAcceleration computes the deviation of a frame's acceleration.
  *
  */
 class FrameAcceleration : public AbstractFunction {
