@@ -122,11 +122,25 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def_readonly("last_iteration_time_ms",     &SQPstatistics::last_iteration_time_ms)
         .def("print", &stats_print, (bp::arg("verbosity") = 1));
 
+    // ── AbstractFunction class ──────────────────────────────────────────────
+    bp::class_<AbstractFunction, std::shared_ptr<AbstractFunction>,
+               boost::noncopyable>("AbstractFunction", bp::no_init)
+        .def("evaluate", &AbstractFunction::evaluate)
+        .def("jacobian", &AbstractFunction::jacobian)
+        .def("get_value",
+             bp::make_function(&AbstractFunction::get_value,
+                               bp::return_internal_reference<>()))
+        .def("get_jac_x", &AbstractFunction::get_jac_x)
+        .def("get_jac_u", &AbstractFunction::get_jac_u)
+        .def("get_input_dim", &AbstractFunction::get_input_dim)
+        .def("get_output_dim", &AbstractFunction::get_output_dim)
+        .def("get_name", &AbstractFunction::get_name);
+
     // ── Abstract base classes ──────────────────────────────────────────────
-    bp::class_<AbstractCost, std::shared_ptr<AbstractCost>,
+    bp::class_<AbstractCost, bp::bases<AbstractFunction>, std::shared_ptr<AbstractCost>,
                boost::noncopyable>("AbstractCost", bp::no_init);
 
-    bp::class_<AbstractConstraint, std::shared_ptr<AbstractConstraint>,
+    bp::class_<AbstractConstraint, bp::bases<AbstractFunction>, std::shared_ptr<AbstractConstraint>,
                boost::noncopyable>("AbstractConstraint", bp::no_init);
 
     // ── Costs ──────────────────────────────────────────────────────────────

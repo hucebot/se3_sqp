@@ -6,6 +6,8 @@ import viser
 from yourdfpy import URDF
 from viser.extras import ViserUrdf
 import time
+import threading
+
 
 
 class rvizer:
@@ -40,6 +42,37 @@ class rvizer:
         self.server.initial_camera.look_at = (0.0, 0.0, 0.5)
         self.server.initial_camera.up = (0.0, 0.0, 1.0)
 
+class interactive_marker():
+    def __init__(self, server, translation_task, orientation_task, lock):
+
+        self.translation_task = translation_task
+        self.orientation_task = orientation_task
+        self.lock = lock
+
+        translation = self.translation_task.get_ref()
+        quat = R.from_matrix(self.orientation_task.get_ref()).as_quat()  # x y z w
+
+        self.int_marker = server.scene.add_transform_controls(
+            "/"+translation_task.get_name(),
+            position=(translation[0], translation[1], translation[2]),
+            wxyz=(quat[3], quat[0], quat[1], quat[2]),
+            scale=0.5
+        )
+        self.int_marker.on_update(self.on_target_move())
+
+
+    def on_target_move(self):
+        def _(_):
+            p = self.int_marker.position
+            o = self.int_marker.wxyz
+
+            new_translation = np.array(p)
+            new_orientation = R.from_quat([o[1], o[2], o[3], o[0]])
+
+            with self.lock:
+                self.translation_task.set_ref(new_translation)
+                self.orientation_task.set_ref(new_orientation.as_matrix())
+        return _
 
 
 
@@ -91,14 +124,8 @@ def main():
     model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path)
     node = sqp.Node(model)
 
-    qf = q0.copy()
-    qf[2] = 1.
-    qf[6] = 0.
-    qf[3] = 1.
-    Rmat = R.from_quat(qf[3:]).as_matrix()
-
-    translation_task = sqp.FrameTranslationCost("base_link", qf[0:3], 4e-1)
-    orientation_task = sqp.FrameOrientationCost("base_link", Rmat, 5e-1)
+    translation_task = sqp.FrameTranslationCost("base_link", q0[0:3], 1e3)
+    orientation_task = sqp.FrameOrientationCost("base_link", R.from_quat(q0[3:]).as_matrix(), 1e3) # xyzw
 
     node.add_cost(translation_task)
     node.add_cost(orientation_task)
@@ -126,7 +153,6 @@ def main():
     solver.set_options(opts)
 
     solver.solve()
-    ocp.save_trajectory("/workspace/code/resources/trajectories/frame.json", dt, urdf_path)
 
     pos = ocp.x_traj()[0][0:3]
     quat_xyzw = ocp.x_traj()[0][3:7]
@@ -138,6 +164,10 @@ def main():
     opts.verbose = 0
     opts.ls_type       = sqp.LSType.NONE
     solver.set_options(opts)
+
+    # Markers
+    lock = threading.Lock()
+    interactive_marker(rviz.server, translation_task, orientation_task, lock)
 
     while True:
         #ocp.x_traj()[0][:] = ocp.x_traj()[1][:]
