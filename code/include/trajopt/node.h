@@ -207,4 +207,6 @@ class Node {
     const double get_constraint_violation(){ return _violation;}
     // Serialize this node's state and control to JSON
     nlohmann::json to_json() const;
+
+    VectorXd _a_zero;
 };

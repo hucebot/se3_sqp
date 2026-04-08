@@ -21,6 +21,8 @@ Node::Node(pinocchio::Model mdl)
     _grad_violation_x.setZero(ndx());
     _grad_violation_u.setZero(ndu());
     _viol_tmp.resize(0);
+
+    _a_zero.setZero(_nv);
 }
 
 void Node::bind_trajectory(VectorXd* x, VectorXd* u) {
@@ -38,8 +40,7 @@ void Node::require_forward_kinematics(){
         if (_u_ptr) {
             pinocchio::forwardKinematics(*_model_ptr, *_data_ptr, q(), v(), a());
         } else {
-            VectorXd a_zero = VectorXd::Zero(_nv);
-            pinocchio::forwardKinematics(*_model_ptr, *_data_ptr, q(), v(), a_zero);
+            pinocchio::forwardKinematics(*_model_ptr, *_data_ptr, q(), v(), _a_zero);
         }
         _cache_flags |= CACHE_FK;
     }
@@ -60,8 +61,7 @@ void Node::require_fk_derivatives(){
         if (_u_ptr) {
             pinocchio::computeForwardKinematicsDerivatives(*_model_ptr, *_data_ptr, q(), v(), a());
         } else {
-            VectorXd a_zero = VectorXd::Zero(_nv);
-            pinocchio::computeForwardKinematicsDerivatives(*_model_ptr, *_data_ptr, q(), v(), a_zero);
+            pinocchio::computeForwardKinematicsDerivatives(*_model_ptr, *_data_ptr, q(), v(), _a_zero);
         }
         _cache_flags |= CACHE_FK_DERIVATIVES | CACHE_FK;
 
