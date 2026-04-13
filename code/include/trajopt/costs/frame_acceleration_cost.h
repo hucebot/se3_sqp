@@ -31,5 +31,4 @@ public:
     void set_ref(const Vector6d& a_ref) { _fa.set_ref(a_ref); }
     const Vector6d& get_ref() const { return _fa.get_ref(); }
     void set_re_reference_frame(const pinocchio::ReferenceFrame& re_ref_rame) { _fa.set_re_reference_frame(re_ref_rame); }
-    void set_base_frame_name(const std::string& base_frame_name) { _fa.set_base_frame_name(base_frame_name); }
 };

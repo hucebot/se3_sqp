@@ -74,6 +74,30 @@ static void stats_print(const SQPstatistics& s, int verbosity) {
 // Module definition
 // ============================================================================
 
+bp::list getSequenceWrapper(ContactScheduler& scheduler,
+                            double sampling_rate,
+                            const std::string& sequence_name,
+                            int nodes_number,
+                            double current_time)
+{
+    std::list<std::vector<std::string>> seq =
+        scheduler.getSequence(sampling_rate, sequence_name, nodes_number, current_time);
+
+    bp::list py_sequence;
+
+    for(const auto& vec : seq)
+    {
+        bp::list py_vec;
+        for(const auto& s : vec)
+        {
+            py_vec.append(s);
+        }
+        py_sequence.append(py_vec);
+    }
+
+    return py_sequence;
+}
+
 BOOST_PYTHON_MODULE(sqp_solver) {
     // Enable eigenpy Eigen <-> numpy converters
     eigenpy::enableEigenPy();
@@ -214,12 +238,11 @@ BOOST_PYTHON_MODULE(sqp_solver) {
              bp::arg("v_ref") = Vector6d(Vector6d::Zero()),
              bp::arg("weight") = 1.0)))
         .def(bp::init<const std::string&, const Vector6d&, const MatrixXd&>(
-            (bp::arg("frame_name"), bp::arg("v_ref"), bp::arg("weight"))))
+            (bp::arg("frame_name"), bp::arg("v_ref")=Vector6d(Vector6d::Zero()), bp::arg("weight"))))
         .def("set_ref", &FrameVelocityCost::set_ref)
         .def("get_ref", &FrameVelocityCost::get_ref,
              bp::return_value_policy<bp::copy_const_reference>())
-        .def("set_re_reference_frame", &FrameVelocityCost::set_re_reference_frame)
-        .def("set_base_frame_name", &FrameVelocityCost::set_base_frame_name);
+        .def("set_re_reference_frame", &FrameVelocityCost::set_re_reference_frame);
     bp::implicitly_convertible<std::shared_ptr<FrameVelocityCost>,
                                std::shared_ptr<AbstractCost>>();
 
@@ -235,8 +258,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def("set_ref", &FrameAccelerationCost::set_ref)
         .def("get_ref", &FrameAccelerationCost::get_ref,
              bp::return_value_policy<bp::copy_const_reference>())
-        .def("set_re_reference_frame", &FrameAccelerationCost::set_re_reference_frame)
-        .def("set_base_frame_name", &FrameAccelerationCost::set_base_frame_name);
+        .def("set_re_reference_frame", &FrameAccelerationCost::set_re_reference_frame),
     bp::implicitly_convertible<std::shared_ptr<FrameAccelerationCost>,
                                std::shared_ptr<AbstractCost>>();
 
@@ -318,8 +340,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def("set_ref", &FrameVelocityConstraint::set_ref)
         .def("get_ref", &FrameVelocityConstraint::get_ref,
             bp::return_value_policy<bp::copy_const_reference>())
-        .def("set_re_reference_frame", &FrameVelocityConstraint::set_re_reference_frame)
-        .def("set_base_frame_name", &FrameVelocityConstraint::set_base_frame_name);
+        .def("set_re_reference_frame", &FrameVelocityConstraint::set_re_reference_frame);
     bp::implicitly_convertible<std::shared_ptr<FrameVelocityConstraint>,
                                std::shared_ptr<AbstractConstraint>>();
 
@@ -331,7 +352,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def("addPhase", &ContactScheduler::addPhase,
              (bp::arg("contacts_list"), bp::arg("duration"),
               bp::arg("sequence_name") = "_"))
-        .def("getSequence", &ContactScheduler::getSequence,
+        .def("getSequence", &getSequenceWrapper,
              (bp::arg("sampling_rate"),
               bp::arg("sequence_name") = "_",
               bp::arg("nodes_number") = -1,

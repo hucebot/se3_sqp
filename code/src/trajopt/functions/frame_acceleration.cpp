@@ -4,8 +4,7 @@
 FrameAcceleration::FrameAcceleration(const std::string& frame_name, const Vector6d& a_ref)
     : AbstractFunction(),     _a_ref(a_ref),
     _frame_name(frame_name),
-    _re_ref_frame(pinocchio::LOCAL),
-    _base_frame_name("base_link")
+    _re_ref_frame(pinocchio::LOCAL)
 {
     _name = "frame_acceleration(" + frame_name + ")";
     _frame_id = -1;
@@ -33,23 +32,16 @@ void FrameAcceleration::evaluate_impl() {
     // Ensure FK and frame placements are computed
     _node->require_frame_placements();
 
-    pinocchio::Motion acc;
-    if(_frame_name == _base_frame_name)
-        acc = _node->data().a[1];
-    else
-        acc = pinocchio::getFrameAcceleration(_node->model(), _node->data(), _frame_id, _re_ref_frame);
+    _acc = pinocchio::getFrameAcceleration(_node->model(), _node->data(), _frame_id, _re_ref_frame);
 
     _value.setZero(6);
-    _value.segment(0, 3) = acc.linear() - _a_ref.segment(0,3);
-    _value.segment(3, 3) = acc.angular() - _a_ref.segment(3,3);
+    _value.segment(0, 3) = _acc.linear() - _a_ref.segment(0,3);
+    _value.segment(3, 3) = _acc.angular() - _a_ref.segment(3,3);
 }
 
 void FrameAcceleration::jacobian_impl() {
     _node->require_fk_derivatives();
-    if(_frame_name == _base_frame_name)
-        pinocchio::getFrameAccelerationDerivatives(_node->model(), _node->data(), _frame_id, pinocchio::LOCAL, _dv_dq, _da_dq, _da_dv, _da_da);
-    else
-        pinocchio::getFrameAccelerationDerivatives(_node->model(), _node->data(), _frame_id, _re_ref_frame, _dv_dq, _da_dq, _da_dv, _da_da);
+    pinocchio::getFrameAccelerationDerivatives(_node->model(), _node->data(), _frame_id, _re_ref_frame, _dv_dq, _da_dq, _da_dv, _da_da);
 
     _jacobian.setZero();
     _jacobian.block(0, 0,             6, _node->nv()) = _da_dq;
