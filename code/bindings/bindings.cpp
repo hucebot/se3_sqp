@@ -14,12 +14,16 @@
 #include <trajopt/costs/acceleration_cost.h>
 #include <trajopt/costs/frame_translation_cost.h>
 #include <trajopt/costs/frame_orientation_cost.h>
+#include <trajopt/costs/frame_velocity_cost.h>
+#include <trajopt/costs/frame_acceleration_cost.h>
 #include <trajopt/constraints/abstract_constraint.h>
 #include <trajopt/constraints/inverse_dynamics.h>
 #include <trajopt/constraints/joint_limits_constraint.h>
 #include <trajopt/constraints/contact_constraint.h>
 #include <trajopt/constraints/friction_cone_constraint.h>
 #include <trajopt/constraints/frame_translation_constraint.h>
+#include <trajopt/constraints/frame_orientation_constraint.h>
+#include <trajopt/constraints/frame_velocity_constraint.h>
 #include <trajopt/constraints/integration_schemes/euler.h>
 #include <trajopt/constraints/integration_schemes/semi-euler.h>
 
@@ -70,9 +74,34 @@ static void stats_print(const SQPstatistics& s, int verbosity) {
 // Module definition
 // ============================================================================
 
+bp::list getSequenceWrapper(ContactScheduler& scheduler,
+                            double sampling_rate,
+                            const std::string& sequence_name,
+                            int nodes_number,
+                            double current_time)
+{
+    std::list<std::vector<std::string>> seq =
+        scheduler.getSequence(sampling_rate, sequence_name, nodes_number, current_time);
+
+    bp::list py_sequence;
+
+    for(const auto& vec : seq)
+    {
+        bp::list py_vec;
+        for(const auto& s : vec)
+        {
+            py_vec.append(s);
+        }
+        py_sequence.append(py_vec);
+    }
+
+    return py_sequence;
+}
+
 BOOST_PYTHON_MODULE(sqp_solver) {
     // Enable eigenpy Eigen <-> numpy converters
     eigenpy::enableEigenPy();
+    eigenpy::enableEigenPySpecific<Eigen::Matrix<double,6,1>>();
 
     // ── LSType enum ────────────────────────────────────────────────────────
     bp::enum_<LSType>("LSType")
@@ -92,6 +121,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def_readwrite("tolerance",            &SQPoptions::tolerance)
         .def_readwrite("regularization",       &SQPoptions::regularization)
         .def_readwrite("regularization_scale", &SQPoptions::regularization_scale)
+        .def_readwrite("eps_inequality",       &SQPoptions::eps_inequality)
         .def_readwrite("verbose",              &SQPoptions::verbose)
         .def_readwrite("hpipm_iter_max",       &SQPoptions::hpipm_iter_max)
         .def_readwrite("hpipm_tol_stat",       &SQPoptions::hpipm_tol_stat)
@@ -116,11 +146,25 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def_readonly("last_iteration_time_ms",     &SQPstatistics::last_iteration_time_ms)
         .def("print", &stats_print, (bp::arg("verbosity") = 1));
 
+    // ── AbstractFunction class ──────────────────────────────────────────────
+    bp::class_<AbstractFunction, std::shared_ptr<AbstractFunction>,
+               boost::noncopyable>("AbstractFunction", bp::no_init)
+        .def("evaluate", &AbstractFunction::evaluate)
+        .def("jacobian", &AbstractFunction::jacobian)
+        .def("get_value",
+             bp::make_function(&AbstractFunction::get_value,
+                               bp::return_internal_reference<>()))
+        .def("get_jac_x", &AbstractFunction::get_jac_x)
+        .def("get_jac_u", &AbstractFunction::get_jac_u)
+        .def("get_input_dim", &AbstractFunction::get_input_dim)
+        .def("get_output_dim", &AbstractFunction::get_output_dim)
+        .def("get_name", &AbstractFunction::get_name);
+
     // ── Abstract base classes ──────────────────────────────────────────────
-    bp::class_<AbstractCost, std::shared_ptr<AbstractCost>,
+    bp::class_<AbstractCost, bp::bases<AbstractFunction>, std::shared_ptr<AbstractCost>,
                boost::noncopyable>("AbstractCost", bp::no_init);
 
-    bp::class_<AbstractConstraint, std::shared_ptr<AbstractConstraint>,
+    bp::class_<AbstractConstraint, bp::bases<AbstractFunction>, std::shared_ptr<AbstractConstraint>,
                boost::noncopyable>("AbstractConstraint", bp::no_init);
 
     // ── Costs ──────────────────────────────────────────────────────────────
@@ -186,6 +230,38 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     bp::implicitly_convertible<std::shared_ptr<FrameOrientationCost>,
                                std::shared_ptr<AbstractCost>>();
 
+    // FrameVelocityCost
+    bp::class_<FrameVelocityCost, bp::bases<AbstractCost>,
+               std::shared_ptr<FrameVelocityCost>>("FrameVelocityCost",
+        bp::init<const std::string&, const Vector6d&, double>(
+            (bp::arg("frame_name"),
+             bp::arg("v_ref") = Vector6d(Vector6d::Zero()),
+             bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, const Vector6d&, const MatrixXd&>(
+            (bp::arg("frame_name"), bp::arg("v_ref")=Vector6d(Vector6d::Zero()), bp::arg("weight"))))
+        .def("set_ref", &FrameVelocityCost::set_ref)
+        .def("get_ref", &FrameVelocityCost::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>())
+        .def("set_re_reference_frame", &FrameVelocityCost::set_re_reference_frame);
+    bp::implicitly_convertible<std::shared_ptr<FrameVelocityCost>,
+                               std::shared_ptr<AbstractCost>>();
+
+    // FrameAccelerationCost
+    bp::class_<FrameAccelerationCost, bp::bases<AbstractCost>,
+               std::shared_ptr<FrameAccelerationCost>>("FrameAccelerationCost",
+                                                   bp::init<const std::string&, const Vector6d&, double>(
+                                                       (bp::arg("frame_name"),
+                                                        bp::arg("a_ref") = Vector6d(Vector6d::Zero()),
+                                                        bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, const Vector6d&, const MatrixXd&>(
+            (bp::arg("frame_name"), bp::arg("a_ref"), bp::arg("weight"))))
+        .def("set_ref", &FrameAccelerationCost::set_ref)
+        .def("get_ref", &FrameAccelerationCost::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>())
+        .def("set_re_reference_frame", &FrameAccelerationCost::set_re_reference_frame),
+    bp::implicitly_convertible<std::shared_ptr<FrameAccelerationCost>,
+                               std::shared_ptr<AbstractCost>>();
+
     // ── Constraints ────────────────────────────────────────────────────────
 
     // EulerIntegration
@@ -245,6 +321,29 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     bp::implicitly_convertible<std::shared_ptr<FrameTranslationConstraint>,
                                std::shared_ptr<AbstractConstraint>>();
 
+    // FrameOrientationConstraint
+    bp::class_<FrameOrientationConstraint, bp::bases<AbstractConstraint>,
+               std::shared_ptr<FrameOrientationConstraint>>("FrameOrientationConstraint",
+                                                            bp::init<const std::string&, const Eigen::Matrix3d&>(
+                                                                (bp::arg("frame_name"), bp::arg("R_ref") = Eigen::Matrix3d(Eigen::Matrix3d::Identity()))))
+        .def("set_ref", &FrameOrientationConstraint::set_ref)
+        .def("get_ref", &FrameOrientationConstraint::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>());
+    bp::implicitly_convertible<std::shared_ptr<FrameOrientationConstraint>,
+                               std::shared_ptr<AbstractConstraint>>();
+
+    // FrameVelocityConstraint
+    bp::class_<FrameVelocityConstraint, bp::bases<AbstractConstraint>,
+            std::shared_ptr<FrameVelocityConstraint>>("FrameVelocityConstraint",
+        bp::init<const std::string&, const Vector6d&>(
+            (bp::arg("frame_name"), bp::arg("v_ref") = Vector6d(Vector6d::Zero()))))
+        .def("set_ref", &FrameVelocityConstraint::set_ref)
+        .def("get_ref", &FrameVelocityConstraint::get_ref,
+            bp::return_value_policy<bp::copy_const_reference>())
+        .def("set_re_reference_frame", &FrameVelocityConstraint::set_re_reference_frame);
+    bp::implicitly_convertible<std::shared_ptr<FrameVelocityConstraint>,
+                               std::shared_ptr<AbstractConstraint>>();
+
     // ── ContactScheduler ───────────────────────────────────────────────────
     bp::class_<ContactScheduler>("ContactScheduler")
         .def(bp::init<>())
@@ -253,7 +352,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def("addPhase", &ContactScheduler::addPhase,
              (bp::arg("contacts_list"), bp::arg("duration"),
               bp::arg("sequence_name") = "_"))
-        .def("getSequence", &ContactScheduler::getSequence,
+        .def("getSequence", &getSequenceWrapper,
              (bp::arg("sampling_rate"),
               bp::arg("sequence_name") = "_",
               bp::arg("nodes_number") = -1,
@@ -299,7 +398,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     // ── SQPSolver ──────────────────────────────────────────────────────────
     bp::class_<SQPSolver, boost::noncopyable>("SQPSolver", bp::init<OCP&>())
         .def("set_options", &SQPSolver::set_options)
-        .def("solve",       &SQPSolver::solve)
+        .def("solve",       &SQPSolver::solve, bp::arg("x0") = Eigen::VectorXd(0))
         .def("get_stats",   &SQPSolver::get_stats,
              bp::return_internal_reference<>());
 }

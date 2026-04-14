@@ -24,19 +24,35 @@ void SQPSolver::set_options(const SQPoptions& opts) {
     _opts.print();
 }
 
-void SQPSolver::solve() {
+void SQPSolver::solve(const Eigen::VectorXd& x0) {
     _stats.reset();
     _stats.start_timer();
     _current_reg = _opts.regularization;
+
     for (int i = 0; i < _opts.max_sqp_iters; i++) {
         PROFILE_DECLARE(iter_linearize_ms);
         PROFILE_DECLARE(iter_linesearch_ms);
 
-        { PROFILE_SCOPE(iter_linearize_ms); linearize(); }
+        { PROFILE_SCOPE(iter_linearize_ms);
+            linearize();
+
+            if(x0.size() > 0)
+            {
+                pinocchio::difference(_ocproblem.get_node(0).model(), _ocproblem.x_traj()[0].segment(0, _ocproblem.get_node(0).model().nq), x0.segment(0, _ocproblem.get_node(0).model().nq), _dx0.segment(0, _ocproblem.get_node(0).model().nv));
+                _dx0.segment(_ocproblem.get_node(0).model().nv, _ocproblem.get_node(0).model().nv) = x0.segment(_ocproblem.get_node(0).model().nq, _ocproblem.get_node(0).model().nv) - _ocproblem.x_traj()[0].segment(_ocproblem.get_node(0).model().nq, _ocproblem.get_node(0).model().nv);
+
+                _b[0] = _A[0] * _dx0 + _b[0];
+                _r[0] = _S[0] * _dx0 + _r[0];
+            }
+        }
         populate_qp();
         _qp_solver.solve();
         _stats.update_qp_info(_qp_solver.get_status(), _qp_solver.get_iter());
 
+        if(x0.size() > 0)
+        {
+            _dx[0] = _dx0;
+        }
 
         // Backtracking line search
         {
@@ -154,6 +170,9 @@ void SQPSolver::init() {
         _ndx = _ocproblem.get_node(k).ndx();
         _ndu = _ocproblem.get_node(k).ndu();
 
+        if(k == 0)
+            _dx0.setZero(_ndx);
+
         _ng = 0;
         for (auto& con : _ocproblem.get_node(k).get_constraints())
             _ng += con->get_output_dim();
@@ -244,6 +263,7 @@ void SQPSolver::populate_qp() {
 
         _qp_solver.set_Q(k, _Q[k].data());
         _qp_solver.set_q(k, _q[k].data());
+
         if (k<_Nu){
             _qp_solver.set_R(k, _R[k].data());
             _qp_solver.set_r(k, _r[k].data());
@@ -251,13 +271,14 @@ void SQPSolver::populate_qp() {
         }
 
         _qp_solver.set_C(k, _C[k].data());
-        if (k< _Nu) _qp_solver.set_D(k, _D[k].data());
+        if (k< _Nu){
+            _qp_solver.set_D(k, _D[k].data());
+        }
+
         _qp_solver.set_lg(k, _lg[k].data());
         _qp_solver.set_ug(k, _ug[k].data());
 
     }
-
-    // std::cout<<"populated_qp"<<std::endl;
 }
 
 void SQPSolver::step() {
@@ -387,6 +408,9 @@ void SQPSolver::linearize() {
             _C[i].middleRows(row, nc) = con->get_jac_x();
             _lg[i].segment(row, nc) = con->get_lower_bound() - residual;
             _ug[i].segment(row, nc) = con->get_upper_bound() - residual;
+
+            _lg[i].array() -= _opts.eps_inequality;
+            _ug[i].array() += _opts.eps_inequality;
 
             if (i < _Nu) {
                 MatrixXdConstRef Ju = con->get_jac_u();  // No copy!

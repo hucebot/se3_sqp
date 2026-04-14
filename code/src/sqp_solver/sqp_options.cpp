@@ -17,6 +17,7 @@ void SQPoptions::defaults()
     tolerance = 1e-3;
     regularization = 1e-12;
     regularization_scale = 1e3;
+    eps_inequality = 1e-4;
     verbose = 1;
     hpipm_iter_max   = 1000;
     hpipm_tol_stat   = 1e-4;
@@ -36,6 +37,7 @@ void SQPoptions::print() const
     std::cout << "  Tolerance:             " << tolerance << std::endl;
     std::cout << "  Regularization:        " << regularization << std::endl;
     std::cout << "  Regularization scale:  " << regularization_scale << std::endl;
+    std::cout << "  Eps inequality:             " << eps_inequality << std::endl;
     std::cout << "  Verbose:               " << verbose << std::endl;
     std::cout << "  Linesearch type:       " << ls_name << std::endl;
     if (ls_type != LSType::NONE) {
