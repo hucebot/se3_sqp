@@ -18,6 +18,7 @@
 #include <trajopt/costs/frame_velocity_cost.h>
 #include <trajopt/costs/frame_acceleration_cost.h>
 #include <trajopt/costs/force_cost.h>
+#include <trajopt/costs/step_cost.h>
 #include <trajopt/constraints/abstract_constraint.h>
 #include <trajopt/constraints/inverse_dynamics.h>
 #include <trajopt/constraints/joint_limits_constraint.h>
@@ -287,6 +288,23 @@ BOOST_PYTHON_MODULE(sqp_solver) {
              bp::return_value_policy<bp::copy_const_reference>())
         .def("set_re_reference_frame", &FrameAccelerationCost::set_re_reference_frame),
     bp::implicitly_convertible<std::shared_ptr<FrameAccelerationCost>,
+                               std::shared_ptr<AbstractCost>>();
+
+    // StepCost
+    bp::class_<StepCost, bp::bases<AbstractCost>,
+               std::shared_ptr<StepCost>>("StepCost",
+        bp::init<const std::string&, double, double, double>(
+                                                          (bp::arg("frame_name"),
+                                                           bp::arg("step_height_ref"),
+                                                           bp::arg("ground_ref"),
+                                                           bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, double, double, const Matrix3d&>(
+            (bp::arg("frame_name"), bp::arg("step_height_ref"), bp::arg("ground_ref"), bp::arg("weight"))))
+        .def("set_ref", &StepCost::set_ref)
+        .def("get_ref", &StepCost::get_ref)
+        .def("set_ground_ref", &StepCost::set_ground_ref)
+        .def("get_ground_ref", &StepCost::get_ground_ref);
+    bp::implicitly_convertible<std::shared_ptr<StepCost>,
                                std::shared_ptr<AbstractCost>>();
 
     // ── Constraints ────────────────────────────────────────────────────────

@@ -199,6 +199,7 @@ def main():
             node.add_constraint(sqp.ContactConstraint(foot));
             node.add_constraint(sqp.FrictionConeConstraint(foot, 0.8))
             node.add_cost(sqp.ForceCost(frame_name=foot, weight=1e-6))
+            node.add_cost(sqp.StepCost(frame_name=foot, step_height_ref=0.05, ground_ref= 0.0, weight=20.))
 
 
         # Costs
@@ -211,13 +212,14 @@ def main():
         node.add_cost(sqp.VelocityCost(1e-6))
         node.add_cost(sqp.AccelerationCost(1e-9))
 
-
         ocp.addNode(node)
 
     model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path, root_joint=pin.JointModelFreeFlyer())
     node = sqp.Node(model)
     for foot in feet:
         node.add_contact(foot)
+        node.add_cost(sqp.StepCost(frame_name=foot, step_height_ref=0.05, ground_ref= 0.0, weight=20.))
+
     node.set_active_contacts(contact_sequence[k])
 
     base_velocity.append(sqp.FrameVelocityCost("base", weight=50.))
