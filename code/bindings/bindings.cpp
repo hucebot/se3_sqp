@@ -17,6 +17,7 @@
 #include <trajopt/costs/frame_orientation_cost.h>
 #include <trajopt/costs/frame_velocity_cost.h>
 #include <trajopt/costs/frame_acceleration_cost.h>
+#include <trajopt/costs/force_cost.h>
 #include <trajopt/constraints/abstract_constraint.h>
 #include <trajopt/constraints/inverse_dynamics.h>
 #include <trajopt/constraints/joint_limits_constraint.h>
@@ -202,10 +203,25 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     bp::implicitly_convertible<std::shared_ptr<AccelerationCost>,
                                std::shared_ptr<AbstractCost>>();
 
+    // ForceCost
+    bp::class_<ForceCost, bp::bases<AbstractCost>,
+               std::shared_ptr<ForceCost>>("ForceCost",
+        bp::init<const std::string&, const Eigen::Vector3d&, double>(
+              (bp::arg("frame_name"),
+               bp::arg("f_ref") = Eigen::Vector3d(Eigen::Vector3d::Zero()),
+               bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, const Eigen::Vector3d&, const Matrix3d&>(
+            (bp::arg("frame_name"), bp::arg("f_ref"), bp::arg("weight"))))
+        .def("set_ref", &FrameTranslationCost::set_ref)
+        .def("get_ref", &FrameTranslationCost::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>());
+    bp::implicitly_convertible<std::shared_ptr<ForceCost>,
+                               std::shared_ptr<AbstractCost>>();
+
     // TorqueCost
     bp::class_<TorqueCost, bp::bases<AbstractCost>,
                std::shared_ptr<TorqueCost>>("TorqueCost",
-                                                  bp::init<bp::optional<double>>((bp::arg("weight") = 1.0)))
+        bp::init<bp::optional<double>>((bp::arg("weight") = 1.0)))
         .def(bp::init<const VectorXd&, double>(
             (bp::arg("tau_ref"), bp::arg("weight") = 1.0)));
     bp::implicitly_convertible<std::shared_ptr<TorqueCost>,
@@ -218,7 +234,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
             (bp::arg("frame_name"),
              bp::arg("p_ref") = Eigen::Vector3d(Eigen::Vector3d::Zero()),
              bp::arg("weight") = 1.0)))
-        .def(bp::init<const std::string&, const Eigen::Vector3d&, const MatrixXd&>(
+        .def(bp::init<const std::string&, const Eigen::Vector3d&, const Matrix3d&>(
             (bp::arg("frame_name"), bp::arg("p_ref"), bp::arg("weight"))))
         .def("set_ref", &FrameTranslationCost::set_ref)
         .def("get_ref", &FrameTranslationCost::get_ref,
@@ -233,7 +249,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
             (bp::arg("frame_name"),
              bp::arg("R_ref") = Eigen::Matrix3d(Eigen::Matrix3d::Identity()),
              bp::arg("weight") = 1.0)))
-        .def(bp::init<const std::string&, const Eigen::Matrix3d&, const MatrixXd&>(
+        .def(bp::init<const std::string&, const Eigen::Matrix3d&, const Matrix3d&>(
             (bp::arg("frame_name"), bp::arg("R_ref"), bp::arg("weight"))))
         .def("set_ref", &FrameOrientationCost::set_ref)
         .def("get_ref", &FrameOrientationCost::get_ref,

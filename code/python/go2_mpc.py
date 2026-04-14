@@ -198,6 +198,7 @@ def main():
         for foot in feet:
             node.add_constraint(sqp.ContactConstraint(foot));
             node.add_constraint(sqp.FrictionConeConstraint(foot, 0.8))
+            node.add_cost(sqp.ForceCost(frame_name=foot, weight=1e-6))
 
 
         # Costs
@@ -253,7 +254,7 @@ def main():
     opts = sqp.SQPoptions()
     opts.max_sqp_iters = 1
     opts.verbose = 0
-    opts.ls_type = sqp.LSType.NONE
+    opts.ls_type = sqp.LSType.MERIT
     solver.set_options(opts)
 
     t = 0.
