@@ -69,7 +69,7 @@ void HPIPMSolver::allocate(){
     d_ocp_qp_ipm_arg_create(&_qp_dim, &_qp_arg, _arg_mem);
 
     // Set default IPM mode (SPEED, BALANCE, or ROBUST)
-    d_ocp_qp_ipm_arg_set_default(ROBUST, &_qp_arg);
+    d_ocp_qp_ipm_arg_set_default(SPEED, &_qp_arg);
 
     // Allocate workspace (size depends on arg settings)
     int ws_size = d_ocp_qp_ipm_ws_memsize(&_qp_dim, &_qp_arg);

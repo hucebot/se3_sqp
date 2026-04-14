@@ -132,7 +132,7 @@ def main():
     scheduler.addPhase(["FL_RR"], stance_duration, "trot")         # FR+RL stance
 
     # Generate contact sequence for 2 full gait cycles
-    N = 20;
+    N = 10;
     contact_sequence = scheduler.getSequence(sampling_rate=dt, sequence_name="trot", nodes_number=N)
 
     print(f"Horizon: N={N}  nodes={N}   T={N*dt}")
@@ -198,15 +198,15 @@ def main():
         for foot in feet:
             node.add_constraint(sqp.ContactConstraint(foot));
             node.add_constraint(sqp.FrictionConeConstraint(foot, 0.8))
-            node.add_cost(sqp.ForceCost(frame_name=foot, weight=1e-6))
-            node.add_cost(sqp.StepCost(frame_name=foot, step_height_ref=0.05, ground_ref= 0.0, weight=20.))
+            node.add_cost(sqp.ForceCost(frame_name=foot, weight=1e-9))
+            node.add_cost(sqp.StepCost(frame_name=foot, step_height_ref=0.05, ground_ref= 0.0, weight=2.))
 
 
         # Costs
-        base_velocity.append(sqp.FrameVelocityCost("base", weight=50.))
+        base_velocity.append(sqp.FrameVelocityCost("base", weight=2.))
         node.add_cost(base_velocity[k])
 
-        node.add_cost(sqp.ConfigurationCost(q0, 10.))
+        node.add_cost(sqp.ConfigurationCost(q0, 1.))
         node.add_cost(sqp.TorqueCost(1e-4))
 
         node.add_cost(sqp.VelocityCost(1e-6))
@@ -222,11 +222,11 @@ def main():
 
     node.set_active_contacts(contact_sequence[k])
 
-    base_velocity.append(sqp.FrameVelocityCost("base", weight=50.))
+    base_velocity.append(sqp.FrameVelocityCost("base", weight=5.))
     node.add_cost(base_velocity[-1])
 
     node.add_cost(sqp.VelocityCost(1e-6))
-    node.add_cost(sqp.ConfigurationCost(q0, 10.))
+    node.add_cost(sqp.ConfigurationCost(q0, 1.))
 
     ocp.addNode(node)
 
@@ -243,7 +243,7 @@ def main():
     # Solve
     solver = sqp.SQPSolver(ocp)
     opts = sqp.SQPoptions()
-    opts.max_sqp_iters = 200
+    opts.max_sqp_iters = 10
     opts.tolerance     = 5e-3
     #opts.ls_merit_eta  = 1e-4
     opts.ls_type       = sqp.LSType.MERIT
@@ -255,7 +255,13 @@ def main():
 
     opts = sqp.SQPoptions()
     opts.max_sqp_iters = 1
-    opts.verbose = 0
+    #opts.verbose = 0
+    #opts.hpipm_iter_max = 10
+    opts.hpipm_warm_start = True
+    opts.hpipm_tol_eq = 1e-3
+    opts.hpipm_tol_ineq = 1e-3
+    opts.hpipm_tol_stat = 1e-3
+    opts.hpipm_tol_comp = 1e-3
     opts.ls_type = sqp.LSType.MERIT
     solver.set_options(opts)
 
@@ -275,11 +281,13 @@ def main():
         for k in range(N):
             ocp.get_node(k).set_active_contacts(contact_sequence[k]);
 
+
         solver.solve(ocp.x_traj()[1][:])
         t+=dt
 
         q1 = ocp.x_traj()[1][0:model.nq]
         v1 = ocp.x_traj()[1][model.nq:]
+
 
         u0 = ocp.u_traj()[0]
         i = 0
