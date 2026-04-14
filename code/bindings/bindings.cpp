@@ -12,7 +12,7 @@
 #include <trajopt/costs/configuration_cost.h>
 #include <trajopt/costs/velocity_cost.h>
 #include <trajopt/costs/acceleration_cost.h>
-//#include <trajopt/costs/torque_cost.h>
+#include <trajopt/costs/torque_cost.h>
 #include <trajopt/costs/frame_translation_cost.h>
 #include <trajopt/costs/frame_orientation_cost.h>
 #include <trajopt/costs/frame_velocity_cost.h>
@@ -202,14 +202,14 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     bp::implicitly_convertible<std::shared_ptr<AccelerationCost>,
                                std::shared_ptr<AbstractCost>>();
 
-    // // TorqueCost
-    // bp::class_<TorqueCost, bp::bases<AbstractCost>,
-    //            std::shared_ptr<TorqueCost>>("TorqueCost",
-    //                                               bp::init<bp::optional<double>>((bp::arg("weight") = 1.0)))
-    //     .def(bp::init<const VectorXd&, double>(
-    //         (bp::arg("tau_ref"), bp::arg("weight") = 1.0)));
-    // bp::implicitly_convertible<std::shared_ptr<TorqueCost>,
-    //                            std::shared_ptr<AbstractCost>>();
+    // TorqueCost
+    bp::class_<TorqueCost, bp::bases<AbstractCost>,
+               std::shared_ptr<TorqueCost>>("TorqueCost",
+                                                  bp::init<bp::optional<double>>((bp::arg("weight") = 1.0)))
+        .def(bp::init<const VectorXd&, double>(
+            (bp::arg("tau_ref"), bp::arg("weight") = 1.0)));
+    bp::implicitly_convertible<std::shared_ptr<TorqueCost>,
+                               std::shared_ptr<AbstractCost>>();
 
     // FrameTranslationCost
     bp::class_<FrameTranslationCost, bp::bases<AbstractCost>,

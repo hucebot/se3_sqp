@@ -205,8 +205,9 @@ def main():
         node.add_cost(base_velocity[k])
 
         node.add_cost(sqp.ConfigurationCost(q0, 10.))
+        node.add_cost(sqp.TorqueCost(1e-4))
 
-        node.add_cost(sqp.VelocityCost(q0, 1e-6))
+        node.add_cost(sqp.VelocityCost(1e-6))
         node.add_cost(sqp.AccelerationCost(1e-9))
 
 
@@ -221,7 +222,7 @@ def main():
     base_velocity.append(sqp.FrameVelocityCost("base", weight=50.))
     node.add_cost(base_velocity[-1])
 
-    node.add_cost(sqp.VelocityCost(q0, 1e-6))
+    node.add_cost(sqp.VelocityCost(1e-6))
     node.add_cost(sqp.ConfigurationCost(q0, 10.))
 
     ocp.addNode(node)
@@ -290,7 +291,7 @@ def main():
             rviz.base_frame.position = pos
             rviz.base_frame.wxyz = np.array([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]])
             rviz.viser_urdf.update_cfg(q1[7:])
-            rviz.update_forces(contact_forces, scale = 0.05)
+            rviz.update_forces(contact_forces, scale = 0.01)
         rviz.server.flush()
 
         time.sleep(0.01)
