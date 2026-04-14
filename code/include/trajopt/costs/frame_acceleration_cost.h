@@ -2,6 +2,7 @@
 
 #include <trajopt/costs/abstract_cost.h>
 #include <trajopt/functions/frame_acceleration.h>
+#include <trajopt/costs/frame_velocity_cost.h>
 
 /**
  * FrameAccelerationCost penalizes deviation of a frame's acceleration from a target.
@@ -20,7 +21,7 @@ public:
 
     FrameAccelerationCost(const std::string& frame_name,
                       const Vector6d& a_ref,
-                      const MatrixXd& weight);
+                      const Matrix6d& weight);
 
     void set_node(Node* node) override { AbstractCost::set_node(node); _fa.set_node(node); }
 

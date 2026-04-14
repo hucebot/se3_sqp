@@ -9,7 +9,7 @@ FrameVelocityCost::FrameVelocityCost(const std::string& frame_name, const Vector
     _name = "frame_velocity_cost(" + frame_name + ")";
 }
 
-FrameVelocityCost::FrameVelocityCost(const std::string& frame_name, const Vector6d& v_ref, const MatrixXd& weight):
+FrameVelocityCost::FrameVelocityCost(const std::string& frame_name, const Vector6d& v_ref, const Matrix6d& weight):
     AbstractCost(weight),
     _fv(frame_name, v_ref)
 {

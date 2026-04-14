@@ -7,7 +7,7 @@ FrameTranslationCost::FrameTranslationCost(
 }
 
 FrameTranslationCost::FrameTranslationCost(
-    const std::string& frame_name, const Eigen::Vector3d& p_ref, const MatrixXd& weight)
+    const std::string& frame_name, const Eigen::Vector3d& p_ref, const Matrix3d& weight)
     : AbstractCost(weight), _ft(frame_name, p_ref) {
     _name = "frame_translation_cost(" + frame_name + ")";
 }

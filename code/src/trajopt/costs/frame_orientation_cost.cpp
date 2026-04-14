@@ -1,5 +1,4 @@
 #include <trajopt/costs/frame_orientation_cost.h>
-#include "pinocchio/spatial/explog.hpp"
 
 FrameOrientationCost::FrameOrientationCost(
     const std::string& frame_name, const Eigen::Matrix3d& R_ref, double weight)
@@ -8,7 +7,7 @@ FrameOrientationCost::FrameOrientationCost(
 }
 
 FrameOrientationCost::FrameOrientationCost(
-    const std::string& frame_name, const Eigen::Matrix3d& R_ref, const MatrixXd& weight)
+    const std::string& frame_name, const Eigen::Matrix3d& R_ref, const Matrix3d& weight)
     : AbstractCost(weight), _fo(frame_name, R_ref) {
     _name = "frame_orientation_cost(" + frame_name + ")";
 }

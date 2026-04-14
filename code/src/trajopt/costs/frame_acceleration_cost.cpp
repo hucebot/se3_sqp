@@ -9,7 +9,7 @@ FrameAccelerationCost::FrameAccelerationCost(const std::string& frame_name, cons
     _name = "frame_acceleration_cost(" + frame_name + ")";
 }
 
-FrameAccelerationCost::FrameAccelerationCost(const std::string& frame_name, const Vector6d& a_ref, const MatrixXd& weight):
+FrameAccelerationCost::FrameAccelerationCost(const std::string& frame_name, const Vector6d& a_ref, const Matrix6d& weight):
     AbstractCost(weight),
     _fa(frame_name, a_ref)
 {
