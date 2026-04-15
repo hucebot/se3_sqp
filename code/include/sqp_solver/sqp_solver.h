@@ -19,6 +19,7 @@ class SQPSolver {
 
     // High-performance QP solver (direct member for zero indirection)
     HPIPMSolver _qp_solver;
+    hpipm_mode _hpipm_mode;
 
     // // Current trajectory (Eigen for SIMD-vectorized operations)
     std::vector<VectorXd> _x_candidate;  // States: _x[k] is VectorXd of size _nx
@@ -86,7 +87,7 @@ class SQPSolver {
     SQPoptions _opts;
 
     /// Allocate all storage and configure QP solver from OCP dimensions
-    void init();
+    void init(const hpipm_mode mode);
 
     /// Rebind nodes to nominal trajectory, then linearize dynamics, costs,
     /// and constraints around the current nominal. Populates A,B,b,Q,q,R,r,C,D,lg,ug.
@@ -121,7 +122,7 @@ class SQPSolver {
     bool break_criteria();
 
    public:
-    SQPSolver(OCP& ocp);
+    SQPSolver(OCP& ocp, const hpipm_mode mode = hpipm_mode::ROBUST);
     ~SQPSolver();
 
     /// @brief set solver options before calling solve()

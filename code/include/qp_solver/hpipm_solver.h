@@ -7,6 +7,7 @@ extern "C" {
 #include <hpipm_d_ocp_qp_dim.h>
 #include <hpipm_d_ocp_qp_ipm.h>
 #include <hpipm_d_ocp_qp_sol.h>
+#include <hpipm_common.h>
 }
 
 /**
@@ -49,7 +50,7 @@ class HPIPMSolver {
     void init_stage(int k, int nx, int nu, int ng = 0, int nbx = 0, int nbu = 0);
 
     // Allocates memory 
-    void allocate();
+    void allocate(const hpipm_mode mode);
 
     // === Problem Specification (ALL INLINE for zero overhead) ===
 

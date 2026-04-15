@@ -253,6 +253,8 @@ def main():
 
     #ocp.save_trajectory("/workspace/code/resources/trajectories/go2_mpc.json", dt, urdf_path)
 
+    solver_mpc = sqp.SQPSolver(ocp=ocp, mode=sqp.hpipm_mode.BALANCE)
+
     opts = sqp.SQPoptions()
     opts.max_sqp_iters = 1
     #opts.verbose = 0
@@ -263,7 +265,7 @@ def main():
     opts.hpipm_tol_stat = 1e-3
     opts.hpipm_tol_comp = 1e-3
     opts.ls_type = sqp.LSType.MERIT
-    solver.set_options(opts)
+    solver_mpc.set_options(opts)
 
     t = 0.
     contact_forces = {}
@@ -282,7 +284,7 @@ def main():
             ocp.get_node(k).set_active_contacts(contact_sequence[k]);
 
 
-        solver.solve(ocp.x_traj()[1][:])
+        solver_mpc.solve(ocp.x_traj()[1][:])
         t+=dt
 
         q1 = ocp.x_traj()[1][0:model.nq]

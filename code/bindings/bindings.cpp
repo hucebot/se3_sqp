@@ -5,6 +5,7 @@
 #include <pinocchio/parsers/urdf.hpp>
 
 #include <sqp_solver/sqp_solver.h>
+#include <hpipm_common.h>
 #include <trajopt/ocp.h>
 #include <trajopt/node.h>
 #include <trajopt/scheduler.h>
@@ -106,6 +107,14 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     eigenpy::enableEigenPy();
     eigenpy::enableEigenPySpecific<Eigen::Matrix<double,6,1>>();
     eigenpy::enableEigenPySpecific<Eigen::Matrix<double,6,6>>();
+
+    // ── hpipm_mode enum ────────────────────────────────────────────────────
+    bp::enum_<hpipm_mode>("hpipm_mode")
+        .value("BALANCE",   hpipm_mode::BALANCE)
+        .value("ROBUST",   hpipm_mode::ROBUST)
+        .value("SPEED",   hpipm_mode::SPEED)
+        .value("SPEED_ABS",   hpipm_mode::SPEED_ABS);
+
 
     // ── LSType enum ────────────────────────────────────────────────────────
     bp::enum_<LSType>("LSType")
@@ -441,9 +450,9 @@ BOOST_PYTHON_MODULE(sqp_solver) {
              (bp::arg("filepath"), bp::arg("dt") = 0.0, bp::arg("urdf_path") = ""));
 
     // ── SQPSolver ──────────────────────────────────────────────────────────
-    bp::class_<SQPSolver, boost::noncopyable>("SQPSolver", bp::init<OCP&>())
+    bp::class_<SQPSolver, boost::noncopyable>("SQPSolver",bp::init<OCP&, bp::optional<hpipm_mode>>(
+            (bp::arg("ocp"), bp::arg("mode") = hpipm_mode::ROBUST)))
         .def("set_options", &SQPSolver::set_options)
-        .def("solve",       &SQPSolver::solve, bp::arg("x0") = Eigen::VectorXd(0))
-        .def("get_stats",   &SQPSolver::get_stats,
-             bp::return_internal_reference<>());
+        .def("solve", &SQPSolver::solve, bp::arg("x0") = Eigen::VectorXd(0))
+        .def("get_stats", &SQPSolver::get_stats, bp::return_internal_reference<>());
 }
