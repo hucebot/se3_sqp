@@ -7,41 +7,85 @@ from yourdfpy import URDF
 from viser.extras import ViserUrdf
 import time
 import threading
-from pynput import keyboard
 import pinocchio
+import struct
 
-vx = 0.0
-vy = 0.0
-wz = 0.0
+class JoystickJS0:
+    """
+    Minimal Linux joystick reader for /dev/input/js0.
 
-LIN_STEP = 0.1
-ANG_STEP = 0.2
+    Provides:
+        vx, vy, wz in [-1, 1]
+    """
 
-def on_press(key):
-    global vx, vy, wz
+    JS_EVENT_FORMAT = "IhBB"
+    JS_EVENT_SIZE = struct.calcsize(JS_EVENT_FORMAT)
 
-    try:
-        if key.char == '8':
-            vx += LIN_STEP
-        elif key.char == '2':
-            vx += -LIN_STEP
-        elif key.char == '4':
-            wz += ANG_STEP
-        elif key.char == '6':
-            wz += -ANG_STEP
-    except AttributeError:
-        pass
+    JS_EVENT_BUTTON = 0x01
+    JS_EVENT_AXIS   = 0x02
 
+    def __init__(self, device="/dev/input/js0", deadzone=0.05):
+        self.device = device
+        self.deadzone = deadzone
 
-def get_velocity():
-    return vx, vy, wz
+        self.vx = 0.0
+        self.vy = 0.0
+        self.wz = 0.0
 
+        self._running = False
+        self._thread = None
 
-listener = keyboard.Listener(
-    on_press=on_press,
-)
+    def start(self):
+        """Start background reader thread."""
+        self._running = True
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
 
-listener.start()
+    def stop(self):
+        """Stop reader thread."""
+        self._running = False
+        if self._thread:
+            self._thread.join()
+
+    def get(self, alpha_lin=1., alpha_ang=1.):
+        """Return current command (vx, vy, wz)."""
+        return alpha_lin*self.vx, alpha_lin*self.vy, alpha_ang*self.wz
+
+    def _apply_deadzone(self, v):
+        return 0.0 if abs(v) < self.deadzone else v
+
+    def _loop(self):
+        try:
+            with open(self.device, "rb") as js:
+
+                while self._running:
+                    ev_buf = js.read(self.JS_EVENT_SIZE)
+                    if not ev_buf:
+                        time.sleep(0.001)
+                        continue
+
+                    _, value, etype, number = struct.unpack(
+                        self.JS_EVENT_FORMAT, ev_buf
+                    )
+
+                    v = value / 32767.0
+                    v = self._apply_deadzone(v)
+
+                    if etype == self.JS_EVENT_AXIS:
+
+                        # Xbox / Linux standard mapping
+                        if number == 0:      # left stick X
+                            self.vy = v
+
+                        elif number == 1:    # left stick Y
+                            self.vx = -v
+
+                        elif number == 2:    # right stick X
+                            self.wz = v
+
+        except Exception as e:
+            print(f"[JoystickJS0] Error: {e}")
+            self._running = False
 
 class rvizer:
     def __init__(self, URDF_PATH):
@@ -251,14 +295,11 @@ def main():
 
     solver.solve()
 
-    #ocp.save_trajectory("/workspace/code/resources/trajectories/go2_mpc.json", dt, urdf_path)
-
     solver_mpc = sqp.SQPSolver(ocp=ocp, mode=sqp.hpipm_mode.BALANCE)
 
     opts = sqp.SQPoptions()
     opts.max_sqp_iters = 1
-    #opts.verbose = 0
-    #opts.hpipm_iter_max = 10
+    opts.verbose = 0
     opts.hpipm_warm_start = True
     opts.hpipm_tol_eq = 1e-3
     opts.hpipm_tol_ineq = 1e-3
@@ -269,10 +310,12 @@ def main():
 
     t = 0.
     contact_forces = {}
+    joy = JoystickJS0()
+    joy.start()
     for foot in feet:
         contact_forces[foot] = np.zeros((3,1))
     while True:
-        vx, vy, wz = get_velocity()
+        vx, vy, wz = joy.get(alpha_lin=0.5, alpha_ang=1.)
 
         # send to robot
         for bv in base_velocity:
