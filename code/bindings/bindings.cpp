@@ -274,7 +274,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
             (bp::arg("frame_name"),
              bp::arg("v_ref") = Vector6d(Vector6d::Zero()),
              bp::arg("weight") = 1.0)))
-        .def(bp::init<const std::string&, const Vector6d&, const MatrixXd&>(
+        .def(bp::init<const std::string&, const Vector6d&, const Matrix6d&>(
             (bp::arg("frame_name"), bp::arg("v_ref")=Vector6d(Vector6d::Zero()), bp::arg("weight"))))
         .def("set_ref", &FrameVelocityCost::set_ref)
         .def("get_ref", &FrameVelocityCost::get_ref,
@@ -290,7 +290,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
                                                        (bp::arg("frame_name"),
                                                         bp::arg("a_ref") = Vector6d(Vector6d::Zero()),
                                                         bp::arg("weight") = 1.0)))
-        .def(bp::init<const std::string&, const Vector6d&, const MatrixXd&>(
+        .def(bp::init<const std::string&, const Vector6d&, const Matrix6d&>(
             (bp::arg("frame_name"), bp::arg("a_ref"), bp::arg("weight"))))
         .def("set_ref", &FrameAccelerationCost::set_ref)
         .def("get_ref", &FrameAccelerationCost::get_ref,
