@@ -222,8 +222,8 @@ BOOST_PYTHON_MODULE(sqp_solver) {
                bp::arg("weight") = 1.0)))
         .def(bp::init<const std::string&, const Eigen::Vector3d&, const Matrix3d&>(
             (bp::arg("frame_name"), bp::arg("f_ref"), bp::arg("weight"))))
-        .def("set_ref", &FrameTranslationCost::set_ref)
-        .def("get_ref", &FrameTranslationCost::get_ref,
+        .def("set_ref", &ForceCost::set_ref)
+        .def("get_ref", &ForceCost::get_ref,
              bp::return_value_policy<bp::copy_const_reference>());
     bp::implicitly_convertible<std::shared_ptr<ForceCost>,
                                std::shared_ptr<AbstractCost>>();
