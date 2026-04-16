@@ -153,6 +153,7 @@ class rvizer:
                     self.force_handles[frame_name] = self.server.scene.add_line_segments(
                         path, points, colors=np.array([255, 50, 50], dtype=np.uint8), line_width=3.0,
                     )
+            self.force_visualization_initied = True
 
 
 BUILD_DIR = Path(__file__).resolve().parent.parent / "build"
