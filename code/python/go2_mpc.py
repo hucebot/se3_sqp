@@ -9,6 +9,7 @@ import time
 import threading
 import pinocchio
 import struct
+import glob
 
 class JoystickJS0:
     """
@@ -24,7 +25,13 @@ class JoystickJS0:
     JS_EVENT_BUTTON = 0x01
     JS_EVENT_AXIS   = 0x02
 
-    def __init__(self, device="/dev/input/js0", deadzone=0.05):
+    def __init__(self, device=None, deadzone=0.05):
+        if device is None:
+                    devices = sorted(glob.glob("/dev/input/js*"))
+                    if not devices:
+                        raise RuntimeError("No joystick device found in /dev/input/js*")
+                    device = devices[0]
+
         self.device = device
         self.deadzone = deadzone
 
