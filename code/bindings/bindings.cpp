@@ -3,6 +3,7 @@
 #include <eigenpy/eigenpy.hpp>
 
 #include <pinocchio/parsers/urdf.hpp>
+#include <pinocchio/multibody/fwd.hpp>
 
 #include <sqp_solver/sqp_solver.h>
 #include <hpipm_common.h>
@@ -107,6 +108,12 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     eigenpy::enableEigenPy();
     eigenpy::enableEigenPySpecific<Eigen::Matrix<double,6,1>>();
     eigenpy::enableEigenPySpecific<Eigen::Matrix<double,6,6>>();
+
+    // ── ReferenceFrame enum ────────────────────────────────────────────────────
+    bp::enum_<pinocchio::ReferenceFrame>("ReferenceFrame")
+        .value("LOCAL",   pinocchio::ReferenceFrame::LOCAL)
+        .value("WORLD",   pinocchio::ReferenceFrame::WORLD)
+        .value("LOCAL_WORLD_ALIGNED",   pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED);
 
     // ── hpipm_mode enum ────────────────────────────────────────────────────
     bp::enum_<hpipm_mode>("hpipm_mode")

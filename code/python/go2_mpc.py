@@ -308,6 +308,7 @@ def main():
 
         # Costs
         base_velocity.append(sqp.FrameVelocityCost("base", weight=2.))
+        base_velocity[k].set_re_reference_frame(sqp.ReferenceFrame.LOCAL)
         node.add_cost(base_velocity[k])
 
         node.add_cost(sqp.ConfigurationCost(q0, 1.))
@@ -327,6 +328,7 @@ def main():
     node.set_active_contacts(contact_sequence[N-1])
 
     base_velocity.append(sqp.FrameVelocityCost("base", weight=5.))
+    base_velocity[N-1].set_re_reference_frame(sqp.ReferenceFrame.LOCAL)
     node.add_cost(base_velocity[-1])
 
     node.add_cost(sqp.VelocityCost(1e-6))
