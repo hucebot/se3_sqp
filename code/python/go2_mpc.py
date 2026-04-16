@@ -10,13 +10,17 @@ import threading
 import pinocchio
 import struct
 import glob
+import fcntl
+import array
 
 class JoystickJS0:
     """
-    Minimal Linux joystick reader for /dev/input/js0.
+    Minimal Linux joystick reader for /dev/input/js*.
 
     Provides:
         vx, vy, wz in [-1, 1]
+
+    Axis mapping is detected automatically using JSIOCGAXMAP.
     """
 
     JS_EVENT_FORMAT = "IhBB"
@@ -25,12 +29,22 @@ class JoystickJS0:
     JS_EVENT_BUTTON = 0x01
     JS_EVENT_AXIS   = 0x02
 
+    JSIOCGAXES  = 0x80016a11
+    JSIOCGAXMAP = 0x80406a32
+
+    # Linux ABS axis codes
+    ABS_X  = 0x00
+    ABS_Y  = 0x01
+    ABS_RX = 0x03
+    ABS_RY = 0x04
+
     def __init__(self, device=None, deadzone=0.05):
+
         if device is None:
-                    devices = sorted(glob.glob("/dev/input/js*"))
-                    if not devices:
-                        raise RuntimeError("No joystick device found in /dev/input/js*")
-                    device = devices[0]
+            devices = sorted(glob.glob("/dev/input/js*"))
+            if not devices:
+                raise RuntimeError("No joystick device found in /dev/input/js*")
+            device = devices[0]
 
         self.device = device
         self.deadzone = deadzone
@@ -41,6 +55,43 @@ class JoystickJS0:
 
         self._running = False
         self._thread = None
+
+        # axis indices (detected automatically)
+        self.ax_left_x = None
+        self.ax_left_y = None
+        self.ax_right_x = None
+
+        self._detect_axis_mapping()
+
+    def _detect_axis_mapping(self):
+        """Query joystick axis map from kernel."""
+        try:
+            with open(self.device, "rb") as js:
+
+                # number of axes
+                buf = array.array('B', [0])
+                fcntl.ioctl(js, self.JSIOCGAXES, buf)
+                num_axes = buf[0]
+
+                # axis map
+                buf = array.array('B', [0] * 0x40)
+                fcntl.ioctl(js, self.JSIOCGAXMAP, buf)
+
+                axis_map = buf[:num_axes]
+
+                axis_index = {code: i for i, code in enumerate(axis_map)}
+
+                self.ax_left_x  = axis_index.get(self.ABS_X)
+                self.ax_left_y  = axis_index.get(self.ABS_Y)
+                self.ax_right_x = axis_index.get(self.ABS_RX)
+
+                print("[Joystick] axis mapping:")
+                print("  left_x :", self.ax_left_x)
+                print("  left_y :", self.ax_left_y)
+                print("  right_x:", self.ax_right_x)
+
+        except Exception as e:
+            print(f"[Joystick] axis detection failed: {e}")
 
     def start(self):
         """Start background reader thread."""
@@ -66,7 +117,9 @@ class JoystickJS0:
             with open(self.device, "rb") as js:
 
                 while self._running:
+
                     ev_buf = js.read(self.JS_EVENT_SIZE)
+
                     if not ev_buf:
                         time.sleep(0.001)
                         continue
@@ -78,20 +131,19 @@ class JoystickJS0:
                     v = value / 32767.0
                     v = self._apply_deadzone(v)
 
-                    if etype == self.JS_EVENT_AXIS:
+                    if etype & self.JS_EVENT_AXIS:
 
-                        # Xbox / Linux standard mapping
-                        if number == 0:      # left stick X
+                        if number == self.ax_left_x:
                             self.vy = v
 
-                        elif number == 1:    # left stick Y
+                        elif number == self.ax_left_y:
                             self.vx = -v
 
-                        elif number == 2:    # right stick X
+                        elif number == self.ax_right_x:
                             self.wz = v
 
         except Exception as e:
-            print(f"[JoystickJS0] Error: {e}")
+            print(f"[Joystick] Error: {e}")
             self._running = False
 
 class rvizer:
@@ -272,7 +324,7 @@ def main():
         node.add_contact(foot)
         node.add_cost(sqp.StepCost(frame_name=foot, step_height_ref=0.05, ground_ref= 0.0, weight=20.))
 
-    node.set_active_contacts(contact_sequence[k])
+    node.set_active_contacts(contact_sequence[N-1])
 
     base_velocity.append(sqp.FrameVelocityCost("base", weight=5.))
     node.add_cost(base_velocity[-1])
@@ -328,6 +380,8 @@ def main():
         # send to robot
         for bv in base_velocity:
             bv.set_ref(np.array([vx, vy, 0., 0., 0., wz]))
+
+
 
         # Update contact schedule
         contact_sequence = scheduler.getSequence(dt, "trot", N, t);
