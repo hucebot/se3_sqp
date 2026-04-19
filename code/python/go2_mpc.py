@@ -37,6 +37,10 @@ class JoystickJS0:
     ABS_Y  = 0x01
     ABS_RX = 0x03
     ABS_RY = 0x04
+    ABS_Z  = 0x02
+    ABS_RZ = 0x05
+
+    RIGHT_X_CANDIDATES = [ABS_RX, ABS_Z, ABS_RZ]
 
     def __init__(self, device=None, deadzone=0.05):
 
@@ -81,14 +85,21 @@ class JoystickJS0:
 
                 axis_index = {code: i for i, code in enumerate(axis_map)}
 
-                self.ax_left_x  = axis_index.get(self.ABS_X)
-                self.ax_left_y  = axis_index.get(self.ABS_Y)
-                self.ax_right_x = axis_index.get(self.ABS_RX)
+                self.ax_left_x = axis_index.get(self.ABS_X)
+                self.ax_left_y = axis_index.get(self.ABS_Y)
+
+                # detect right stick X among candidates
+                self.ax_right_x = None
+                for code in self.RIGHT_X_CANDIDATES:
+                    if code in axis_index:
+                        self.ax_right_x = axis_index[code]
+                        break
 
                 print("[Joystick] axis mapping:")
-                print("  left_x :", self.ax_left_x)
-                print("  left_y :", self.ax_left_y)
-                print("  right_x:", self.ax_right_x)
+                print("  axis_map :", axis_map)
+                print("  left_x   :", self.ax_left_x)
+                print("  left_y   :", self.ax_left_y)
+                print("  right_x  :", self.ax_right_x)
 
         except Exception as e:
             print(f"[Joystick] axis detection failed: {e}")
@@ -305,6 +316,7 @@ def main():
             node.add_cost(sqp.ForceCost(frame_name=foot, weight=1e-9))
             node.add_cost(sqp.StepCost(frame_name=foot, step_height_ref=0.05, ground_ref= 0.0, weight=2.))
 
+        node.add_constraint(sqp.JointLimitsConstraint())
 
         # Costs
         base_velocity.append(sqp.FrameVelocityCost("base", weight=2.))
@@ -323,13 +335,17 @@ def main():
     node = sqp.Node(model)
     for foot in feet:
         node.add_contact(foot)
-        node.add_cost(sqp.StepCost(frame_name=foot, step_height_ref=0.05, ground_ref= 0.0, weight=20.))
-
     node.set_active_contacts(contact_sequence[N-1])
 
+    for foot in feet:
+        node.add_constraint(sqp.ContactConstraint(foot));
+        node.add_cost(sqp.StepCost(frame_name=foot, step_height_ref=0.05, ground_ref= 0.0, weight=2.))
+
     base_velocity.append(sqp.FrameVelocityCost("base", weight=5.))
-    base_velocity[N-1].set_re_reference_frame(sqp.ReferenceFrame.LOCAL)
+    base_velocity[-1].set_re_reference_frame(sqp.ReferenceFrame.LOCAL)
     node.add_cost(base_velocity[-1])
+
+    node.add_constraint(sqp.JointLimitsConstraint())
 
     node.add_cost(sqp.VelocityCost(1e-6))
     node.add_cost(sqp.ConfigurationCost(q0, 1.))
@@ -357,17 +373,18 @@ def main():
 
     solver.solve()
 
-    solver_mpc = sqp.SQPSolver(ocp=ocp, mode=sqp.hpipm_mode.BALANCE)
+    solver_mpc = sqp.SQPSolver(ocp=ocp, mode=sqp.hpipm_mode.SPEED_ABS)
 
     opts = sqp.SQPoptions()
     opts.max_sqp_iters = 1
-    opts.verbose = 0
+    #opts.verbose = 0
     opts.hpipm_warm_start = True
     opts.hpipm_tol_eq = 1e-3
     opts.hpipm_tol_ineq = 1e-3
     opts.hpipm_tol_stat = 1e-3
     opts.hpipm_tol_comp = 1e-3
     opts.ls_type = sqp.LSType.MERIT
+    opts.eps_inequality = 1e-3
     solver_mpc.set_options(opts)
 
     t = 0.
@@ -390,12 +407,12 @@ def main():
         for k in range(N):
             ocp.get_node(k).set_active_contacts(contact_sequence[k]);
 
-
-        solver_mpc.solve(ocp.x_traj()[1][:])
+        solver_mpc.solve(ocp.x_traj()[0][:])
         t+=dt
 
         q1 = ocp.x_traj()[1][0:model.nq]
         v1 = ocp.x_traj()[1][model.nq:]
+
 
 
         u0 = ocp.u_traj()[0]
@@ -413,6 +430,13 @@ def main():
             rviz.viser_urdf.update_cfg(q1[7:])
             rviz.update_forces(contact_forces, scale = 0.01)
         rviz.server.flush()
+
+
+        for k in range(N-2):
+            ocp.get_node(k).q()[:] = ocp.get_node(k+1).q()[:]
+            ocp.get_node(k).v()[:] = ocp.get_node(k+1).v()[:]
+            ocp.get_node(k).u()[:] = ocp.get_node(k+1).u()[:]
+
 
         time.sleep(0.01)
 
