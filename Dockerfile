@@ -186,8 +186,13 @@ RUN ldconfig
 
 WORKDIR /workspace
 
-RUN apt-get update && apt-get install -y x11-apps terminator
-
+RUN rm -rf /var/lib/apt/lists/* && \
+    apt-get clean && \
+    apt-get update --fix-missing && \
+    apt-get install -y --no-install-recommends \
+        x11-apps terminator && \
+    rm -rf /var/lib/apt/lists/*
+    
 RUN apt update && apt install -y \
     libxcb-cursor0 \
     libxcb-icccm4 \
@@ -195,8 +200,9 @@ RUN apt update && apt install -y \
     libxcb-keysyms1 \
     libxcb-render-util0 \
     libxcb-xinerama0 \
+    libxcb-shape0 \
     libxcb-xkb1 \
     libxkbcommon-x11-0 \
-    libegl1
-
+    libgl1 libglx0 libegl1 
+    
 CMD ["/bin/bash"]
