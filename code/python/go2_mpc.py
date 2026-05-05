@@ -247,7 +247,7 @@ def main():
     scheduler.addPhase(["FL_RR"], stance_duration, "trot")         # FR+RL stance
 
     # Generate contact sequence for 2 full gait cycles
-    N = 10;
+    N = 20;
     contact_sequence = scheduler.getSequence(sampling_rate=dt, sequence_name="trot", nodes_number=N)
 
     print(f"Horizon: N={N}  nodes={N}   T={N*dt}")
