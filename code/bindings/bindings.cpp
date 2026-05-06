@@ -3,8 +3,10 @@
 #include <eigenpy/eigenpy.hpp>
 
 #include <pinocchio/parsers/urdf.hpp>
+#include <pinocchio/multibody/fwd.hpp>
 
 #include <sqp_solver/sqp_solver.h>
+#include <hpipm_common.h>
 #include <trajopt/ocp.h>
 #include <trajopt/node.h>
 #include <trajopt/scheduler.h>
@@ -12,10 +14,13 @@
 #include <trajopt/costs/configuration_cost.h>
 #include <trajopt/costs/velocity_cost.h>
 #include <trajopt/costs/acceleration_cost.h>
+#include <trajopt/costs/torque_cost.h>
 #include <trajopt/costs/frame_translation_cost.h>
 #include <trajopt/costs/frame_orientation_cost.h>
 #include <trajopt/costs/frame_velocity_cost.h>
 #include <trajopt/costs/frame_acceleration_cost.h>
+#include <trajopt/costs/force_cost.h>
+#include <trajopt/costs/step_cost.h>
 #include <trajopt/constraints/abstract_constraint.h>
 #include <trajopt/constraints/inverse_dynamics.h>
 #include <trajopt/constraints/joint_limits_constraint.h>
@@ -70,6 +75,12 @@ static void stats_print(const SQPstatistics& s, int verbosity) {
     s.print(verbosity);
 }
 
+static bp::list stats_per_node_violation(const SQPstatistics& s) {
+    bp::list result;
+    for (double v : s.per_node_violation) result.append(v);
+    return result;
+}
+
 // ============================================================================
 // Module definition
 // ============================================================================
@@ -102,6 +113,21 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     // Enable eigenpy Eigen <-> numpy converters
     eigenpy::enableEigenPy();
     eigenpy::enableEigenPySpecific<Eigen::Matrix<double,6,1>>();
+    eigenpy::enableEigenPySpecific<Eigen::Matrix<double,6,6>>();
+
+    // ── ReferenceFrame enum ────────────────────────────────────────────────────
+    bp::enum_<pinocchio::ReferenceFrame>("ReferenceFrame")
+        .value("LOCAL",   pinocchio::ReferenceFrame::LOCAL)
+        .value("WORLD",   pinocchio::ReferenceFrame::WORLD)
+        .value("LOCAL_WORLD_ALIGNED",   pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED);
+
+    // ── hpipm_mode enum ────────────────────────────────────────────────────
+    bp::enum_<hpipm_mode>("hpipm_mode")
+        .value("BALANCE",   hpipm_mode::BALANCE)
+        .value("ROBUST",   hpipm_mode::ROBUST)
+        .value("SPEED",   hpipm_mode::SPEED)
+        .value("SPEED_ABS",   hpipm_mode::SPEED_ABS);
+
 
     // ── LSType enum ────────────────────────────────────────────────────────
     bp::enum_<LSType>("LSType")
@@ -123,6 +149,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def_readwrite("regularization_scale", &SQPoptions::regularization_scale)
         .def_readwrite("eps_inequality",       &SQPoptions::eps_inequality)
         .def_readwrite("verbose",              &SQPoptions::verbose)
+        .def_readwrite("print_per_node_violation", &SQPoptions::print_per_node_violation)
         .def_readwrite("hpipm_iter_max",       &SQPoptions::hpipm_iter_max)
         .def_readwrite("hpipm_tol_stat",       &SQPoptions::hpipm_tol_stat)
         .def_readwrite("hpipm_tol_eq",         &SQPoptions::hpipm_tol_eq)
@@ -144,6 +171,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def_readonly("qp_iterations",              &SQPstatistics::qp_iterations)
         .def_readonly("total_time_ms",              &SQPstatistics::total_time_ms)
         .def_readonly("last_iteration_time_ms",     &SQPstatistics::last_iteration_time_ms)
+        .add_property("per_node_violation",         &stats_per_node_violation)
         .def("print", &stats_print, (bp::arg("verbosity") = 1));
 
     // ── AbstractFunction class ──────────────────────────────────────────────
@@ -200,6 +228,30 @@ BOOST_PYTHON_MODULE(sqp_solver) {
     bp::implicitly_convertible<std::shared_ptr<AccelerationCost>,
                                std::shared_ptr<AbstractCost>>();
 
+    // ForceCost
+    bp::class_<ForceCost, bp::bases<AbstractCost>,
+               std::shared_ptr<ForceCost>>("ForceCost",
+        bp::init<const std::string&, const Eigen::Vector3d&, double>(
+              (bp::arg("frame_name"),
+               bp::arg("f_ref") = Eigen::Vector3d(Eigen::Vector3d::Zero()),
+               bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, const Eigen::Vector3d&, const Matrix3d&>(
+            (bp::arg("frame_name"), bp::arg("f_ref"), bp::arg("weight"))))
+        .def("set_ref", &ForceCost::set_ref)
+        .def("get_ref", &ForceCost::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>());
+    bp::implicitly_convertible<std::shared_ptr<ForceCost>,
+                               std::shared_ptr<AbstractCost>>();
+
+    // TorqueCost
+    bp::class_<TorqueCost, bp::bases<AbstractCost>,
+               std::shared_ptr<TorqueCost>>("TorqueCost",
+        bp::init<bp::optional<double>>((bp::arg("weight") = 1.0)))
+        .def(bp::init<const VectorXd&, double>(
+            (bp::arg("tau_ref"), bp::arg("weight") = 1.0)));
+    bp::implicitly_convertible<std::shared_ptr<TorqueCost>,
+                               std::shared_ptr<AbstractCost>>();
+
     // FrameTranslationCost
     bp::class_<FrameTranslationCost, bp::bases<AbstractCost>,
                std::shared_ptr<FrameTranslationCost>>("FrameTranslationCost",
@@ -207,7 +259,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
             (bp::arg("frame_name"),
              bp::arg("p_ref") = Eigen::Vector3d(Eigen::Vector3d::Zero()),
              bp::arg("weight") = 1.0)))
-        .def(bp::init<const std::string&, const Eigen::Vector3d&, const MatrixXd&>(
+        .def(bp::init<const std::string&, const Eigen::Vector3d&, const Matrix3d&>(
             (bp::arg("frame_name"), bp::arg("p_ref"), bp::arg("weight"))))
         .def("set_ref", &FrameTranslationCost::set_ref)
         .def("get_ref", &FrameTranslationCost::get_ref,
@@ -222,7 +274,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
             (bp::arg("frame_name"),
              bp::arg("R_ref") = Eigen::Matrix3d(Eigen::Matrix3d::Identity()),
              bp::arg("weight") = 1.0)))
-        .def(bp::init<const std::string&, const Eigen::Matrix3d&, const MatrixXd&>(
+        .def(bp::init<const std::string&, const Eigen::Matrix3d&, const Matrix3d&>(
             (bp::arg("frame_name"), bp::arg("R_ref"), bp::arg("weight"))))
         .def("set_ref", &FrameOrientationCost::set_ref)
         .def("get_ref", &FrameOrientationCost::get_ref,
@@ -237,7 +289,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
             (bp::arg("frame_name"),
              bp::arg("v_ref") = Vector6d(Vector6d::Zero()),
              bp::arg("weight") = 1.0)))
-        .def(bp::init<const std::string&, const Vector6d&, const MatrixXd&>(
+        .def(bp::init<const std::string&, const Vector6d&, const Matrix6d&>(
             (bp::arg("frame_name"), bp::arg("v_ref")=Vector6d(Vector6d::Zero()), bp::arg("weight"))))
         .def("set_ref", &FrameVelocityCost::set_ref)
         .def("get_ref", &FrameVelocityCost::get_ref,
@@ -253,13 +305,30 @@ BOOST_PYTHON_MODULE(sqp_solver) {
                                                        (bp::arg("frame_name"),
                                                         bp::arg("a_ref") = Vector6d(Vector6d::Zero()),
                                                         bp::arg("weight") = 1.0)))
-        .def(bp::init<const std::string&, const Vector6d&, const MatrixXd&>(
+        .def(bp::init<const std::string&, const Vector6d&, const Matrix6d&>(
             (bp::arg("frame_name"), bp::arg("a_ref"), bp::arg("weight"))))
         .def("set_ref", &FrameAccelerationCost::set_ref)
         .def("get_ref", &FrameAccelerationCost::get_ref,
              bp::return_value_policy<bp::copy_const_reference>())
         .def("set_re_reference_frame", &FrameAccelerationCost::set_re_reference_frame),
     bp::implicitly_convertible<std::shared_ptr<FrameAccelerationCost>,
+                               std::shared_ptr<AbstractCost>>();
+
+    // StepCost
+    bp::class_<StepCost, bp::bases<AbstractCost>,
+               std::shared_ptr<StepCost>>("StepCost",
+        bp::init<const std::string&, double, double, double>(
+                                                          (bp::arg("frame_name"),
+                                                           bp::arg("step_height_ref"),
+                                                           bp::arg("ground_ref"),
+                                                           bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, double, double, const Matrix3d&>(
+            (bp::arg("frame_name"), bp::arg("step_height_ref"), bp::arg("ground_ref"), bp::arg("weight"))))
+        .def("set_ref", &StepCost::set_ref)
+        .def("get_ref", &StepCost::get_ref)
+        .def("set_ground_ref", &StepCost::set_ground_ref)
+        .def("get_ground_ref", &StepCost::get_ground_ref);
+    bp::implicitly_convertible<std::shared_ptr<StepCost>,
                                std::shared_ptr<AbstractCost>>();
 
     // ── Constraints ────────────────────────────────────────────────────────
@@ -396,9 +465,9 @@ BOOST_PYTHON_MODULE(sqp_solver) {
              (bp::arg("filepath"), bp::arg("dt") = 0.0, bp::arg("urdf_path") = ""));
 
     // ── SQPSolver ──────────────────────────────────────────────────────────
-    bp::class_<SQPSolver, boost::noncopyable>("SQPSolver", bp::init<OCP&>())
+    bp::class_<SQPSolver, boost::noncopyable>("SQPSolver",bp::init<OCP&, bp::optional<hpipm_mode>>(
+            (bp::arg("ocp"), bp::arg("mode") = hpipm_mode::ROBUST)))
         .def("set_options", &SQPSolver::set_options)
-        .def("solve",       &SQPSolver::solve, bp::arg("x0") = Eigen::VectorXd(0))
-        .def("get_stats",   &SQPSolver::get_stats,
-             bp::return_internal_reference<>());
+        .def("solve", &SQPSolver::solve, bp::arg("x0") = Eigen::VectorXd(0))
+        .def("get_stats", &SQPSolver::get_stats, bp::return_internal_reference<>());
 }

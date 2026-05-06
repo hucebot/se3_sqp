@@ -20,6 +20,7 @@ void SQPstatistics::reset()
     qp_iterations = 0;
     total_time_ms = 0.0;
     last_iteration_time_ms = 0.0;
+    per_node_violation.clear();
 }
 
 void SQPstatistics::print(int verbosity) const
@@ -77,11 +78,19 @@ void SQPstatistics::print_internal(std::ostream& os, int verbosity) const
         if (mpc_step % 10 == 0)
         {
             os << std::setw(5) << "SQPi"
-               << std::setw(10) << "t(ms)" << std::endl;
+               << std::setw(10) << "t(ms)"
+               << std::setw(10) << "Cost"
+               << std::setw(10) << "Violation"
+               << std::setw(10) << "Defect"
+               << std::setw(10) << "DualInf" << std::endl;
         }
         os << std::fixed << std::setprecision(3)
            << std::setw(5)  << number_of_iterations
-           << std::setw(10) << total_time_ms << std::endl;
+           << std::setw(10) << total_time_ms 
+           << std::setw(10) << total_cost
+           << std::setw(10) << total_constraint_violation
+           << std::setw(10) << total_dynamics_defect
+           << std::setw(10) << dual_infeasibility << std::endl;
         ++mpc_step;
     }
     else if (verbosity == 2)
@@ -102,6 +111,14 @@ void SQPstatistics::print_internal(std::ostream& os, int verbosity) const
         }
         os << "  Last Iteration Time:    " << std::fixed << std::setprecision(3) << last_iteration_time_ms << " ms" << std::endl;
         os << "  Total Time:             " << std::setprecision(3) << total_time_ms / 1000.0 << " s" << std::endl;
+    }
+
+    if (print_per_node_violation && !per_node_violation.empty()) {
+        os << std::scientific << std::setprecision(2);
+        os << "  Nodes:";
+        for (double v : per_node_violation)
+            os << std::setw(10) << v;
+        os << std::endl;
     }
 }
 
@@ -161,4 +178,9 @@ void SQPstatistics::update_qp_info(int status, int iters)
 {
     qp_status = status;
     qp_iterations = iters;
+}
+
+void SQPstatistics::update_per_node_violations(const std::vector<double>& violations)
+{
+    per_node_violation = violations;
 }

@@ -33,7 +33,7 @@ class FrameOrientationCost : public AbstractCost {
 
     FrameOrientationCost(const std::string& frame_name,
                          const Eigen::Matrix3d& R_ref,
-                         const MatrixXd& weight);
+                         const Matrix3d& weight);
 
     void set_node(Node* node) override { AbstractCost::set_node(node); _fo.set_node(node); }
 

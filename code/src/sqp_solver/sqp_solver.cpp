@@ -4,7 +4,9 @@
 #include <cmath>
 #include <iostream>
 
-SQPSolver::SQPSolver(OCP& ocp): _ocproblem(ocp) { init(); }
+SQPSolver::SQPSolver(OCP& ocp, const hpipm_mode mode): _ocproblem(ocp), _hpipm_mode(mode) {
+    init(mode);
+}
 
 SQPSolver::~SQPSolver() {
     // HPIPM memory automatically freed by HPIPMSolver destructor
@@ -21,7 +23,10 @@ void SQPSolver::set_options(const SQPoptions& opts) {
     _qp_solver.set_tol(_opts.hpipm_tol_stat, _opts.hpipm_tol_eq,
                        _opts.hpipm_tol_ineq, _opts.hpipm_tol_comp);
     _qp_solver.set_warm_start(_opts.hpipm_warm_start);
+    _stats.print_per_node_violation = _opts.print_per_node_violation;
     _opts.print();
+    if(_opts.verbose != 0)
+        std::cout << "  HPIPM mode:        " << _hpipm_mode << std::endl;
 }
 
 void SQPSolver::solve(const Eigen::VectorXd& x0) {
@@ -90,6 +95,13 @@ void SQPSolver::solve(const Eigen::VectorXd& x0) {
         _stats.update_cost( _candidate_cost);
         _stats.update_constraint_violation( _candidate_viol);
         _stats.update_dynamics_defect( _candidate_defect);
+
+        if (_opts.print_per_node_violation) {
+            std::vector<double> node_viols(_N);
+            for (int k = 0; k < _N; k++)
+                node_viols[k] = _ocproblem.get_node(k).get_constraint_violation();
+            _stats.update_per_node_violations(node_viols);
+        }
         
 
         PROFILE_PRINT("  Lin", iter_linearize_ms);
@@ -101,7 +113,7 @@ void SQPSolver::solve(const Eigen::VectorXd& x0) {
     else if (_opts.verbose == 2) _stats.print(1);
 }
 
-void SQPSolver::init() {
+void SQPSolver::init(const hpipm_mode mode) {
     _N = _ocproblem.num_nodes();
     _ls_alpha = 1.0;
     _current_reg = _opts.regularization;
@@ -233,7 +245,7 @@ void SQPSolver::init() {
 
 
     // std::cout<<"allocating hpipm"<<std::endl;
-    _qp_solver.allocate();
+    _qp_solver.allocate(mode);
     // std::cout<<"allocated hpipm"<<std::endl;
 
 

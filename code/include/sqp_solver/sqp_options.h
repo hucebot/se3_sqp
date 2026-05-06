@@ -17,6 +17,7 @@ struct SQPoptions {
     double eps_inequality;  // eps_inequality is added on upper and lower bounds
 
     int verbose;  // 0=silent, 1=per-iteration + final summary, 2=final only (MPC)
+    bool print_per_node_violation;  // if true, print per-node violations at every iteration
 
     // HPIPM inner QP solver settings
     int    hpipm_iter_max;

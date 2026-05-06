@@ -7,7 +7,7 @@ IMAGE_NAME="sqp-solver:latest"
 WORKSPACE_DIR="$(pwd)"
 
 # Allow docker root to access X server
-xhost +SI:localuser:root
+xhost +local:
 
 # Check if container exists and is running
 if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -26,11 +26,14 @@ else
     --ipc=host \
     --name "${CONTAINER_NAME}" \
     -v "${WORKSPACE_DIR}:/workspace" \
+    -v /dev/input/:/dev/input/ \
     -v /home/enrico/Qt/:/home/Qt \
     -v /tmp/.X11-unix:/tmp/.X11-unix \
     -e DISPLAY=$DISPLAY \
     -e QT_X11_NO_MITSHM=1 \
     -w /workspace \
+    -p 8080:8080 \
+    --network host \
     "${IMAGE_NAME}" \
     /bin/bash
 fi

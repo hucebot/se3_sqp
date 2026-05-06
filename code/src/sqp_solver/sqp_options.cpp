@@ -19,6 +19,7 @@ void SQPoptions::defaults()
     regularization_scale = 1e3;
     eps_inequality = 1e-4;
     verbose = 1;
+    print_per_node_violation = false;
     hpipm_iter_max   = 1000;
     hpipm_tol_stat   = 1e-4;
     hpipm_tol_eq     = 1e-8;
@@ -39,6 +40,7 @@ void SQPoptions::print() const
     std::cout << "  Regularization scale:  " << regularization_scale << std::endl;
     std::cout << "  Eps inequality:             " << eps_inequality << std::endl;
     std::cout << "  Verbose:               " << verbose << std::endl;
+    std::cout << "  Per-node violation:    " << (print_per_node_violation ? "yes" : "no") << std::endl;
     std::cout << "  Linesearch type:       " << ls_name << std::endl;
     if (ls_type != LSType::NONE) {
         std::cout << "  Max linesearch iters:  " << max_ls_iters << std::endl;

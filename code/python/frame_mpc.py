@@ -225,7 +225,7 @@ def main():
 
     while True:
         #ocp.x_traj()[0][:] = ocp.x_traj()[1][:]
-        solver.solve(ocp.x_traj()[1][:])
+        solver.solve(ocp.x_traj()[0][:])
 
         q1 = ocp.x_traj()[1][0:model.nq]
         v1 = ocp.x_traj()[1][model.nq:]
@@ -238,6 +238,11 @@ def main():
         rviz.base_frame.wxyz = np.array([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]])
 
         v_plot.update(v1)
+
+        for k in range(N-2):
+            ocp.get_node(k).q()[:] = ocp.get_node(k+1).q()[:]
+            ocp.get_node(k).v()[:] = ocp.get_node(k+1).v()[:]
+            ocp.get_node(k).u()[:] = ocp.get_node(k+1).u()[:]
 
         time.sleep(dt)
 

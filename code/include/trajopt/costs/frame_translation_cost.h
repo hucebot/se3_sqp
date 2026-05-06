@@ -19,7 +19,7 @@ class FrameTranslationCost : public AbstractCost {
 
     FrameTranslationCost(const std::string& frame_name,
                          const Eigen::Vector3d& p_ref,
-                         const MatrixXd& weight);
+                         const Matrix3d& weight);
 
     void set_node(Node* node) override { AbstractCost::set_node(node); _ft.set_node(node); }
 

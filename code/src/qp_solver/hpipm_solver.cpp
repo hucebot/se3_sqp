@@ -51,7 +51,7 @@ void HPIPMSolver::init_stage(int k, int nx, int nu, int ng, int nbx, int nbu) {
 }
 
 
-void HPIPMSolver::allocate(){
+void HPIPMSolver::allocate(const hpipm_mode mode){
 
     // Allocate QP problem structure
     int qp_size = d_ocp_qp_memsize(&_qp_dim);
@@ -69,7 +69,7 @@ void HPIPMSolver::allocate(){
     d_ocp_qp_ipm_arg_create(&_qp_dim, &_qp_arg, _arg_mem);
 
     // Set default IPM mode (SPEED, BALANCE, or ROBUST)
-    d_ocp_qp_ipm_arg_set_default(ROBUST, &_qp_arg);
+    d_ocp_qp_ipm_arg_set_default(mode, &_qp_arg);
 
     // Allocate workspace (size depends on arg settings)
     int ws_size = d_ocp_qp_ipm_ws_memsize(&_qp_dim, &_qp_arg);

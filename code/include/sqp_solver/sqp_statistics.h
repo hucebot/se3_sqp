@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <chrono>
+#include <vector>
 
 struct SQPstatistics {
     int number_of_iterations;
@@ -14,6 +15,9 @@ struct SQPstatistics {
     int linesearch_iterations;
     int qp_status;          // HPIPM convergence status (0=success, 1=max_iter, 2=min_step, 3=NaN)
     int qp_iterations;      // Number of IPM iterations in last QP solve
+
+    std::vector<double> per_node_violation;  // constraint violation per node, k=0..N-1
+    bool print_per_node_violation = false;   // set from SQPoptions; controls per-node print
 
     // Timing
     double total_time_ms;
@@ -41,6 +45,7 @@ struct SQPstatistics {
     void update_dual_infeasibility(double dual_infeas);
     void update_linesearch_iterations(int ls_iter);
     void update_qp_info(int status, int iters);
+    void update_per_node_violations(const std::vector<double>& violations);
 
     // Timing functions
     void start_timer();
