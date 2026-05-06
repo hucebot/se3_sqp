@@ -7,7 +7,6 @@ InvDynamicsFunction::InvDynamicsFunction() : AbstractFunction() {
 
 void InvDynamicsFunction::allocate_dims() {
     int nv = _node->nv();
-    int nc = _node->n_contacts();
 
     _output_dim = nv;
     _input_dim = _node->ndx() + _node->ndu();  // [q_k, v_k, a_k, f_1, ..., f_nc]
