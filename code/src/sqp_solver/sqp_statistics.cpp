@@ -77,11 +77,19 @@ void SQPstatistics::print_internal(std::ostream& os, int verbosity) const
         if (mpc_step % 10 == 0)
         {
             os << std::setw(5) << "SQPi"
-               << std::setw(10) << "t(ms)" << std::endl;
+               << std::setw(10) << "t(ms)"
+               << std::setw(10) << "Cost"
+               << std::setw(10) << "Violation"
+               << std::setw(10) << "Defect"
+               << std::setw(10) << "DualInf" << std::endl;
         }
         os << std::fixed << std::setprecision(3)
            << std::setw(5)  << number_of_iterations
-           << std::setw(10) << total_time_ms << std::endl;
+           << std::setw(10) << total_time_ms 
+           << std::setw(10) << total_cost
+           << std::setw(10) << total_constraint_violation
+           << std::setw(10) << total_dynamics_defect
+           << std::setw(10) << dual_infeasibility << std::endl;
         ++mpc_step;
     }
     else if (verbosity == 2)
