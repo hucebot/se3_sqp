@@ -7,7 +7,6 @@ from yourdfpy import URDF
 from viser.extras import ViserUrdf
 import time
 import threading
-import pinocchio
 import struct
 import glob
 import fcntl
