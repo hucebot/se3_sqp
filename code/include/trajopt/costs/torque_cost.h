@@ -20,7 +20,7 @@ private:
 
 public:
     explicit TorqueCost(const VectorXd& tau_ref, double weight = 1.0);
-    TorqueCost(const VectorXd& a_ref, const MatrixXd& weight);
+    TorqueCost(const VectorXd& tau_ref, const MatrixXd& weight);
     explicit TorqueCost(double weight = 1.0);
 
     void set_node(Node* node) override { AbstractCost::set_node(node); _id.set_node(node); }
