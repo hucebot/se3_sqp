@@ -23,6 +23,7 @@ void SQPSolver::set_options(const SQPoptions& opts) {
     _qp_solver.set_tol(_opts.hpipm_tol_stat, _opts.hpipm_tol_eq,
                        _opts.hpipm_tol_ineq, _opts.hpipm_tol_comp);
     _qp_solver.set_warm_start(_opts.hpipm_warm_start);
+    _stats.print_per_node_violation = _opts.print_per_node_violation;
     _opts.print();
     if(_opts.verbose != 0)
         std::cout << "  HPIPM mode:        " << _hpipm_mode << std::endl;
@@ -94,6 +95,13 @@ void SQPSolver::solve(const Eigen::VectorXd& x0) {
         _stats.update_cost( _candidate_cost);
         _stats.update_constraint_violation( _candidate_viol);
         _stats.update_dynamics_defect( _candidate_defect);
+
+        if (_opts.print_per_node_violation) {
+            std::vector<double> node_viols(_N);
+            for (int k = 0; k < _N; k++)
+                node_viols[k] = _ocproblem.get_node(k).get_constraint_violation();
+            _stats.update_per_node_violations(node_viols);
+        }
         
 
         PROFILE_PRINT("  Lin", iter_linearize_ms);

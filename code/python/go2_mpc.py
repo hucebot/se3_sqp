@@ -234,14 +234,14 @@ import pinocchio as pin
 RESOURCES = Path(__file__).resolve().parent.parent / "resources"
 
 def main():
-    dt = 0.02
+    dt = 0.01
     feet = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 
     scheduler = sqp.ContactScheduler()
     scheduler.define_contact("FL_RR", ["FL_foot", "RR_foot"])
     scheduler.define_contact("FR_RL", ["FR_foot", "RL_foot"])
 
-    stance_duration = 0.1;  # 150ms per diagonal stance
+    stance_duration = 0.15;  # 150ms per diagonal stance
     scheduler.addPhase(["FR_RL"], stance_duration, "trot")         # FR+RL stance
     scheduler.addPhase(["FL_RR"], stance_duration, "trot")         # FR+RL stance
 
@@ -322,7 +322,7 @@ def main():
         base_velocity[k].set_re_reference_frame(sqp.ReferenceFrame.LOCAL)
         node.add_cost(base_velocity[k])
 
-        node.add_cost(sqp.ConfigurationCost(q0, 1.))
+        node.add_cost(sqp.ConfigurationCost(q0, 1e-3))
         node.add_cost(sqp.TorqueCost(1e-4))
 
         node.add_cost(sqp.VelocityCost(1e-6))
@@ -364,8 +364,8 @@ def main():
     # Solve
     solver = sqp.SQPSolver(ocp)
     opts = sqp.SQPoptions()
-    opts.max_sqp_iters = 10
-    opts.tolerance     = 5e-3
+    opts.max_sqp_iters = 100
+    opts.tolerance     = 1e-3
     #opts.ls_merit_eta  = 1e-4
     opts.ls_type       = sqp.LSType.MERIT
     solver.set_options(opts)
@@ -375,8 +375,9 @@ def main():
     solver_mpc = sqp.SQPSolver(ocp=ocp, mode=sqp.hpipm_mode.SPEED_ABS)
 
     opts = sqp.SQPoptions()
-    opts.max_sqp_iters = 1
-    #opts.verbose = 0
+    opts.max_sqp_iters = 3
+    opts.verbose = 2
+    opts.print_per_node_violation = True
     opts.hpipm_warm_start = True
     opts.hpipm_tol_eq = 1e-3
     opts.hpipm_tol_ineq = 1e-3
@@ -437,7 +438,7 @@ def main():
             ocp.get_node(k).u()[:] = ocp.get_node(k+1).u()[:]
 
 
-        time.sleep(0.01)
+        time.sleep(0.001)
 
 
 if __name__ == "__main__":

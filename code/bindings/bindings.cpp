@@ -75,6 +75,12 @@ static void stats_print(const SQPstatistics& s, int verbosity) {
     s.print(verbosity);
 }
 
+static bp::list stats_per_node_violation(const SQPstatistics& s) {
+    bp::list result;
+    for (double v : s.per_node_violation) result.append(v);
+    return result;
+}
+
 // ============================================================================
 // Module definition
 // ============================================================================
@@ -143,6 +149,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def_readwrite("regularization_scale", &SQPoptions::regularization_scale)
         .def_readwrite("eps_inequality",       &SQPoptions::eps_inequality)
         .def_readwrite("verbose",              &SQPoptions::verbose)
+        .def_readwrite("print_per_node_violation", &SQPoptions::print_per_node_violation)
         .def_readwrite("hpipm_iter_max",       &SQPoptions::hpipm_iter_max)
         .def_readwrite("hpipm_tol_stat",       &SQPoptions::hpipm_tol_stat)
         .def_readwrite("hpipm_tol_eq",         &SQPoptions::hpipm_tol_eq)
@@ -164,6 +171,7 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def_readonly("qp_iterations",              &SQPstatistics::qp_iterations)
         .def_readonly("total_time_ms",              &SQPstatistics::total_time_ms)
         .def_readonly("last_iteration_time_ms",     &SQPstatistics::last_iteration_time_ms)
+        .add_property("per_node_violation",         &stats_per_node_violation)
         .def("print", &stats_print, (bp::arg("verbosity") = 1));
 
     // ── AbstractFunction class ──────────────────────────────────────────────

@@ -20,6 +20,7 @@ void SQPstatistics::reset()
     qp_iterations = 0;
     total_time_ms = 0.0;
     last_iteration_time_ms = 0.0;
+    per_node_violation.clear();
 }
 
 void SQPstatistics::print(int verbosity) const
@@ -111,6 +112,14 @@ void SQPstatistics::print_internal(std::ostream& os, int verbosity) const
         os << "  Last Iteration Time:    " << std::fixed << std::setprecision(3) << last_iteration_time_ms << " ms" << std::endl;
         os << "  Total Time:             " << std::setprecision(3) << total_time_ms / 1000.0 << " s" << std::endl;
     }
+
+    if (print_per_node_violation && !per_node_violation.empty()) {
+        os << std::scientific << std::setprecision(2);
+        os << "  Nodes:";
+        for (double v : per_node_violation)
+            os << std::setw(10) << v;
+        os << std::endl;
+    }
 }
 
 void SQPstatistics::update()
@@ -169,4 +178,9 @@ void SQPstatistics::update_qp_info(int status, int iters)
 {
     qp_status = status;
     qp_iterations = iters;
+}
+
+void SQPstatistics::update_per_node_violations(const std::vector<double>& violations)
+{
+    per_node_violation = violations;
 }
