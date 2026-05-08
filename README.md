@@ -25,3 +25,5 @@ make -j2
 ./franka_reaching     # Franka Panda end-effector tracking
 ./go2_trot            # Unitree Go2 trotting gait
 ```
+## Aknowledgment
+This project has been funded by the ORION Educational Programme (Université de Lorraine) and partially funded by the JCJC Project ANR-24-CE33-0753-01  MeRLin.
