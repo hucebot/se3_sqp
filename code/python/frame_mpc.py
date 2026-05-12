@@ -98,8 +98,11 @@ def main():
     interactive_marker.interactive_marker(rviz.server, translation_task, orientation_task, lock)
 
     # Plot
-    #solver_plot = plotter.plot_solver_stats(rviz.server, dt)
-    v_plot = plotter.plot(title="Velocities", size=model.nv, legend_label="v", server=rviz.server, dt=dt)
+    tabs = rviz.server.gui.add_tab_group()
+    with tabs.add_tab("Solution"):
+        v_plot = plotter.plot(title="Velocities", size=model.nv, legend_label="v", server=rviz.server, dt=dt)
+    with tabs.add_tab("SQP Stats"):
+        solver_plot = plotter.plot_solver_stats(rviz.server, dt, number_of_nodes=N)
 
     while True:
         #ocp.x_traj()[0][:] = ocp.x_traj()[1][:]
@@ -117,7 +120,7 @@ def main():
             ocp.get_node(k).v()[:] = ocp.get_node(k+1).v()[:]
             ocp.get_node(k).u()[:] = ocp.get_node(k+1).u()[:]
 
-        #solver_plot.update(solver.get_stats())
+        solver_plot.update(solver.get_stats())
         time.sleep(dt)
 
 

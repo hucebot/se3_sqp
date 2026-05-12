@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import time
 from utils import joy as joystick
-from utils import rviser
+from utils import rviser, plotter
 
 
 BUILD_DIR = Path(__file__).resolve().parent.parent / "build"
@@ -158,7 +158,7 @@ def main():
     opts = sqp.SQPoptions()
     opts.max_sqp_iters = 1
     opts.verbose = 0
-    opts.print_per_node_violation = True
+    opts.print_per_node_violation = False
     opts.hpipm_warm_start = True
     opts.hpipm_tol_eq = 1e-3
     opts.hpipm_tol_ineq = 1e-3
@@ -167,6 +167,9 @@ def main():
     opts.ls_type = sqp.LSType.MERIT
     opts.eps_inequality = 1e-3
     solver_mpc.set_options(opts)
+
+    # Plots
+    solver_plot = plotter.plot_solver_stats(rviz.server, dt, number_of_nodes=N)
 
     t = 0.
     contact_forces = {}
@@ -209,7 +212,7 @@ def main():
             ocp.get_node(k).v()[:] = ocp.get_node(k+1).v()[:]
             ocp.get_node(k).u()[:] = ocp.get_node(k+1).u()[:]
 
-
+        solver_plot.update(solver_mpc.get_stats())
         time.sleep(0.001)
 
 

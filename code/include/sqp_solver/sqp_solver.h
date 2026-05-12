@@ -83,6 +83,8 @@ class SQPSolver {
     VectorXd _lbx;            // Lower bound (zeros)
     VectorXd _ubx;            // Upper bound (zeros)
 
+    std::vector<double> _node_viols; // used for logging per node constraint violation
+
     SQPstatistics _stats;
     SQPoptions _opts;
 

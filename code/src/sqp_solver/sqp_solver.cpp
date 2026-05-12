@@ -96,13 +96,12 @@ void SQPSolver::solve(const Eigen::VectorXd& x0) {
         _stats.update_constraint_violation( _candidate_viol);
         _stats.update_dynamics_defect( _candidate_defect);
 
-        if (_opts.print_per_node_violation) {
-            std::vector<double> node_viols(_N);
-            for (int k = 0; k < _N; k++)
-                node_viols[k] = _ocproblem.get_node(k).get_constraint_violation();
-            _stats.update_per_node_violations(node_viols);
-        }
-        
+
+        // Update log per node constraint violation
+        for(int k = 0; k < _N; ++k)
+            _node_viols[k] = _ocproblem.get_node(k).get_constraint_violation();
+        _stats.update_per_node_violations(_node_viols);
+
 
         PROFILE_PRINT("  Lin", iter_linearize_ms);
         PROFILE_PRINT("  LS", iter_linesearch_ms);
@@ -261,6 +260,8 @@ void SQPSolver::init(const hpipm_mode mode) {
     _qp_solver.set_warm_start(_opts.hpipm_warm_start);
 
     // std::cout<<"inited_sqp"<<std::endl;
+
+    _node_viols.resize(_N);
 }
 
 void SQPSolver::populate_qp() {
