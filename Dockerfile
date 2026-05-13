@@ -173,7 +173,8 @@ COPY --from=blasfeo-hpipm-builder /opt/hpipm-install/opt/hpipm /opt/hpipm
 # Install Python packages for visualization (NO pin - we use source-built pinocchio)
 RUN pip3 install --no-cache-dir --break-system-packages \
     viser \
-    yourdfpy
+    yourdfpy \ 
+    mujoco
 
 # Set environment variables
 ENV LD_LIBRARY_PATH=/opt/blasfeo/lib:/opt/hpipm/lib:/usr/local/lib
@@ -203,6 +204,6 @@ RUN apt update && apt install -y \
     libxcb-shape0 \
     libxcb-xkb1 \
     libxkbcommon-x11-0 \
-    libgl1 libglx0 libegl1 
+    libgl1 libglx0 libegl1 libsecret-1-0
     
 CMD ["/bin/bash"]
