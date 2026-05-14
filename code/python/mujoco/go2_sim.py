@@ -208,7 +208,8 @@ try:
         for k in range(N):
             ocp.get_node(k).set_active_contacts(contact_sequence[k]);
 
-        solver_mpc.solve(ocp.x_traj()[0][:])
+        x_meas = np.concatenate([ocp.get_node(0).q(), ocp.get_node(0).v()])
+        solver_mpc.solve(x_meas)
         t+=dt
 
         q1 = ocp.x_traj()[1][0:pin_model.nq]
@@ -226,10 +227,6 @@ try:
         data.ctrl[:] = tau_ref
 
         mujoco.mj_step(model, data)
-
-        #ocp.get_node(0).q()[7:] = pinocchio_to_mujoco(pinocchio_joint_names, mujoco_joint_names, data.qpos[7:])
-        #ocp.get_node(0).v()[6:] = pinocchio_to_mujoco(pinocchio_joint_names, mujoco_joint_names, data.qvel[6:])
-        #ocp.x_traj()[0][:] = np.concatenate([ocp.get_node(0).q(), ocp.get_node(0).v()])
 
         if counter % render_every == 0:
             viewer.render(data)
