@@ -81,6 +81,7 @@ print(f"Gait: trot ({stance_duration}s per diagonal stance)");
 
 
 rviz = rviser.rviser(urdf_path)
+solver_plot = plotter.plot_solver_stats(rviz.server, dt, number_of_nodes=N)
 
 # ── Nominal standing configuration ──
 pin_data = pin.Data(pin_model)
@@ -234,6 +235,7 @@ try:
             viewer.render(data)
 
             rviz.update(q=q1[7:], q_base=q1[0:7])
+            solver_plot.update(solver_mpc.get_stats())
 
         counter += 1
 
