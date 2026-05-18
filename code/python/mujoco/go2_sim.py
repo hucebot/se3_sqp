@@ -3,8 +3,10 @@ import glfw
 import numpy as np
 import sys
 from pathlib import Path
-from joint_impedance_ctrl import JointImpedanceController, convert, to_pinocchio_qpos, to_mujoco_qpos
+from joint_impedance_ctrl import JointImpedanceController
 from mujoco_viewer import MujocoViewer
+import conversions
+
 
 BUILD_DIR = Path(__file__).resolve().parent.parent / "../build"
 sys.path.insert(0, str(BUILD_DIR))
@@ -49,7 +51,7 @@ q0[7:] = np.array([0.0, 0.8, -1.6,  # hip, thigh, calf
                    0.0, 0.8, -1.6,  # hip, thigh, calf
                    0.0, 0.8, -1.6,  # hip, thigh, calf
                    0.0, 0.8, -1.6]) # hip, thigh, calf
-data.qpos = to_mujoco_qpos(mujoco_joint_names, pinocchio_joint_names, q0)
+data.qpos = conversions.to_mujoco_qpos(mujoco_joint_names, pinocchio_joint_names, q0)
 
 # velocities
 data.qvel[:] = 0.0
@@ -220,9 +222,9 @@ try:
             ocp.get_node(k).v()[:] = ocp.get_node(k+1).v()[:]
             ocp.get_node(k).u()[:] = ocp.get_node(k+1).u()[:]
 
-        tau_ref = joint_controller.compute(data, q_des=convert(mujoco_joint_names, pinocchio_joint_names, q1[7:]),
-        dq_des=convert(mujoco_joint_names, pinocchio_joint_names, v1[6:]),
-        tau_ff=convert(mujoco_joint_names, pinocchio_joint_names, ocp.get_node(0).tau()[6:]))
+        tau_ref = joint_controller.compute(data, q_des=conversions.convert(mujoco_joint_names, pinocchio_joint_names, q1[7:]),
+            dq_des=conversions.convert(mujoco_joint_names, pinocchio_joint_names, v1[6:]),
+            tau_ff=conversions.convert(mujoco_joint_names, pinocchio_joint_names, ocp.get_node(0).tau()[6:]))
 
         data.ctrl[:] = tau_ref
 

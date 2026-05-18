@@ -1,24 +1,6 @@
 import mujoco
 import numpy as np
 
-def convert(to_joints, from_joints, u_from):
-    map = {name: i for i, name in enumerate(from_joints)}
-    return np.array([u_from[map[name]] for name in to_joints])
-
-def to_pinocchio_qpos(pinocchio_joints, mujoco_joints, mujoco_qpos):
-    pinocchio_qpos = mujoco_qpos.copy()
-    pinocchio_qpos[3:6] = mujoco_qpos[4:7]
-    pinocchio_qpos[6] = mujoco_qpos[3]
-    pinocchio_qpos[7:] = convert(pinocchio_joints, mujoco_joints, mujoco_qpos[7:])
-    return pinocchio_qpos
-
-def to_mujoco_qpos(mujoco_joints, pinocchio_joints, pinocchio_qpos):
-    mujoco_qpos = pinocchio_qpos.copy()
-    mujoco_qpos[3] = pinocchio_qpos[6]
-    mujoco_qpos[4:7] = pinocchio_qpos[3:6]
-    mujoco_qpos[7:] = convert(mujoco_joints, pinocchio_joints, pinocchio_qpos[7:])
-    return mujoco_qpos
-
 class JointImpedanceController:
     def __init__(self, model, joint_names):
 
@@ -56,6 +38,18 @@ class JointImpedanceController:
 
         self.kp = np.ones(self.nu) * 50.0
         self.kd = np.ones(self.nu) * 3.0
+
+    def set_kp(self, kp):
+        if isinstance(kp, float):
+            self.kp = np.ones(self.nu) * kp
+        else:
+            self.kp = kp
+
+    def set_kd(self, kd):
+        if isinstance(kd, float):
+            self.kd = np.ones(self.nu) * kd
+        else:
+            self.kd = kd
 
     def compute(self, data, q_des, dq_des=None, tau_ff=None):
         if dq_des is None:
