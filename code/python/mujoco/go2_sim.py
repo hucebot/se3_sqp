@@ -173,7 +173,6 @@ solver = sqp.SQPSolver(ocp)
 opts = sqp.SQPoptions()
 opts.max_sqp_iters = 20
 opts.tolerance     = 1e-3
-#opts.ls_merit_eta  = 1e-4
 opts.ls_type       = sqp.LSType.MERIT
 solver.set_options(opts)
 
