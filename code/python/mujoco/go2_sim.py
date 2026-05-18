@@ -6,7 +6,15 @@ from pathlib import Path
 from joint_impedance_ctrl import JointImpedanceController
 from mujoco_viewer import MujocoViewer
 import conversions
+from reference_interpolator import ReferenceInterpolator
 
+BASE_POSITION_FEEDBACK = False
+BASE_ORIENTATION_FEEDBACK = False
+JOINT_POSITION_FEEDBACK = False
+
+BASE_LINEAR_VELOCITY_FEEDBACK = False
+BASE_ORIENTATION_VELOCITY_FEEDBACK = False
+JOINT_VELOCITY_FEEDBACK = False
 
 BUILD_DIR = Path(__file__).resolve().parent.parent / "../build"
 sys.path.insert(0, str(BUILD_DIR))
@@ -20,10 +28,16 @@ sys.path.insert(0, str(UTILS_PATH))
 import joy as joystick
 import rviser, plotter
 
+q0 = np.array([0., 0., 0.31, 0., 0., 0., 1.,
+               0., 0.8, -1.6,   # hip, thigh, calf
+               0., 0.8, -1.6,   # hip, thigh, calf
+               0., 0.8, -1.6,   # hip, thigh, calf
+               0., 0.8, -1.6,]) # hip, thigh, calf
+
 # -----------------------------
-# Load models (mujoco and pinocchio)
+# LOAD MODELS (MUJOCO and PINOCCHIO)
 # -----------------------------
-MODEL_PATH = str(RESOURCES / "mjcf/go2/scene.xml")
+MODEL_PATH = str(RESOURCES / "mjcf/go2/scene_terrain.xml")
 
 model = mujoco.MjModel.from_xml_path(MODEL_PATH)
 data = mujoco.MjData(model)
@@ -43,14 +57,8 @@ print(f"mujoco_joint_names: {mujoco_joint_names}")
 print(f"pinocchio_joint_names: {pinocchio_joint_names}")
 
 # -----------------------------
-# INITIAL CONFIGURATION
+# INITIATE SIMULATION STATE
 # -----------------------------
-q0 = pin.neutral(pin_model)
-q0[2] = 0.3
-q0[7:] = np.array([0.0, 0.8, -1.6,  # hip, thigh, calf
-                   0.0, 0.8, -1.6,  # hip, thigh, calf
-                   0.0, 0.8, -1.6,  # hip, thigh, calf
-                   0.0, 0.8, -1.6]) # hip, thigh, calf
 data.qpos = conversions.to_mujoco_qpos(mujoco_joint_names, pinocchio_joint_names, q0)
 
 # velocities
@@ -60,10 +68,12 @@ data.qvel[:] = 0.0
 mujoco.mj_forward(model, data)
 
 # -----------------------------
-# Main loop
+# CREATES OCP
 # -----------------------------
 dt = 0.01
-model.opt.timestep = dt/2.
+dt_ctrl = dt/10.
+
+model.opt.timestep = dt_ctrl #dt/2.
 feet = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 
 scheduler = sqp.ContactScheduler()
@@ -156,7 +166,9 @@ for k in range(N):
     ocp.get_node(k).u()[:] = 0.0
 
 
-# Solve
+# -----------------------------
+# CREATES SOLVERS FOR INITIAL GUESS AND MPC
+# -----------------------------
 solver = sqp.SQPSolver(ocp)
 opts = sqp.SQPoptions()
 opts.max_sqp_iters = 20
@@ -182,48 +194,80 @@ opts.ls_type = sqp.LSType.MERIT
 opts.eps_inequality = 1e-3
 solver_mpc.set_options(opts)
 
-
+# -----------------------------
+# JOINT IMPEDANCE CONTROLLER AND INTERPOLATOR
+# -----------------------------
 joint_controller = JointImpedanceController(model, mujoco_joint_names)
+joint_controller.kp = np.ones(joint_controller.nu) * 50.0
+joint_controller.kd = np.ones(joint_controller.nu) * 3.0
 
+ref_interpolator = ReferenceInterpolator(dt, dt_ctrl)
 
 # -----------------------------
-# Mujoco Viewer
+# INITIALIZE LOOP OBJECTS RELATED TO VISUALIZER AND JOYSTICK
 # -----------------------------
 viewer = MujocoViewer(model)
 
 t = 0.
 joy = joystick.Joystick()
 joy.start()
-render_every = 1
+render_every = 17
+solve_every = 10
 counter = 0
+
 try:
     while not viewer.should_close():
-        # get joystick commands
-        vx, vy, wz = joy.get(alpha_lin=0.5, alpha_ang=1.)
+        if counter % solve_every == 0:
+            # get joystick commands
+            vx, vy, wz = joy.get(alpha_lin=0.5, alpha_ang=1.)
 
-        # send to robot
-        for bv in base_velocity:
-            bv.set_ref(np.array([vx, vy, 0., 0., 0., wz]))
+            for bv in base_velocity:
+                bv.set_ref(np.array([vx, vy, 0., 0., 0., wz]))
 
-        # Update contact schedule
-        contact_sequence = scheduler.getSequence(dt, "trot", N, t);
-        for k in range(N):
-            ocp.get_node(k).set_active_contacts(contact_sequence[k]);
+            # Update contact schedule
+            contact_sequence = scheduler.getSequence(dt, "trot", N, t);
+            for k in range(N):
+                ocp.get_node(k).set_active_contacts(contact_sequence[k]);
 
-        x_meas = np.concatenate([ocp.get_node(0).q(), ocp.get_node(0).v()])
-        solver_mpc.solve(x_meas)
-        t+=dt
+            q_meas = ocp.get_node(0).q()
+            v_meas = ocp.get_node(0).v()
 
-        q1 = ocp.x_traj()[1][0:pin_model.nq]
-        v1 = ocp.x_traj()[1][model.nq:]
+            if BASE_POSITION_FEEDBACK:
+                q_meas[0:3] = conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[0:3]
+            if BASE_ORIENTATION_FEEDBACK:
+                q_meas[3:7] = conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[3:7]
+            if JOINT_POSITION_FEEDBACK:
+                q_meas[7:] = conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[7:]
 
-        for k in range(N-2):
-            ocp.get_node(k).q()[:] = ocp.get_node(k+1).q()[:]
-            ocp.get_node(k).v()[:] = ocp.get_node(k+1).v()[:]
-            ocp.get_node(k).u()[:] = ocp.get_node(k+1).u()[:]
+            if BASE_LINEAR_VELOCITY_FEEDBACK:
+                v_meas[0:3] = conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[0:3]
+            if BASE_ORIENTATION_VELOCITY_FEEDBACK:
+                v_meas[3:6] = conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[3:6]
+            if JOINT_VELOCITY_FEEDBACK:
+                v_meas[6:] = conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[6:]
 
-        tau_ref = joint_controller.compute(data, q_des=conversions.convert(mujoco_joint_names, pinocchio_joint_names, q1[7:]),
-            dq_des=conversions.convert(mujoco_joint_names, pinocchio_joint_names, v1[6:]),
+            x_meas = np.concatenate([q_meas, v_meas])
+
+            solver_mpc.solve(x_meas)
+            t+=dt
+
+            q0 = ocp.x_traj()[0][0:pin_model.nq]
+            v0 = ocp.x_traj()[0][model.nq:]
+            q1 = ocp.x_traj()[1][0:pin_model.nq]
+            v1 = ocp.x_traj()[1][model.nq:]
+
+            for k in range(N-2):
+                ocp.get_node(k).q()[:] = ocp.get_node(k+1).q()[:]
+                ocp.get_node(k).v()[:] = ocp.get_node(k+1).v()[:]
+                ocp.get_node(k).u()[:] = ocp.get_node(k+1).u()[:]
+
+
+            ref_interpolator.update_mpc_plan(q0=q0[7:], v0=v0[6:], q1=q1[7:], v1=v1[6:])
+
+        q_ref, v_ref = ref_interpolator.get_references()
+
+        tau_ref = joint_controller.compute(data, q_des=conversions.convert(mujoco_joint_names, pinocchio_joint_names, q_ref),
+            dq_des=conversions.convert(mujoco_joint_names, pinocchio_joint_names, v_ref),
             tau_ff=conversions.convert(mujoco_joint_names, pinocchio_joint_names, ocp.get_node(0).tau()[6:]))
 
         data.ctrl[:] = tau_ref

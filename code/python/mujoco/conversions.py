@@ -21,6 +21,7 @@ def to_mujoco_qpos(mujoco_joints, pinocchio_joints, qpos_pin):
 
 def to_pinocchio_qvel(pinocchio_joints, mujoco_joints, qpos_mj, qvel_mj):
     v_pin = qvel_mj.copy()
+    v_pin[6:] = convert(pinocchio_joints, mujoco_joints, qvel_mj[6:])
 
     qw, qx, qy, qz = qpos_mj[3:7]
 
@@ -37,8 +38,9 @@ def to_pinocchio_qvel(pinocchio_joints, mujoco_joints, qpos_mj, qvel_mj):
 
     return v_pin
 
-def pinocchio_to_mujoco(qpos_pin, qvel_pin):
+def pinocchio_to_mujoco(mujoco_joints, pinocchio_joints, qpos_pin, qvel_pin):
     v_mj = qvel_pin.copy()
+    v_mj[6:] = convert(mujoco_joints, pinocchio_joints, qvel_pin[6:])
 
     qx, qy, qz, qw = qpos_pin[3:7]
 

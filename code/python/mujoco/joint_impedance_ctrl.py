@@ -39,18 +39,6 @@ class JointImpedanceController:
         self.kp = np.ones(self.nu) * 50.0
         self.kd = np.ones(self.nu) * 3.0
 
-    def set_kp(self, kp):
-        if isinstance(kp, float):
-            self.kp = np.ones(self.nu) * kp
-        else:
-            self.kp = kp
-
-    def set_kd(self, kd):
-        if isinstance(kd, float):
-            self.kd = np.ones(self.nu) * kd
-        else:
-            self.kd = kd
-
     def compute(self, data, q_des, dq_des=None, tau_ff=None):
         if dq_des is None:
             dq_des = np.zeros(self.nu)
