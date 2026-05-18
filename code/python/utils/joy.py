@@ -3,6 +3,9 @@ import glob
 import fcntl
 import array
 import threading
+import time
+import numpy as np
+from scipy.spatial.transform import Rotation
 
 class Joystick:
     """
@@ -107,9 +110,11 @@ class Joystick:
         if self._thread:
             self._thread.join()
 
-    def get(self, alpha_lin=1., alpha_ang=1.):
-        """Return current command (vx, vy, wz)."""
-        return alpha_lin*self.vx, alpha_lin*self.vy, alpha_ang*self.wz
+    def get(self, base_quat=np.array([0., 0., 0., 1.]), alpha_lin=1., alpha_ang=1.):
+
+        self.vx, self.vy, self.vz, self.wz = self.planar_local_velocity_reference(self.vx, self.vy, self.wz, base_quat)
+
+        return alpha_lin*self.vx, alpha_lin*self.vy, alpha_lin*self.vz, alpha_ang*self.wz
 
     def _apply_deadzone(self, v):
         return 0.0 if abs(v) < self.deadzone else v
@@ -147,3 +152,85 @@ class Joystick:
         except Exception as e:
             print(f"[Joystick] Error: {e}")
             self._running = False
+
+
+
+    def planar_local_velocity_reference(self, vx, vy, w, base_quat):
+        """
+        Compute a local-frame velocity reference such that the
+        commanded motion remains parallel to the world horizontal plane.
+
+        Parameters
+        ----------
+        linear_x : float
+            Desired forward velocity [m/s]
+        linear_y : float
+            Desired lateral velocity [m/s]
+        yaw_rate : float
+            Desired yaw velocity [rad/s]
+        base_quat : array-like, shape (4,)
+            Base orientation quaternion [x, y, z, w]
+
+        Returns
+        -------
+        v_local_ref : np.ndarray, shape (3,)
+            Linear velocity reference expressed in the FULL local body frame.
+            Its world projection is guaranteed to remain horizontal.
+
+        yaw_rate : float
+            Unchanged yaw rate reference.
+        """
+
+        # ---------------------------------------------------------
+        # Full body rotation matrix
+        # ---------------------------------------------------------
+
+        R_wb = Rotation.from_quat(base_quat).as_matrix()
+
+        # ---------------------------------------------------------
+        # Build yaw-only heading frame
+        # ---------------------------------------------------------
+
+        # Body x-axis expressed in world frame
+        x_body_world = R_wb[:, 0]
+
+        # Project onto horizontal plane
+        x_heading = x_body_world.copy()
+        x_heading[2] = 0.0
+
+        norm = np.linalg.norm(x_heading)
+
+        if norm < 1e-6:
+            x_heading = np.array([1.0, 0.0, 0.0])
+        else:
+            x_heading /= norm
+
+        # World up axis
+        z_world = np.array([0.0, 0.0, 1.0])
+
+        # Heading y-axis
+        y_heading = np.cross(z_world, x_heading)
+        y_heading /= np.linalg.norm(y_heading)
+
+        # Yaw-only rotation matrix
+        R_wh = np.column_stack((x_heading, y_heading, z_world))
+
+        # ---------------------------------------------------------
+        # Desired planar velocity in heading frame
+        # ---------------------------------------------------------
+
+        v_heading = np.array([vx, vy, 0.0])
+
+        # ---------------------------------------------------------
+        # Convert to world frame (guaranteed planar)
+        # ---------------------------------------------------------
+
+        v_world = R_wh @ v_heading
+
+        # ---------------------------------------------------------
+        # Convert back to FULL body local frame
+        # ---------------------------------------------------------
+
+        v_local_ref = R_wb.T @ v_world
+
+        return v_local_ref[0], v_local_ref[1], v_local_ref[2], w

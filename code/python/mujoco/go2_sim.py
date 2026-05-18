@@ -9,7 +9,7 @@ import conversions
 from reference_interpolator import ReferenceInterpolator
 
 BASE_POSITION_FEEDBACK = False
-BASE_ORIENTATION_FEEDBACK = False
+BASE_ORIENTATION_FEEDBACK = True
 JOINT_POSITION_FEEDBACK = False
 
 BASE_LINEAR_VELOCITY_FEEDBACK = False
@@ -85,7 +85,7 @@ scheduler.addPhase(["FR_RL"], stance_duration, "trot")         # FR+RL stance
 scheduler.addPhase(["FL_RR"], stance_duration, "trot")         # FR+RL stance
 
 # Generate contact sequence for 2 full gait cycles
-N = 20;
+N = 20
 contact_sequence = scheduler.getSequence(sampling_rate=dt, sequence_name="trot", nodes_number=N)
 
 print(f"Horizon: N={N}  nodes={N}   T={N*dt}")
@@ -124,6 +124,8 @@ for k in range(N - 1):
     node.add_constraint(sqp.JointLimitsConstraint())
 
     # Costs
+    node.add_cost(sqp.FrameRollPitchCost("base", weight=10.))
+
     base_velocity.append(sqp.FrameVelocityCost("base", weight=2.))
     base_velocity[k].set_re_reference_frame(sqp.ReferenceFrame.LOCAL)
     node.add_cost(base_velocity[k])
@@ -146,6 +148,7 @@ for foot in feet:
     node.add_constraint(sqp.ContactConstraint(foot));
     node.add_cost(sqp.StepCost(frame_name=foot, step_height_ref=0.05, ground_ref= 0.0, weight=2.))
 
+node.add_cost(sqp.FrameRollPitchCost("base", weight=10.))
 base_velocity.append(sqp.FrameVelocityCost("base", weight=5.))
 base_velocity[-1].set_re_reference_frame(sqp.ReferenceFrame.LOCAL)
 node.add_cost(base_velocity[-1])
@@ -218,10 +221,11 @@ try:
     while not viewer.should_close():
         if counter % solve_every == 0:
             # get joystick commands
-            vx, vy, wz = joy.get(alpha_lin=0.5, alpha_ang=1.)
+            vx, vy, vz, wz = joy.get(base_quat=conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[3:7],
+            alpha_lin=.5, alpha_ang=1.)
 
             for bv in base_velocity:
-                bv.set_ref(np.array([vx, vy, 0., 0., 0., wz]))
+                bv.set_ref(np.array([vx, vy, vz, 0., 0., wz]))
 
             # Update contact schedule
             contact_sequence = scheduler.getSequence(dt, "trot", N, t);
