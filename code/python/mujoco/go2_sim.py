@@ -266,9 +266,10 @@ try:
             t+=dt
 
             q0 = ocp.x_traj()[0][0:pin_model.nq]
-            v0 = ocp.x_traj()[0][model.nq:]
+            v0 = ocp.x_traj()[0][pin_model.nq:]
             q1 = ocp.x_traj()[1][0:pin_model.nq]
-            v1 = ocp.x_traj()[1][model.nq:]
+            v1 = ocp.x_traj()[1][pin_model.nq:]
+
 
             for k in range(N-2):
                 ocp.get_node(k).q()[:] = ocp.get_node(k+1).q()[:]
