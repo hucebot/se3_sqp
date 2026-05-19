@@ -178,11 +178,11 @@ def main():
     for foot in feet:
         contact_forces[foot] = np.zeros((3,1))
     while True:
-        vx, vy, vz, wz = joy.get(alpha_lin=0.5, alpha_ang=1.)
+        vx, vy, wz = joy.get(alpha_lin=0.5, alpha_ang=1.)
 
         # send to robot
         for bv in base_velocity:
-            bv.set_ref(np.array([vx, vy, vz, 0., 0., wz]))
+            bv.set_ref(np.array([vx, vy, 0., 0., 0., wz]))
 
 
 

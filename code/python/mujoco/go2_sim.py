@@ -7,6 +7,7 @@ from joint_impedance_ctrl import JointImpedanceController
 from mujoco_viewer import MujocoViewer
 import conversions
 from reference_interpolator import ReferenceInterpolator
+from filter import LowPassFilter
 
 BASE_POSITION_FEEDBACK = False
 BASE_ORIENTATION_FEEDBACK = True
@@ -91,10 +92,6 @@ contact_sequence = scheduler.getSequence(sampling_rate=dt, sequence_name="trot",
 print(f"Horizon: N={N}  nodes={N}   T={N*dt}")
 print(f"Gait: trot ({stance_duration}s per diagonal stance)");
 
-
-rviz = rviser.rviser(urdf_path)
-solver_plot = plotter.plot_solver_stats(rviz.server, dt, number_of_nodes=N)
-
 # ── Nominal standing configuration ──
 pin_data = pin.Data(pin_model)
 pin.forwardKinematics(pin_model, pin_data, q0)
@@ -124,7 +121,7 @@ for k in range(N - 1):
     node.add_constraint(sqp.JointLimitsConstraint())
 
     # Costs
-    node.add_cost(sqp.FrameRollPitchCost("base", weight=10.))
+    node.add_cost(sqp.FrameRollPitchCost("base", weight=30.))
 
     base_velocity.append(sqp.FrameVelocityCost("base", weight=2.))
     base_velocity[k].set_re_reference_frame(sqp.ReferenceFrame.LOCAL)
@@ -134,7 +131,7 @@ for k in range(N - 1):
     node.add_cost(sqp.TorqueCost(1e-4))
 
     node.add_cost(sqp.VelocityCost(1e-6))
-    node.add_cost(sqp.AccelerationCost(1e-9))
+    node.add_cost(sqp.AccelerationCost(1e-7))
 
     ocp.addNode(node)
 
@@ -148,7 +145,7 @@ for foot in feet:
     node.add_constraint(sqp.ContactConstraint(foot));
     node.add_cost(sqp.StepCost(frame_name=foot, step_height_ref=0.05, ground_ref= 0.0, weight=2.))
 
-node.add_cost(sqp.FrameRollPitchCost("base", weight=10.))
+node.add_cost(sqp.FrameRollPitchCost("base", weight=30.))
 base_velocity.append(sqp.FrameVelocityCost("base", weight=5.))
 base_velocity[-1].set_re_reference_frame(sqp.ReferenceFrame.LOCAL)
 node.add_cost(base_velocity[-1])
@@ -200,14 +197,26 @@ solver_mpc.set_options(opts)
 # JOINT IMPEDANCE CONTROLLER AND INTERPOLATOR
 # -----------------------------
 joint_controller = JointImpedanceController(model, mujoco_joint_names)
-joint_controller.kp = np.ones(joint_controller.nu) * 50.0
-joint_controller.kd = np.ones(joint_controller.nu) * 3.0
+joint_controller.kp = np.ones(joint_controller.nu) * 70.0
+joint_controller.kd = np.ones(joint_controller.nu) * 10.
 
 ref_interpolator = ReferenceInterpolator(dt, dt_ctrl)
+
+qpos_filter = LowPassFilter(dt=0.01, cutoff_frequency=20.0, dim=pin_model.nq-7)
+qvel_filter = LowPassFilter(dt=0.01, cutoff_frequency=20.0, dim=pin_model.nv)
 
 # -----------------------------
 # INITIALIZE LOOP OBJECTS RELATED TO VISUALIZER AND JOYSTICK
 # -----------------------------
+rviz = rviser.rviser(urdf_path)
+tabs = rviz.server.gui.add_tab_group()
+with tabs.add_tab("Plots"):
+    w_plot = plotter.plot(title="Base Angular Velocity", size=2*3, legend_label=["wx_raw", "wy_raw", "wz_raw", "wx_fil", "wy_fil", "wz_fil"], server=rviz.server, dt=dt)
+    qdot_plot = plotter.plot(title="qdot", size=2*(pin_model.nv-6), legend_label=[f"qdot{i}_{s}" for s in ("raw", "fil") for i in range(pin_model.nv-6)], server=rviz.server, dt=dt)
+    q_plot = plotter.plot(title="q", size=2*(pin_model.nq-7), legend_label=[f"q{i}_{s}" for s in ("raw", "fil") for i in range(pin_model.nq-7)], server=rviz.server, dt=dt)
+with tabs.add_tab("SQP Stats"):
+    solver_plot = plotter.plot_solver_stats(rviz.server, dt, number_of_nodes=N)
+
 viewer = MujocoViewer(model)
 
 t = 0.
@@ -220,12 +229,14 @@ counter = 0
 try:
     while not viewer.should_close():
         if counter % solve_every == 0:
+            qvel_filtered = qvel_filter.update(conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel))
+            qpos_filtered = qpos_filter.update(conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos))[7:]
+
             # get joystick commands
-            vx, vy, vz, wz = joy.get(base_quat=conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[3:7],
-            alpha_lin=.5, alpha_ang=1.)
+            vx, vy, wz = joy.get(alpha_lin=.5, alpha_ang=1.)
 
             for bv in base_velocity:
-                bv.set_ref(np.array([vx, vy, vz, 0., 0., wz]))
+                bv.set_ref(np.array([vx, vy, 0., 0., 0., wz]))
 
             # Update contact schedule
             contact_sequence = scheduler.getSequence(dt, "trot", N, t);
@@ -240,14 +251,14 @@ try:
             if BASE_ORIENTATION_FEEDBACK:
                 q_meas[3:7] = conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[3:7]
             if JOINT_POSITION_FEEDBACK:
-                q_meas[7:] = conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[7:]
+                q_meas[7:] = qpos_filtered
 
             if BASE_LINEAR_VELOCITY_FEEDBACK:
-                v_meas[0:3] = conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[0:3]
+                v_meas[0:3] = qvel_filtered[0:3]
             if BASE_ORIENTATION_VELOCITY_FEEDBACK:
-                v_meas[3:6] = conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[3:6]
+                v_meas[3:6] = qvel_filtered[3:6]
             if JOINT_VELOCITY_FEEDBACK:
-                v_meas[6:] = conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[6:]
+                v_meas[6:] = qvel_filtered[6:]
 
             x_meas = np.concatenate([q_meas, v_meas])
 
@@ -270,8 +281,8 @@ try:
         q_ref, v_ref = ref_interpolator.get_references()
 
         tau_ref = joint_controller.compute(data, q_des=conversions.convert(mujoco_joint_names, pinocchio_joint_names, q_ref),
-            dq_des=conversions.convert(mujoco_joint_names, pinocchio_joint_names, v_ref),
-            tau_ff=conversions.convert(mujoco_joint_names, pinocchio_joint_names, ocp.get_node(0).tau()[6:]))
+                                                dq_des=conversions.convert(mujoco_joint_names, pinocchio_joint_names, v_ref),
+                                                tau_ff=conversions.convert(mujoco_joint_names, pinocchio_joint_names, ocp.get_node(0).tau()[6:]))
 
         data.ctrl[:] = tau_ref
 
@@ -282,6 +293,9 @@ try:
 
             rviz.update(q=q1[7:], q_base=q1[0:7])
             solver_plot.update(solver_mpc.get_stats())
+            w_plot.update(np.concatenate([conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[3:6], qvel_filtered[3:6]]))
+            q_plot.update(np.concatenate([conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[7:], qpos_filtered]))
+            qdot_plot.update(np.concatenate([conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[6:], qvel_filtered[6:]]))
 
         counter += 1
 
