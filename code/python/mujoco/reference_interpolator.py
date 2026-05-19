@@ -1,5 +1,3 @@
-import numpy as np
-
 class ReferenceInterpolator:
     def __init__(self, dt_mpc, dt_ctrl):
         self.dt_mpc = dt_mpc
@@ -7,6 +5,11 @@ class ReferenceInterpolator:
 
         self.counter = 0
         self.steps_per_mpc = int(round(dt_mpc / dt_ctrl))
+
+        if self.steps_per_mpc < 1:
+            raise ValueError(
+                f"steps_per_mpc must be >= 1, got {self.steps_per_mpc} "
+                f"(dt_mpc={dt_mpc}, dt_ctrl={dt_ctrl})")
 
         self.q0 = None
         self.v0 = None
