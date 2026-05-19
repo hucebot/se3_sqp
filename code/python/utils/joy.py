@@ -111,7 +111,6 @@ class Joystick:
             self._thread.join()
 
     def get(self, alpha_lin=1., alpha_ang=1.):
-
         return alpha_lin*self.vx, alpha_lin*self.vy, alpha_ang*self.wz
 
     def _apply_deadzone(self, v):
