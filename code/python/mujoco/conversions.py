@@ -2,8 +2,8 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 
 def convert(to_joints, from_joints, u_from):
-    map = {name: i for i, name in enumerate(from_joints)}
-    return np.array([u_from[map[name]] for name in to_joints])
+    map_name = {name: i for i, name in enumerate(from_joints)}
+    return np.array([u_from[map_name[name]] for name in to_joints])
 
 def to_pinocchio_qpos(pinocchio_joints, mujoco_joints, qpos_mj):
     qpos_pin = qpos_mj.copy()
