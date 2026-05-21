@@ -38,7 +38,8 @@ add_library(${PROJECT_NAME} ${LIB_SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
-    ${CMAKE_SOURCE_DIR}/include
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC
     Eigen3::Eigen
@@ -46,6 +47,26 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     hpipm
     pinocchio::pinocchio
     nlohmann_json::nlohmann_json
+)
+
+# ========================================
+# INSTALL
+# ========================================
+
+install(TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}Targets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+install(DIRECTORY include/
+    DESTINATION include
+)
+
+install(EXPORT ${PROJECT_NAME}Targets
+    FILE ${PROJECT_NAME}Config.cmake
+    NAMESPACE ${PROJECT_NAME}::
+    DESTINATION lib/cmake/${PROJECT_NAME}
 )
 
 # ========================================
