@@ -7,15 +7,8 @@ from joint_impedance_ctrl import JointImpedanceController
 from mujoco_viewer import MujocoViewer
 import conversions
 from reference_interpolator import ReferenceInterpolator
-from filter import LowPassFilter
 
-BASE_POSITION_FEEDBACK = False
 BASE_ORIENTATION_FEEDBACK = True
-JOINT_POSITION_FEEDBACK = False
-
-BASE_LINEAR_VELOCITY_FEEDBACK = False
-BASE_ORIENTATION_VELOCITY_FEEDBACK = False
-JOINT_VELOCITY_FEEDBACK = False
 
 BUILD_DIR = Path(__file__).resolve().parent.parent / "../build"
 sys.path.insert(0, str(BUILD_DIR))
@@ -202,18 +195,15 @@ joint_controller.kd = np.ones(joint_controller.nu) * 10.
 
 ref_interpolator = ReferenceInterpolator(dt, dt_ctrl)
 
-qpos_filter = LowPassFilter(dt=0.01, cutoff_frequency=20.0, dim=pin_model.nq-7)
-qvel_filter = LowPassFilter(dt=0.01, cutoff_frequency=20.0, dim=pin_model.nv)
-
 # -----------------------------
 # INITIALIZE LOOP OBJECTS RELATED TO VISUALIZER AND JOYSTICK
 # -----------------------------
 rviz = rviser.rviser(urdf_path)
 tabs = rviz.server.gui.add_tab_group()
 with tabs.add_tab("Plots"):
-    w_plot = plotter.plot(title="Base Angular Velocity", size=2*3, legend_label=["wx_raw", "wy_raw", "wz_raw", "wx_fil", "wy_fil", "wz_fil"], server=rviz.server, dt=dt)
-    qdot_plot = plotter.plot(title="qdot", size=2*(pin_model.nv-6), legend_label=[f"qdot{i}_{s}" for s in ("raw", "fil") for i in range(pin_model.nv-6)], server=rviz.server, dt=dt)
-    q_plot = plotter.plot(title="q", size=2*(pin_model.nq-7), legend_label=[f"q{i}_{s}" for s in ("raw", "fil") for i in range(pin_model.nq-7)], server=rviz.server, dt=dt)
+    w_plot = plotter.plot(title="Base Angular Velocity", size=3, legend_label=["wx_raw", "wy_raw", "wz_raw"], server=rviz.server, dt=dt)
+    qdot_plot = plotter.plot(title="qdot", size=pin_model.nv-6, legend_label="qdot", server=rviz.server, dt=dt)
+    q_plot = plotter.plot(title="q", size=pin_model.nq-7, legend_label="q", server=rviz.server, dt=dt)
 with tabs.add_tab("SQP Stats"):
     solver_plot = plotter.plot_solver_stats(rviz.server, dt, number_of_nodes=N)
 
@@ -229,9 +219,6 @@ counter = 0
 try:
     while not viewer.should_close():
         if counter % solve_every == 0:
-            qvel_filtered = qvel_filter.update(conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel))
-            qpos_filtered = qpos_filter.update(conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos))[7:]
-
             # get joystick commands
             vx, vy, wz = joy.get(alpha_lin=.5, alpha_ang=1.)
 
@@ -246,19 +233,9 @@ try:
             q_meas = ocp.get_node(0).q()
             v_meas = ocp.get_node(0).v()
 
-            if BASE_POSITION_FEEDBACK:
-                q_meas[0:3] = conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[0:3]
             if BASE_ORIENTATION_FEEDBACK:
                 q_meas[3:7] = conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[3:7]
-            if JOINT_POSITION_FEEDBACK:
-                q_meas[7:] = qpos_filtered
 
-            if BASE_LINEAR_VELOCITY_FEEDBACK:
-                v_meas[0:3] = qvel_filtered[0:3]
-            if BASE_ORIENTATION_VELOCITY_FEEDBACK:
-                v_meas[3:6] = qvel_filtered[3:6]
-            if JOINT_VELOCITY_FEEDBACK:
-                v_meas[6:] = qvel_filtered[6:]
 
             x_meas = np.concatenate([q_meas, v_meas])
 
@@ -294,9 +271,9 @@ try:
 
             rviz.update(q=q1[7:], q_base=q1[0:7])
             solver_plot.update(solver_mpc.get_stats())
-            w_plot.update(np.concatenate([conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[3:6], qvel_filtered[3:6]]))
-            q_plot.update(np.concatenate([conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[7:], qpos_filtered]))
-            qdot_plot.update(np.concatenate([conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[6:], qvel_filtered[6:]]))
+            w_plot.update(conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[3:6])
+            q_plot.update(conversions.to_pinocchio_qpos(pinocchio_joint_names, mujoco_joint_names, data.qpos)[7:])
+            qdot_plot.update(conversions.to_pinocchio_qvel(pinocchio_joint_names, mujoco_joint_names, data.qpos, data.qvel)[6:])
 
         counter += 1
 
