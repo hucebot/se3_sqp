@@ -161,7 +161,7 @@ TEST_F(FrictionConeConstraintJacobianTest, BoundsUpdateWithContactState) {
 
     EXPECT_TRUE(lower_active.isApprox(VectorXd::Zero(5)));
     for (int i = 0; i < 5; ++i) {
-        EXPECT_EQ(upper_active(i), std::numeric_limits<double>::infinity());
+        EXPECT_EQ(upper_active(i), 1e8);
     }
 
     // Test inactive contact
@@ -171,7 +171,7 @@ TEST_F(FrictionConeConstraintJacobianTest, BoundsUpdateWithContactState) {
     VectorXd upper_inactive = friction_constraint->get_upper_bound();
 
     for (int i = 0; i < 5; ++i) {
-        EXPECT_EQ(lower_inactive(i), -std::numeric_limits<double>::infinity());
-        EXPECT_EQ(upper_inactive(i), std::numeric_limits<double>::infinity());
+        EXPECT_EQ(lower_inactive(i), -1e8);
+        EXPECT_EQ(upper_inactive(i), 1e8);
     }
 }
