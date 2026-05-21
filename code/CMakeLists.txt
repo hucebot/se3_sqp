@@ -129,10 +129,15 @@ if(BUILD_PYTHON_BINDINGS)
         ${PROJECT_NAME}
         Boost::python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}
         eigenpy::eigenpy
+        Python3::Python
     )
     set_target_properties(sqp_solver_py PROPERTIES
         PREFIX ""
         OUTPUT_NAME "sqp_solver"
         SUFFIX ".so"
+    )
+
+    install(TARGETS sqp_solver_py
+        LIBRARY DESTINATION lib/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}/site-packages
     )
 endif()
