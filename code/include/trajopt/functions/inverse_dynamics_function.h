@@ -19,7 +19,7 @@ private:
     MatrixXd _dtau_da;
 
     // External forces (size = model.njoints, all initialized to zero)
-    PINOCCHIO_ALIGNED_STD_VECTOR(pinocchio::Force) _fext;
+    std::vector<pinocchio::Force> _fext;
 
     // Frame Jacobian scratch buffer (6 x nv)
     MatrixXd _Jframe;

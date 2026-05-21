@@ -22,7 +22,6 @@ else
     echo "Creating new container '${CONTAINER_NAME}'..."
     docker run -it \
     --privileged \
-    --net=host \
     --ipc=host \
     --name "${CONTAINER_NAME}" \
     -v "${WORKSPACE_DIR}:/workspace" \

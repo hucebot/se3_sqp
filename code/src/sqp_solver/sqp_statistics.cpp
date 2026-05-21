@@ -1,6 +1,7 @@
 #include <sqp_solver/sqp_statistics.h>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
 
 SQPstatistics::SQPstatistics()
 {

@@ -1,27 +1,26 @@
 #pragma once
 
-#include <fstream>
 #include <string>
 #include <chrono>
 #include <vector>
 
 struct SQPstatistics {
-    int number_of_iterations;
-    double total_cost;
-    double total_constraint_violation;
-    double total_dynamics_defect;
-    double step_norm;
-    double dual_infeasibility;    // KKT stationarity residual (gradient of Lagrangian)
-    int linesearch_iterations;
+    int number_of_iterations; // SQP total iterations x
+    double total_cost; // x
+    double total_constraint_violation; // x
+    double total_dynamics_defect; // x
+    double step_norm; // max step for SQP update, used to check convergence x
+    double dual_infeasibility;    // KKT stationarity residual (gradient of Lagrangian) x
+    int linesearch_iterations; // x
     int qp_status;          // HPIPM convergence status (0=success, 1=max_iter, 2=min_step, 3=NaN)
-    int qp_iterations;      // Number of IPM iterations in last QP solve
+    int qp_iterations;      // Number of IPM iterations in last QP solve x
 
-    std::vector<double> per_node_violation;  // constraint violation per node, k=0..N-1
+    std::vector<double> per_node_violation;  // constraint violation per node, k=0..N-1 x
     bool print_per_node_violation = false;   // set from SQPoptions; controls per-node print
 
     // Timing
-    double total_time_ms;
-    double last_iteration_time_ms;
+    double total_time_ms; // total SQP time x
+    double last_iteration_time_ms; // time of last SQP iteration x
 
     // Constructor - initialize all values
     SQPstatistics();

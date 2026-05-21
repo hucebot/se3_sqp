@@ -17,6 +17,7 @@
 #include <trajopt/costs/torque_cost.h>
 #include <trajopt/costs/frame_translation_cost.h>
 #include <trajopt/costs/frame_orientation_cost.h>
+#include <trajopt/costs/frame_roll_pitch_cost.h>
 #include <trajopt/costs/frame_velocity_cost.h>
 #include <trajopt/costs/frame_acceleration_cost.h>
 #include <trajopt/costs/force_cost.h>
@@ -280,6 +281,21 @@ BOOST_PYTHON_MODULE(sqp_solver) {
         .def("get_ref", &FrameOrientationCost::get_ref,
              bp::return_value_policy<bp::copy_const_reference>());
     bp::implicitly_convertible<std::shared_ptr<FrameOrientationCost>,
+                               std::shared_ptr<AbstractCost>>();
+
+    // FrameRollPitchCost
+    bp::class_<FrameRollPitchCost, bp::bases<AbstractCost>,
+               std::shared_ptr<FrameRollPitchCost>>("FrameRollPitchCost",
+                                                      bp::init<const std::string&, const Eigen::Matrix3d&, double>(
+                                                          (bp::arg("frame_name"),
+                                                           bp::arg("R_ref") = Eigen::Matrix3d(Eigen::Matrix3d::Identity()),
+                                                           bp::arg("weight") = 1.0)))
+        .def(bp::init<const std::string&, const Eigen::Matrix3d&, const Matrix3d&>(
+            (bp::arg("frame_name"), bp::arg("R_ref"), bp::arg("weight"))))
+        .def("set_ref", &FrameRollPitchCost::set_ref)
+        .def("get_ref", &FrameRollPitchCost::get_ref,
+             bp::return_value_policy<bp::copy_const_reference>());
+    bp::implicitly_convertible<std::shared_ptr<FrameRollPitchCost>,
                                std::shared_ptr<AbstractCost>>();
 
     // FrameVelocityCost
