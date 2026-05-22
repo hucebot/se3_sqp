@@ -110,21 +110,21 @@ void FrictionConeConstraint::jacobian_impl() {
     // Derivative of world force w.r.t. q:
     // ∂f_world/∂q = ∂(R * f_local)/∂q = ∂R/∂q * f_local
     // Using the relationship: ∂(R * f)/∂q = -R * skew(f) * J_angular
-    MatrixXd dwf_dq = -_R_world * pinocchio::skew(_f_local) * _Jframe.bottomRows(3);
+    _dwf_dq = -_R_world * pinocchio::skew(_f_local) * _Jframe.bottomRows(3);
 
 
-    _jacobian.block(0, 0, 1, nv) = dwf_dq.row(2);
+    _jacobian.block(0, 0, 1, nv) = _dwf_dq.row(2);
     _jacobian.block(0, ndx + force_idx, 1, 3) = _R_world.row(2);
 
-    _jacobian.block(1, 0, 1, nv) = _mu * dwf_dq.row(2) - dwf_dq.row(0);
+    _jacobian.block(1, 0, 1, nv) = _mu * _dwf_dq.row(2) - _dwf_dq.row(0);
     _jacobian.block(1, ndx + force_idx, 1, 3) = _mu * _R_world.row(2) - _R_world.row(0);
 
-    _jacobian.block(2, 0, 1, nv) = _mu * dwf_dq.row(2) + dwf_dq.row(0);
+    _jacobian.block(2, 0, 1, nv) = _mu * _dwf_dq.row(2) + _dwf_dq.row(0);
     _jacobian.block(2, ndx + force_idx, 1, 3) = _mu * _R_world.row(2) + _R_world.row(0);
 
-    _jacobian.block(3, 0, 1, nv) = _mu * dwf_dq.row(2) - dwf_dq.row(1);
+    _jacobian.block(3, 0, 1, nv) = _mu * _dwf_dq.row(2) - _dwf_dq.row(1);
     _jacobian.block(3, ndx + force_idx, 1, 3) = _mu * _R_world.row(2) - _R_world.row(1);
 
-    _jacobian.block(4, 0, 1, nv) = _mu * dwf_dq.row(2) + dwf_dq.row(1);
+    _jacobian.block(4, 0, 1, nv) = _mu * _dwf_dq.row(2) + _dwf_dq.row(1);
     _jacobian.block(4, ndx + force_idx, 1, 3) = _mu * _R_world.row(2) + _R_world.row(1);
 }

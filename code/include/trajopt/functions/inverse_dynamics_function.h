@@ -22,7 +22,7 @@ private:
     std::vector<pinocchio::Force> _fext;
 
     // Frame Jacobian scratch buffer (6 x nv)
-    MatrixXd _Jframe;
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _Jframe;
 
 private:
     // Helper to build external forces vector from contact forces

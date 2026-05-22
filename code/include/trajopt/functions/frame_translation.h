@@ -28,7 +28,7 @@ class FrameTranslation : public AbstractFunction {
     Eigen::Vector3d _p_ref;
 
     // Pre-allocated scratch
-    MatrixXd _Jframe;  // 6 x nv
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _Jframe;  // 6 x nv
 
    public:
     explicit FrameTranslation(const std::string& frame_name, const Eigen::Vector3d& p_ref = Eigen::Vector3d::Zero());

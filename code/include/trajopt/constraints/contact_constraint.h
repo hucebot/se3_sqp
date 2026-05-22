@@ -41,9 +41,9 @@ class ContactConstraint : public AbstractConstraint {
     double _ground_height;
 
     // Pre-allocated scratch
-    MatrixXd _Jframe;       // 6 x nv (frame Jacobian in world frame)
-    MatrixXd _Jvf_dq;
-    MatrixXd _Jvf_dv;
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _Jframe;       // 6 x nv (frame Jacobian in world frame)
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _Jvf_dq;
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _Jvf_dv;
 
 
    public:

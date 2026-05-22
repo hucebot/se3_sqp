@@ -20,10 +20,10 @@ private:
     pinocchio::FrameIndex _frame_id;
     pinocchio::Motion _acc;
 
-    Eigen::MatrixXd _dv_dq;
-    Eigen::MatrixXd _da_dq;
-    Eigen::MatrixXd _da_dv;
-    Eigen::MatrixXd _da_da;
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _dv_dq;
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _da_dq;
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _da_dv;
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _da_da;
 
 public:
     explicit FrameAcceleration(const std::string& frame_name, const Vector6d& a_ref = Vector6d::Zero());

@@ -33,9 +33,9 @@ void FrameOrientation::jacobian_impl() {
     _node->require_fk_derivatives();
 
     const Eigen::Matrix3d& R_frame = _node->data().oMf[_frame_id].rotation();
-    Eigen::Matrix3d R_err = R_frame.transpose() * _R_ref;
+    _R_err = R_frame.transpose() * _R_ref;
 
-    pinocchio::Jlog3(R_err, _Jlog);
+    pinocchio::Jlog3(_R_err, _Jlog);
 
     _Jframe.setZero();
     pinocchio::getFrameJacobian(

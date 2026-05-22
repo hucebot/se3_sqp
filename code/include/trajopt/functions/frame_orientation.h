@@ -29,8 +29,9 @@ private:
     Eigen::Matrix3d _R_ref;
 
     // Pre-allocated scratch
-    MatrixXd _Jframe;   // 6 x nv
-    MatrixXd _Jlog;     // 3 x 3
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _Jframe;   // 6 x nv
+    Eigen::Matrix3d _Jlog;     // 3 x 3
+    Eigen::Matrix3d _R_err;
 
 public:
     explicit FrameOrientation(const std::string& frame_name, const Eigen::Matrix3d& R_ref = Eigen::Matrix3d::Identity());

@@ -20,8 +20,8 @@ private:
     pinocchio::FrameIndex _frame_id;
     pinocchio::Motion _vel;
 
-    Eigen::MatrixXd _dv_dq;
-    Eigen::MatrixXd _dv_dqdot;     // 3 x 3
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _dv_dq;
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _dv_dqdot;
 
 public:
     explicit FrameVelocity(const std::string& frame_name, const Vector6d& v_ref = Vector6d::Zero());

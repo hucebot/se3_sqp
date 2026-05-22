@@ -43,11 +43,13 @@ class FrictionConeConstraint : public AbstractConstraint {
     double _mu;        // Friction coefficient
 
     // Pre-allocated scratch
-    MatrixXd _Jframe;       // 6 x nv (frame Jacobian in LOCAL frame)
+    Eigen::Matrix<double, 6, Eigen::Dynamic> _Jframe;       // 6 x nv (frame Jacobian in LOCAL frame)
     Matrix3d _R_world;      // Rotation matrix from frame to world
     Matrix3d _Adj_rot;      // Adjoint for rotation (transposes for force transformation)
     Vector3d _f_local;      // Force in local frame
     Vector3d _f_world;      // Force in world frame
+
+    Eigen::Matrix<double, 3, Eigen::Dynamic> _dwf_dq;
 
    public:
     /**
